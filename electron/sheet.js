@@ -45,7 +45,7 @@ async function nextId(sheet) {
   const rows = await sheet.getRows();
   // Menambahkan 1 ke jumlah baris yang ada untuk ID baru.
   // Ditambah 1 lagi karena header tidak dihitung getRows() tapi ID kita mulai dari 1.
-  return String(rows.length + 1); 
+  return String(rows.length + 1);
 }
 
 
@@ -57,7 +57,7 @@ async function nextId(sheet) {
 export async function testSheetConnection() {
   console.log("Mencoba menghubungkan ke Google Sheets untuk tes...");
   try {
-    const doc = await openDoc(); 
+    const doc = await openDoc();
     await doc.loadInfo();
     console.log(`✅ Tes koneksi berhasil! Judul Dokumen: "${doc.title}"`);
   } catch (error) {
@@ -75,20 +75,62 @@ export async function testSheetConnection() {
  */
 // Tambahkan ini di paling bawah file electron/sheet.js
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function listPOs() {
+  console.log("Mencoba mengambil dan menggabungkan data PO dari Google Sheets...");
   try {
     const doc = await openDoc();
     await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Sheet1'];
-    if (!sheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!");
-    
-    const rows = await sheet.getRows();
-    return rows.map(r => r.toObject()); // Mengubah data baris menjadi objek
+
+    // Langkah 1: Ambil data dasar PO
+    const poSheet = doc.sheetsByTitle['purchase_orders'];
+    if (!poSheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!");
+    const poRows = await poSheet.getRows();
+    const poData = poRows.map(r => ({
+      id: r.id,
+      po_number: r.po_number,
+      project_name: r.project_name,
+      created_at: r.created_at,
+    }));
+
+    // Langkah 2: Ambil semua data revisi
+    const revisionSheet = doc.sheetsByTitle['purchase_order_revisions'];
+    if (!revisionSheet) throw new Error("Sheet 'purchase_order_revisions' tidak ditemukan!");
+    const revisionRows = await revisionSheet.getRows();
+
+    // Temukan revisi terakhir untuk setiap PO
+    const latestRevisionsMap = {};
+    for (const rev of revisionRows) {
+        const poId = rev.purchase_order_id;
+        const currentRevNum = parseInt(rev.revision_number);
+        const existingRev = latestRevisionsMap[poId];
+
+        // Jika revisi ini lebih baru dari yang sudah ada di map, atau belum ada, simpan.
+        if (!existingRev || currentRevNum > parseInt(existingRev.revision_number)) {
+            latestRevisionsMap[poId] = rev;
+        }
+    }
+
+    // Langkah 3: Gabungkan data PO dengan revisi terakhir
+    const combinedPOs = poData.map(po => {
+      const latestRevision = latestRevisionsMap[po.id];
+      return {
+        ...po,
+        status: latestRevision ? latestRevision.status : 'N/A',
+        priority: latestRevision ? latestRevision.priority : 'Normal',
+        deadline: latestRevision ? latestRevision.deadline : '',
+      };
+    });
+
+    console.log(`✅ Berhasil mengambil dan menggabungkan ${combinedPOs.length} PO.`);
+    return combinedPOs;
+
   } catch (error) {
-    console.error('Gagal mengambil daftar PO:', error);
-    return []; // Kembalikan array kosong jika gagal
+    console.error('❌ Gagal mengambil daftar PO dari Google Sheets:', error);
+    return [];
   }
 }
+
 export async function saveNewPO(data) {
   try {
     const doc = await openDoc();
@@ -122,7 +164,7 @@ export async function saveNewPO(data) {
       created_at: now,
     });
     console.log('Revision 0 saved with ID:', revId);
-    
+
     // === Langkah 3: Simpan semua item ke 'purchase_order_items' ===
     const itemSheet = doc.sheetsByTitle['purchase_order_items'];
     if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!");
@@ -150,5 +192,5 @@ export async function saveNewPO(data) {
     console.error('❌ Gagal menyimpan PO ke Google Sheets:', error);
     return { success: false, error: error.message };
   }
-  
+
 }

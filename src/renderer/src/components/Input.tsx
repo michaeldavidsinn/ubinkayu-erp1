@@ -1,8 +1,8 @@
 // src/renderer/src/components/Input.tsx
-import React from 'react';
+import React from 'react'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label: string
 }
 
 export const Input: React.FC<InputProps> = ({ label, ...props }) => {
@@ -11,5 +11,5 @@ export const Input: React.FC<InputProps> = ({ label, ...props }) => {
       <label>{label}</label>
       <input {...props} />
     </div>
-  );
-};
+  )
+}
