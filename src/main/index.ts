@@ -3,7 +3,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 // Pastikan path ini benar sesuai struktur folder Anda
-import { testSheetConnection, saveNewPO, listPOs } from '../../electron/sheet.js';
+import { testSheetConnection, saveNewPO, listPOs, deletePO, updatePO } from '../../electron/sheet.js';
 
 
 // FIX UNTUK MASALAH CACHE: Diletakkan di paling atas, sebelum app ready.
@@ -50,15 +50,25 @@ ipcMain.handle('ping', () => {
   ipcMain.handle('po:list', async () => {
     return listPOs();
   });
-  
+
   ipcMain.handle('po:save', async (_event, data) => {
     console.log('Menerima data PO dari UI untuk disimpan:', data);
     const result = await saveNewPO(data);
-    return result;
-  });
+    return result
+  })
+
+  ipcMain.handle('po:delete', async (_event, poId) => {
+    const result = await deletePO(poId);
+    return result
+  })
+
+  ipcMain.handle('po:update', async (_event, data) => {
+    const result = await updatePO(data)
+    return result
+  })
 
   // 3. Setelah semua persiapan selesai, buat dan tampilkan jendela aplikasi
-  createWindow();
+  createWindow()
 
   // Handler untuk macOS
   app.on('activate', () => {

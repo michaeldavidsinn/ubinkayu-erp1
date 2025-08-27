@@ -5,6 +5,8 @@ interface ICustomAPI {
   saveNewPO: (data: any) => Promise<{ success: boolean; poId?: string; error?: string }>;
   listPOs: () => Promise<any[]>;
   ping: () => Promise<string>;
+  deletePO: (poId: string) => Promise<void>
+  updatePO: (data: any) => Promise<{ success: boolean; error?: string }>
 }
 
 // Perluas tipe 'Window' global

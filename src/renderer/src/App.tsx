@@ -1,4 +1,4 @@
-// File: src/renderer/src/App.tsx (Versi Final yang Dibersihkan)
+// File: src/renderer/src/App.tsx (Versi Final dengan Edit)
 
 import React, { useState, useEffect } from 'react'
 import { Card } from './components/card'
@@ -18,6 +18,7 @@ interface POItem {
   length: number
 }
 
+// Tambahkan beberapa properti yang mungkin tidak ada saat edit
 interface POHeader {
   id: string
   po_number: string
@@ -26,20 +27,24 @@ interface POHeader {
   status?: string
   priority?: string
   deadline?: string
+  notes?: string; // Menambahkan notes untuk mode edit
 }
 
 // --- Komponen Utama Aplikasi ---
 function App() {
   const [view, setView] = useState<'list' | 'input'>('list')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
+  const [editingPO, setEditingPO] = useState<POHeader | null>(null) // State baru untuk PO yang sedang diedit
   const [isLoading, setIsLoading] = useState(true)
 
-  // Ambil semua PO dari backend
   const fetchPOs = async () => {
     setIsLoading(true)
     try {
-      // @ts-ignore - 'api' didefinisikan di preload
+      // @ts-ignore
       const pos: POHeader[] = await window.api.listPOs()
+
+      console.log('Data PO yang diterima di frontend:', pos)
+
       setPurchaseOrders(pos)
     } catch (error) {
       console.error('Gagal mengambil daftar PO:', error)
@@ -48,24 +53,65 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    fetchPOs()
-  }, [])
+  const handleDeletePO = async (poId: string) => {
+    if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
+      setIsLoading(true)
+      try {
+        // @ts-ignore
+        const result = await window.api.deletePO(poId)
+        if (result.success) {
+          alert('PO berhasil dihapus.')
+          await fetchPOs() // Muat ulang daftar setelah berhasil
+        } else {
+          throw new Error(result.error)
+        }
+      } catch (error) {
+        alert(`Gagal menghapus PO: ${(error as Error).message}`)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
 
-  const handleShowInputForm = () => setView('input')
+  // ✨ Fungsi baru untuk memulai mode edit
+  const handleEditPO = (po: POHeader) => {
+    setEditingPO(po)
+    setView('input')
+  }
+
+  const handleShowInputForm = () => {
+    setEditingPO(null) // Pastikan mode edit nonaktif saat input baru
+    setView('input')
+  }
+
+  // Fungsi callback untuk kembali ke list setelah simpan/update
   const handleBackToList = () => {
+    setEditingPO(null)
     fetchPOs()
     setView('list')
   }
+
+  useEffect(() => {
+    fetchPOs()
+  }, [])
 
   return (
     <div className="app-layout">
       <Navbar activeLink={view === 'input' ? '+ Input PO' : 'Purchase Orders'} />
       <main className="main-content">
         {view === 'list' ? (
-          <POListPage poList={purchaseOrders} onAddPO={handleShowInputForm} isLoading={isLoading} />
+          <POListPage
+            poList={purchaseOrders}
+            onAddPO={handleShowInputForm}
+            onDeletePO={handleDeletePO}
+            onEditPO={handleEditPO} // ✨ Berikan fungsi baru ke komponen anak
+            isLoading={isLoading}
+          />
         ) : (
-          <InputPOPage onSaveSuccess={handleBackToList} />
+          <InputPOPage
+            onSaveSuccess={handleBackToList}
+            editingPO={editingPO} // ✨ Berikan data PO yang sedang diedit
+          />
         )}
       </main>
     </div>
@@ -76,10 +122,12 @@ function App() {
 interface POListPageProps {
   poList: POHeader[]
   onAddPO: () => void
+  onDeletePO: (poId: string) => Promise<void>
+  onEditPO: (po: POHeader) => void // ✨ Perbarui props untuk menerima fungsi edit
   isLoading: boolean
 }
 
-const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading }) => (
+const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO}) => (
   <div className="page-container">
     <div className="page-header">
       <div>
@@ -124,7 +172,13 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading }) =
             </div>
             <div className="po-card-footer">
               <Button variant="secondary">Detail</Button>
-              <Button>Edit</Button>
+              <Button onClick={() => onEditPO(po)}>Edit</Button> {/* ✨ Tambahkan handler onEditPO */}
+              <Button
+                variant="secondary"
+                onClick={() => onDeletePO(po.id)}
+              >
+                Hapus
+            </Button>
             </div>
           </Card>
         ))
@@ -134,26 +188,47 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading }) =
 )
 
 // --- Halaman: Input Purchase Order ---
+// ✨ Perbarui props untuk menerima data PO yang sedang diedit
 interface InputPOPageProps {
   onSaveSuccess: () => void
+  editingPO: POHeader | null
 }
 
-const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess }) => {
+const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
   const [poData, setPoData] = useState({
-    nomorPo: '',
-    namaCustomer: '',
-    tanggalMasuk: today,
-    tanggalKirim: '',
-    prioritas: 'Normal',
+    nomorPo: editingPO?.po_number || '',
+    namaCustomer: editingPO?.project_name || '',
+    tanggalMasuk: editingPO?.created_at ? editingPO.created_at.split('T')[0] : today,
+    tanggalKirim: editingPO?.deadline || '',
+    prioritas: editingPO?.priority || 'Normal',
     alamatKirim: '',
-    catatan: ''
+    catatan: editingPO?.notes || '',
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
+  // ✨ Effect untuk mengisi form jika mode edit aktif
+  useEffect(() => {
+    if (editingPO) {
+      // Di sini Anda perlu memuat item-item PO jika fitur tersebut tersedia.
+      // Saat ini, kita hanya mengisi data header.
+      setPoData({
+        nomorPo: editingPO.po_number,
+        namaCustomer: editingPO.project_name,
+        tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
+        tanggalKirim: editingPO.deadline || '',
+        prioritas: editingPO.priority || 'Normal',
+        alamatKirim: '', // Alamat kirim tidak disimpan di sheets, jadi dikosongkan
+        catatan: editingPO.notes || '',
+      })
+      // Untuk mengedit item, Anda akan memanggil backend untuk mengambil itemnya
+      // await window.api.listPOItems(editingPO.id)
+    }
+  }, [editingPO])
+
   const handleDataChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement> | HTMLSelectElement>
   ) => setPoData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
 
   const handleAddItem = () =>
@@ -189,23 +264,25 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess }) => {
     }
   }
 
-  const handleSavePO = async () => {
+  // ✨ Fungsi baru untuk menangani simpan dan update
+  const handleSaveOrUpdatePO = async () => {
     if (!poData.nomorPo || !poData.namaCustomer)
       return alert('Nomor PO dan Nama Customer harus diisi!')
     if (items.length === 0) return alert('Tambahkan minimal satu item.')
     setIsSaving(true)
     try {
-      const payload = { ...poData, items }
+      const payload = { ...poData, items, poId: editingPO?.id }
       // @ts-ignore
-      const result = await window.api.saveNewPO(payload)
+      const result = editingPO ? await window.api.updatePO(payload) : await window.api.saveNewPO(payload);
+
       if (result.success) {
-        alert(`PO berhasil disimpan dengan ID: ${result.poId}`)
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
         onSaveSuccess()
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      alert(`Gagal menyimpan PO: ${(error as Error).message}`)
+      alert(`Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
     } finally {
       setIsSaving(false)
     }
@@ -215,16 +292,16 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess }) => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Input Purchase Order</h1>
-          <p>Buat PO baru dengan spesifikasi detail produk</p>
+          <h1>{editingPO ? 'Edit Purchase Order' : 'Input Purchase Order'}</h1> {/* ✨ Judul dinamis */}
+          <p>{editingPO ? 'Perbarui data PO' : 'Buat PO baru dengan spesifikasi detail produk'}</p> {/* ✨ Subjudul dinamis */}
         </div>
         <div className="header-actions">
           <Button onClick={handlePingTest} style={{ backgroundColor: '#2F855A' }}>
             Tes Jembatan (Ping)
           </Button>
           <Button variant="secondary">◎ Preview</Button>
-          <Button onClick={handleSavePO} disabled={isSaving}>
-            {isSaving ? 'Menyimpan...' : 'Simpan PO'}
+          <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
+            {isSaving ? 'Menyimpan...' : (editingPO ? 'Perbarui PO' : 'Simpan PO')} {/* ✨ Label tombol dinamis */}
           </Button>
         </div>
       </div>
@@ -237,6 +314,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess }) => {
             value={poData.nomorPo}
             onChange={handleDataChange}
             placeholder="e.g., 2505.1127"
+            disabled={!!editingPO} // ✨ Nonaktifkan input PO Number saat edit
           />
           <Input
             label="Nama Customer *"
