@@ -1,5 +1,3 @@
-// File: src/renderer/src/App.tsx (Versi Final dengan Edit)
-
 import React, { useState, useEffect } from 'react'
 import { Card } from './components/card'
 import { Input } from './components/input'
@@ -18,7 +16,6 @@ interface POItem {
   length: number
 }
 
-// Tambahkan beberapa properti yang mungkin tidak ada saat edit
 interface POHeader {
   id: string
   po_number: string
@@ -27,14 +24,15 @@ interface POHeader {
   status?: string
   priority?: string
   deadline?: string
-  notes?: string; // Menambahkan notes untuk mode edit
+  notes?: string;
 }
 
 // --- Komponen Utama Aplikasi ---
 function App() {
-  const [view, setView] = useState<'list' | 'input'>('list')
+  const [view, setView] = useState<'list' | 'input' | 'detail'>('list')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
-  const [editingPO, setEditingPO] = useState<POHeader | null>(null) // State baru untuk PO yang sedang diedit
+  const [editingPO, setEditingPO] = useState<POHeader | null>(null)
+  const [detailPO, setDetailPO] = useState<POHeader | null>(null);
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchPOs = async () => {
@@ -61,7 +59,7 @@ function App() {
         const result = await window.api.deletePO(poId)
         if (result.success) {
           alert('PO berhasil dihapus.')
-          await fetchPOs() // Muat ulang daftar setelah berhasil
+          await fetchPOs()
         } else {
           throw new Error(result.error)
         }
@@ -73,23 +71,31 @@ function App() {
     }
   }
 
-  // ✨ Fungsi baru untuk memulai mode edit
   const handleEditPO = (po: POHeader) => {
     setEditingPO(po)
     setView('input')
   }
 
   const handleShowInputForm = () => {
-    setEditingPO(null) // Pastikan mode edit nonaktif saat input baru
+    setEditingPO(null)
     setView('input')
   }
 
-  // Fungsi callback untuk kembali ke list setelah simpan/update
+  const handleShowDetail = (po: POHeader) => {
+    setDetailPO(po);
+    setView('detail');
+  };
+
   const handleBackToList = () => {
     setEditingPO(null)
     fetchPOs()
     setView('list')
   }
+
+  const handleBackFromDetail = () => {
+    setDetailPO(null);
+    setView('list');
+  };
 
   useEffect(() => {
     fetchPOs()
@@ -104,14 +110,17 @@ function App() {
             poList={purchaseOrders}
             onAddPO={handleShowInputForm}
             onDeletePO={handleDeletePO}
-            onEditPO={handleEditPO} // ✨ Berikan fungsi baru ke komponen anak
+            onEditPO={handleEditPO}
+            onShowDetail={handleShowDetail}
             isLoading={isLoading}
           />
-        ) : (
+        ) : view === 'input' ? (
           <InputPOPage
             onSaveSuccess={handleBackToList}
-            editingPO={editingPO} // ✨ Berikan data PO yang sedang diedit
+            editingPO={editingPO}
           />
+        ) : (
+          <PODetailPage po={detailPO} onBackToList={handleBackFromDetail} />
         )}
       </main>
     </div>
@@ -123,11 +132,12 @@ interface POListPageProps {
   poList: POHeader[]
   onAddPO: () => void
   onDeletePO: (poId: string) => Promise<void>
-  onEditPO: (po: POHeader) => void // ✨ Perbarui props untuk menerima fungsi edit
+  onEditPO: (po: POHeader) => void
+  onShowDetail: (po: POHeader) => void;
   isLoading: boolean
 }
 
-const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO}) => (
+const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO, onShowDetail}) => (
   <div className="page-container">
     <div className="page-header">
       <div>
@@ -171,8 +181,8 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onD
               </span>
             </div>
             <div className="po-card-footer">
-              <Button variant="secondary">Detail</Button>
-              <Button onClick={() => onEditPO(po)}>Edit</Button> {/* ✨ Tambahkan handler onEditPO */}
+              <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
+              <Button onClick={() => onEditPO(po)}>Revisi</Button>
               <Button
                 variant="secondary"
                 onClick={() => onDeletePO(po.id)}
@@ -188,7 +198,6 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onD
 )
 
 // --- Halaman: Input Purchase Order ---
-// ✨ Perbarui props untuk menerima data PO yang sedang diedit
 interface InputPOPageProps {
   onSaveSuccess: () => void
   editingPO: POHeader | null
@@ -208,24 +217,48 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
-  // ✨ Effect untuk mengisi form jika mode edit aktif
+  // Perbarui useEffect untuk memuat item PO
   useEffect(() => {
     if (editingPO) {
-      // Di sini Anda perlu memuat item-item PO jika fitur tersebut tersedia.
-      // Saat ini, kita hanya mengisi data header.
+      // Isi data header
       setPoData({
         nomorPo: editingPO.po_number,
         namaCustomer: editingPO.project_name,
         tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
         tanggalKirim: editingPO.deadline || '',
         prioritas: editingPO.priority || 'Normal',
-        alamatKirim: '', // Alamat kirim tidak disimpan di sheets, jadi dikosongkan
+        alamatKirim: '',
         catatan: editingPO.notes || '',
-      })
-      // Untuk mengedit item, Anda akan memanggil backend untuk mengambil itemnya
-      // await window.api.listPOItems(editingPO.id)
+      });
+
+      // Panggil backend untuk mengambil item yang terkait
+      const fetchPOItems = async () => {
+        try {
+          // @ts-ignore
+          const poItems = await window.api.listPOItems(editingPO.id);
+          setItems(poItems);
+          console.log("Item PO berhasil dimuat:", poItems);
+        } catch (error) {
+          console.error("Gagal memuat item PO:", error);
+        }
+      };
+
+      fetchPOItems();
+
+    } else {
+      // Reset form jika bukan mode edit
+      setPoData({
+        nomorPo: '',
+        namaCustomer: '',
+        tanggalMasuk: today,
+        tanggalKirim: '',
+        prioritas: 'Normal',
+        alamatKirim: '',
+        catatan: '',
+      });
+      setItems([]);
     }
-  }, [editingPO])
+  }, [editingPO]);
 
   const handleDataChange = (
     e: React.ChangeEvent<HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement> | HTMLSelectElement>
@@ -264,7 +297,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     }
   }
 
-  // ✨ Fungsi baru untuk menangani simpan dan update
   const handleSaveOrUpdatePO = async () => {
     if (!poData.nomorPo || !poData.namaCustomer)
       return alert('Nomor PO dan Nama Customer harus diisi!')
@@ -292,8 +324,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>{editingPO ? 'Edit Purchase Order' : 'Input Purchase Order'}</h1> {/* ✨ Judul dinamis */}
-          <p>{editingPO ? 'Perbarui data PO' : 'Buat PO baru dengan spesifikasi detail produk'}</p> {/* ✨ Subjudul dinamis */}
+          <h1>{editingPO ? 'Edit Purchase Order' : 'Input Purchase Order'}</h1>
+          <p>{editingPO ? 'Perbarui data PO' : 'Buat PO baru dengan spesifikasi detail produk'}</p>
         </div>
         <div className="header-actions">
           <Button onClick={handlePingTest} style={{ backgroundColor: '#2F855A' }}>
@@ -301,7 +333,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </Button>
           <Button variant="secondary">◎ Preview</Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
-            {isSaving ? 'Menyimpan...' : (editingPO ? 'Perbarui PO' : 'Simpan PO')} {/* ✨ Label tombol dinamis */}
+            {isSaving ? 'Menyimpan...' : (editingPO ? 'Perbarui PO' : 'Simpan PO')}
           </Button>
         </div>
       </div>
@@ -314,7 +346,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             value={poData.nomorPo}
             onChange={handleDataChange}
             placeholder="e.g., 2505.1127"
-            disabled={!!editingPO} // ✨ Nonaktifkan input PO Number saat edit
+            disabled={!!editingPO}
           />
           <Input
             label="Nama Customer *"
@@ -424,6 +456,101 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     </div>
   )
 }
+
+// --- Komponen Halaman Detail PO ---
+interface PODetailPageProps {
+    po: POHeader | null;
+    onBackToList: () => void;
+}
+
+const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
+    const [items, setItems] = useState<POItem[]>([]);
+    const [isLoadingItems, setIsLoadingItems] = useState(true);
+
+    useEffect(() => {
+        if (po) {
+            const fetchItems = async () => {
+                try {
+                    setIsLoadingItems(true);
+                    // @ts-ignore
+                    const poItems = await window.api.listPOItems(po.id);
+                    setItems(poItems);
+                    console.log("Items untuk detail PO berhasil dimuat:", poItems);
+                } catch (error) {
+                    console.error("Gagal memuat item untuk detail:", error);
+                } finally {
+                    setIsLoadingItems(false);
+                }
+            };
+            fetchItems();
+        }
+    }, [po]);
+
+    if (!po) {
+        return (
+            <div className="page-container">
+                <p>Data PO tidak ditemukan.</p>
+                <Button onClick={onBackToList}>Kembali ke Daftar</Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="page-container">
+            <div className="page-header">
+                <div>
+                    <h1>Detail Purchase Order: {po.po_number}</h1>
+                    <p>Informasi lengkap dan daftar item untuk PO ini.</p>
+                </div>
+                <Button onClick={onBackToList}>Kembali</Button>
+            </div>
+            <Card>
+                <h2>Informasi Dasar</h2>
+                <div className="detail-grid">
+                    <div><b>Nomor PO:</b> {po.po_number}</div>
+                    <div><b>Nama Customer:</b> {po.project_name}</div>
+                    <div><b>Tanggal Masuk:</b> {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}</div>
+                    <div><b>Target Kirim:</b> {po.deadline ? new Date(po.deadline).toLocaleDateString() : '-'}</div>
+                    <div><b>Prioritas:</b> {po.priority}</div>
+                    <div><b>Status:</b> {po.status}</div>
+                </div>
+                {po.notes && (
+                    <div>
+                        <h3>Catatan:</h3>
+                        <p>{po.notes}</p>
+                    </div>
+                )}
+            </Card>
+
+            <div className="item-section-header">
+                <h2>Daftar Item</h2>
+            </div>
+            {isLoadingItems ? (
+                <div className="loading-spinner">⏳ Loading item...</div>
+            ) : items.length === 0 ? (
+                <p>Tidak ada item terdaftar untuk PO ini.</p>
+            ) : (
+                items.map((item, index) => (
+                    <Card key={item.id} className="item-card">
+                        <div className="item-card-header">
+                            <h4>Item #{index + 1}</h4>
+                        </div>
+                        <div className="form-grid">
+                            <Input label="Produk ID" value={item.productId} disabled />
+                            <Input label="Catatan / Notes" value={item.notes} disabled />
+                            <Input label="Qty" type="number" value={item.qty} disabled />
+                            <Input label="Satuan" value={item.satuan} disabled />
+                            <Input label="Tebal (mm)" type="number" value={item.thickness} disabled />
+                            <Input label="Lebar (mm)" type="number" value={item.width} disabled />
+                            <Input label="Panjang (mm)" type="number" value={item.length} disabled />
+                        </div>
+                    </Card>
+                ))
+            )}
+        </div>
+    );
+};
+
 
 // --- Komponen Statis: Navbar ---
 interface NavbarProps {

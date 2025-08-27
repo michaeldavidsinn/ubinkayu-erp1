@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable prettier/prettier */
 // File: src/main/index.ts
 
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 // Pastikan path ini benar sesuai struktur folder Anda
-import { testSheetConnection, saveNewPO, listPOs, deletePO, updatePO } from '../../electron/sheet.js';
+import { testSheetConnection, saveNewPO, listPOs, deletePO, updatePO, listPOItems } from '../../electron/sheet.js';
 
 
 // FIX UNTUK MASALAH CACHE: Diletakkan di paling atas, sebelum app ready.
@@ -66,6 +68,11 @@ ipcMain.handle('ping', () => {
     const result = await updatePO(data)
     return result
   })
+
+  ipcMain.handle('po:listItems', async (_event, poId) => {
+    const items = await listPOItems(poId);
+    return items;
+  });
 
   // 3. Setelah semua persiapan selesai, buat dan tampilkan jendela aplikasi
   createWindow()
