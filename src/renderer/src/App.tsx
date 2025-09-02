@@ -1,19 +1,30 @@
 import React, { useState, useEffect } from 'react'
-import { Card } from './components/card'
-import { Input } from './components/input'
+import { Card } from './components/Card'
+import { Input } from './components/Input'
 import { Textarea } from './components/textarea'
-import { Button } from './components/button'
+import { Button } from './components/Button'
 
 // --- Tipe Data ---
 interface POItem {
   id: number
-  productId: string
-  notes: string
-  qty: number
+  purchase_order_id?: string
+  revision_id?: string
+  product_id: string
+  product_name: string
+  wood_type: string
+  profile: string
+  color: string
+  finishing: string
+  sample: string
+  marketing: string
+  thickness_mm: number
+  width_mm: number
+  length_mm: number
+  length_type: string
+  quantity: number
   satuan: string
-  thickness: number
-  width: number
-  length: number
+  location: string
+  notes: string
 }
 
 interface POHeader {
@@ -269,13 +280,24 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       ...prev,
       {
         id: Date.now(),
-        productId: '',
-        notes: '',
-        qty: 1,
-        satuan: 'pcs',
-        thickness: 0,
-        width: 0,
-        length: 0
+      purchase_order_id: '',
+      revision_id: '',
+      product_id: '',
+      product_name: '',
+      wood_type: '',
+      profile: '',
+      color: '',
+      finishing: '',
+      sample: '',
+      marketing: '',
+      thickness_mm: 0,
+      width_mm: 0,
+      length_mm: 0,
+      length_type: '',
+      quantity: 1,
+      satuan: 'pcs',
+      location: '',
+      notes: ''
       }
     ])
 
@@ -411,45 +433,90 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             </Button>
           </div>
           <div className="form-grid">
-            <Input
-              label="Produk ID"
-              value={item.productId}
-              onChange={(e) => handleItemChange(item.id, 'productId', e.target.value)}
-            />
-            <Input
-              label="Catatan / Notes"
-              value={item.notes}
-              onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-            />
-            <Input
-              label="Qty"
-              type="number"
-              value={item.qty}
-              onChange={(e) => handleItemChange(item.id, 'qty', Number(e.target.value))}
-            />
-            <Input
-              label="Satuan"
-              value={item.satuan}
-              onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
-            />
-            <Input
-              label="Tebal (mm)"
-              type="number"
-              value={item.thickness}
-              onChange={(e) => handleItemChange(item.id, 'thickness', Number(e.target.value))}
-            />
-            <Input
-              label="Lebar (mm)"
-              type="number"
-              value={item.width}
-              onChange={(e) => handleItemChange(item.id, 'width', Number(e.target.value))}
-            />
-            <Input
-              label="Panjang (mm)"
-              type="number"
-              value={item.length}
-              onChange={(e) => handleItemChange(item.id, 'length', Number(e.target.value))}
-            />
+           <Input
+    label="Product ID"
+    value={item.product_id}
+    onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
+  />
+  <Input
+    label="Product Name"
+    value={item.product_name}
+    onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
+  />
+  <Input
+    label="Wood Type"
+    value={item.wood_type}
+    onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
+  />
+  <Input
+    label="Profile"
+    value={item.profile}
+    onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
+  />
+  <Input
+    label="Color"
+    value={item.color}
+    onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+  />
+  <Input
+    label="Finishing"
+    value={item.finishing}
+    onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
+  />
+  <Input
+    label="Sample"
+    value={item.sample}
+    onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
+  />
+  <Input
+    label="Marketing"
+    value={item.marketing}
+    onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
+  />
+  <Input
+    label="Thickness (mm)"
+    type="number"
+    value={item.thickness_mm}
+    onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+  />
+  <Input
+    label="Width (mm)"
+    type="number"
+    value={item.width_mm}
+    onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+  />
+  <Input
+    label="Length (mm)"
+    type="number"
+    value={item.length_mm}
+    onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+  />
+  <Input
+    label="Length Type"
+    value={item.length_type}
+    onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
+  />
+  <Input
+    label="Quantity"
+    type="number"
+    value={item.quantity}
+    onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+  />
+  <Input
+    label="Satuan"
+    value={item.satuan}
+    onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
+  />
+  <Input
+    label="Location"
+    value={item.location}
+    onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
+  />
+  <Input
+    label="Notes"
+    value={item.notes}
+    onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
+  />
           </div>
         </Card>
       ))}
@@ -536,13 +603,22 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
                             <h4>Item #{index + 1}</h4>
                         </div>
                         <div className="form-grid">
-                            <Input label="Produk ID" value={item.productId} disabled />
-                            <Input label="Catatan / Notes" value={item.notes} disabled />
-                            <Input label="Qty" type="number" value={item.qty} disabled />
-                            <Input label="Satuan" value={item.satuan} disabled />
-                            <Input label="Tebal (mm)" type="number" value={item.thickness} disabled />
-                            <Input label="Lebar (mm)" type="number" value={item.width} disabled />
-                            <Input label="Panjang (mm)" type="number" value={item.length} disabled />
+                           <Input label="Produk ID" value={item.product_id} disabled />
+  <Input label="Nama Produk" value={item.product_name} disabled />
+  <Input label="Jenis Kayu" value={item.wood_type} disabled />
+  <Input label="Profil" value={item.profile} disabled />
+  <Input label="Warna" value={item.color} disabled />
+  <Input label="Finishing" value={item.finishing} disabled />
+  <Input label="Sample" value={item.sample} disabled />
+  <Input label="Marketing" value={item.marketing} disabled />
+  <Input label="Tebal (mm)" type="number" value={item.thickness_mm} disabled />
+  <Input label="Lebar (mm)" type="number" value={item.width_mm} disabled />
+  <Input label="Panjang (mm)" type="number" value={item.length_mm} disabled />
+  <Input label="Jenis Panjang" value={item.length_type} disabled />
+  <Input label="Qty" type="number" value={item.quantity} disabled />
+  <Input label="Satuan" value={item.satuan} disabled />
+  <Input label="Lokasi" value={item.location} disabled />
+  <Input label="Catatan / Notes" value={item.notes} disabled />
                         </div>
                     </Card>
                 ))

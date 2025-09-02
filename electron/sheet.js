@@ -118,15 +118,24 @@ export async function saveNewPO(data) {
       const itemId = await nextId(itemSheet);
       await itemSheet.addRow({
         id: itemId,
-        purchase_order_id: poId,
-        revision_id: revId,
-        product_id: item.productId,
-        thickness_mm: item.thickness,
-        width_mm: item.width,
-        length_mm: item.length,
-        quantity: item.qty,
-        satuan: item.satuan,
-        notes: item.notes
+  purchase_order_id: poId,
+  revision_id: revId,
+  product_id: item.product_id,
+  product_name: item.product_name,
+  wood_type: item.wood_type,
+  profile: item.profile,
+  color: item.color,
+  finishing: item.finishing,
+  sample: item.sample,
+  marketing: item.marketing,
+  thickness_mm: item.thickness_mm,
+  width_mm: item.width_mm,
+  length_mm: item.length_mm,
+  length_type: item.length_type,
+  quantity: item.quantity,
+  satuan: item.satuan,
+  location: item.location,
+  notes: item.notes
       });
     }
     console.log('✅ Semua data PO berhasil disimpan!');
@@ -187,15 +196,24 @@ export async function listPOItems(poId) {
     const items = itemRows.filter(r => r._rawData[1] === poId).map(r => ({
       // Perhatikan penggunaan indeks _rawData
       id: r._rawData[0],
-      purchase_order_id: r._rawData[1],
-      revision_id: r._rawData[2],
-      productId: r._rawData[3],
-      thickness: Number(r._rawData[4]),
-      width: Number(r._rawData[5]),
-      length: Number(r._rawData[6]),
-      qty: Number(r._rawData[7]),
-      satuan: r._rawData[8],
-      notes: r._rawData[9],
+    purchase_order_id: r._rawData[1],
+    revision_id: r._rawData[2],
+    product_id: r._rawData[3],
+    product_name: r._rawData[4],
+    wood_type: r._rawData[5],
+    profile: r._rawData[6],
+    color: r._rawData[7],
+    finishing: r._rawData[8],
+    sample: r._rawData[9],
+    marketing: r._rawData[10],
+    thickness_mm: Number(r._rawData[11]),
+    width_mm: Number(r._rawData[12]),
+    length_mm: Number(r._rawData[13]),
+    length_type: r._rawData[14],
+    quantity: Number(r._rawData[15]),
+    satuan: r._rawData[16],
+    location: r._rawData[17],
+    notes: r._rawData[18],
     }));
     return items;
   } catch (error) {
