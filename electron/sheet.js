@@ -312,3 +312,33 @@ export async function updatePO(data) {
     return { success: false, error: error.message };
   }
 }
+// Tambahkan fungsi ini di paling bawah file electron/sheet.js
+
+export async function getProducts() {
+  console.log("Mencoba mengambil data dari sheet 'product_master'...");
+  try {
+    const doc = await openDoc();
+    await doc.loadInfo();
+    const sheet = doc.sheetsByTitle['product_master'];
+    if (!sheet) throw new Error("Sheet 'product_master' tidak ditemukan!");
+
+    const rows = await sheet.getRows();
+    const products = rows.map(r => ({
+      product_name: r._rawData[0],
+      wood_type: r._rawData[1],
+      profile: r._rawData[2],
+      color: r._rawData[3],
+      finishing: r._rawData[4],
+      sample: r._rawData[5],
+      marketing: r._rawData[6],
+      satuan: r._rawData[7],
+    }));
+
+    console.log(`✅ Berhasil mengambil ${products.length} produk dari master.`);
+    console.log("Data Produk yang dikirim ke frontend:", products);
+    return products;
+  } catch (error) {
+    console.error("❌ Gagal mengambil daftar produk:", error);
+    return [];
+  }
+}

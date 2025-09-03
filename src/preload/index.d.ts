@@ -4,6 +4,7 @@
 
 // Deklarasikan tipe untuk objek API kita
 interface ICustomAPI {
+  getProducts: () => Promise<any[]>
   saveNewPO: (data: any) => Promise<{ success: boolean; poId?: string; error?: string }>;
   listPOs: () => Promise<any[]>;
   ping: () => Promise<string>;

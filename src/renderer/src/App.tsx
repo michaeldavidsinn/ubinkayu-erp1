@@ -4,6 +4,7 @@ import { Input } from './components/Input'
 import { Textarea } from './components/textarea'
 import { Button } from './components/Button'
 
+
 // --- Tipe Data ---
 interface POItem {
   id: number
@@ -45,6 +46,20 @@ function App() {
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
   const [detailPO, setDetailPO] = useState<POHeader | null>(null);
   const [isLoading, setIsLoading] = useState(true)
+  const [products, setProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const result = await window.api.getProducts();
+        console.log("Produk dari sheet:", result);
+        setProducts(result);
+      } catch (err) {
+        console.error("Gagal load produk:", err);
+      }
+    }
+    loadProducts();
+  }, []);
 
   const fetchPOs = async () => {
     setIsLoading(true)
@@ -148,7 +163,7 @@ interface POListPageProps {
   isLoading: boolean
 }
 
-const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO, onShowDetail}) => (
+const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO, onShowDetail }) => (
   <div className="page-container">
     <div className="page-header">
       <div>
@@ -199,7 +214,7 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onD
                 onClick={() => onDeletePO(po.id)}
               >
                 Hapus
-            </Button>
+              </Button>
             </div>
           </Card>
         ))
@@ -216,6 +231,7 @@ interface InputPOPageProps {
 
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
+  const [productList, setProductList] = useState<any[]>([]);
   const [poData, setPoData] = useState({
     nomorPo: editingPO?.po_number || '',
     namaCustomer: editingPO?.project_name || '',
@@ -227,6 +243,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
+const getUniqueOptions = (field: keyof typeof productList[0]) => {
+  return productList
+    .map((p) => p[field])       // ambil kolom yang dipilih
+    .filter(Boolean)            // buang yang kosong/null
+    .filter((v, i, a) => a.indexOf(v) === i); // filter duplikat manual
+};
 
   // Perbarui useEffect untuk memuat item PO
   useEffect(() => {
@@ -269,6 +291,16 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       });
       setItems([]);
     }
+    const fetchProducts = async () => {
+      try {
+        // @ts-ignore
+        const products = await window.api.getProducts();
+        setProductList(products);
+      } catch (error) {
+        console.error("Gagal memuat daftar produk:", error);
+      }
+    };
+    fetchProducts();
   }, [editingPO]);
 
   const handleDataChange = (
@@ -280,24 +312,24 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       ...prev,
       {
         id: Date.now(),
-      purchase_order_id: '',
-      revision_id: '',
-      product_id: '',
-      product_name: '',
-      wood_type: '',
-      profile: '',
-      color: '',
-      finishing: '',
-      sample: '',
-      marketing: '',
-      thickness_mm: 0,
-      width_mm: 0,
-      length_mm: 0,
-      length_type: '',
-      quantity: 1,
-      satuan: 'pcs',
-      location: '',
-      notes: ''
+        purchase_order_id: '',
+        revision_id: '',
+        product_id: '',
+        product_name: '',
+        wood_type: '',
+        profile: '',
+        color: '',
+        finishing: '',
+        sample: '',
+        marketing: '',
+        thickness_mm: 0,
+        width_mm: 0,
+        length_mm: 0,
+        length_type: '',
+        quantity: 1,
+        satuan: 'pcs',
+        location: '',
+        notes: ''
       }
     ])
 
@@ -425,206 +457,299 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       </div>
 
       {items.map((item, index) => (
-        <Card key={item.id} className="item-card">
-          <div className="item-card-header">
-            <h4>Item #{index + 1}</h4>
-            <Button variant="secondary" onClick={() => handleRemoveItem(item.id)}>
-              Hapus
-            </Button>
-          </div>
-          <div className="form-grid">
-           <Input
-    label="Product ID"
-    value={item.product_id}
-    onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
-  />
-  <Input
-    label="Product Name"
+  <Card key={item.id} className="item-card">
+    <div className="item-card-header">
+      <h4>Item #{index + 1}</h4>
+      <Button variant="secondary" onClick={() => handleRemoveItem(item.id)}>
+        Hapus
+      </Button>
+    </div>
+
+    <div className="form-grid">
+      {/* Product ID tetap input */}
+      <Input
+        label="Product ID"
+        value={item.product_id}
+        onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
+      />
+
+      {/* Product Name */}
+<div className="form-field">
+  <label>Product Name</label>
+  <select
     value={item.product_name}
-    onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
-  />
-  <Input
-    label="Wood Type"
+    onChange={(e) => handleItemChange(item.id, "product_name", e.target.value)}
+  >
+    <option value="">Pilih Produk</option>
+    {getUniqueOptions("product_name").map((name) => (
+      <option key={name} value={name}>
+        {name}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Wood Type */}
+<div className="form-field">
+  <label>Wood Type</label>
+  <select
     value={item.wood_type}
-    onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
-  />
-  <Input
-    label="Profile"
+    onChange={(e) => handleItemChange(item.id, "wood_type", e.target.value)}
+  >
+    <option value="">Pilih Wood Type</option>
+    {getUniqueOptions("wood_type").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Profile */}
+<div className="form-field">
+  <label>Profile</label>
+  <select
     value={item.profile}
-    onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
-  />
-  <Input
-    label="Color"
+    onChange={(e) => handleItemChange(item.id, "profile", e.target.value)}
+  >
+    <option value="">Pilih Profile</option>
+    {getUniqueOptions("profile").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Color */}
+<div className="form-field">
+  <label>Color</label>
+  <select
     value={item.color}
-    onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
-  />
-  <Input
-    label="Finishing"
+    onChange={(e) => handleItemChange(item.id, "color", e.target.value)}
+  >
+    <option value="">Pilih Color</option>
+    {getUniqueOptions("color").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Finishing */}
+<div className="form-field">
+  <label>Finishing</label>
+  <select
     value={item.finishing}
-    onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
-  />
-  <Input
-    label="Sample"
+    onChange={(e) => handleItemChange(item.id, "finishing", e.target.value)}
+  >
+    <option value="">Pilih Finishing</option>
+    {getUniqueOptions("finishing").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Sample */}
+<div className="form-field">
+  <label>Sample</label>
+  <select
     value={item.sample}
-    onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
-  />
-  <Input
-    label="Marketing"
+    onChange={(e) => handleItemChange(item.id, "sample", e.target.value)}
+  >
+    <option value="">Pilih Sample</option>
+    {getUniqueOptions("sample").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Marketing */}
+<div className="form-field">
+  <label>Marketing</label>
+  <select
     value={item.marketing}
-    onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
-  />
-  <Input
-    label="Thickness (mm)"
-    type="number"
-    value={item.thickness_mm}
-    onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
-  />
-  <Input
-    label="Width (mm)"
-    type="number"
-    value={item.width_mm}
-    onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
-  />
-  <Input
-    label="Length (mm)"
-    type="number"
-    value={item.length_mm}
-    onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
-  />
-  <Input
-    label="Length Type"
-    value={item.length_type}
-    onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
-  />
-  <Input
-    label="Quantity"
-    type="number"
-    value={item.quantity}
-    onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
-  />
-  <Input
-    label="Satuan"
+    onChange={(e) => handleItemChange(item.id, "marketing", e.target.value)}
+  >
+    <option value="">Pilih Marketing</option>
+    {getUniqueOptions("marketing").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Satuan */}
+<div className="form-field">
+  <label>Satuan</label>
+  <select
     value={item.satuan}
-    onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
-  />
-  <Input
-    label="Location"
-    value={item.location}
-    onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
-  />
-  <Input
-    label="Notes"
-    value={item.notes}
-    onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-  />
-          </div>
-        </Card>
-      ))}
+    onChange={(e) => handleItemChange(item.id, "satuan", e.target.value)}
+  >
+    <option value="">Pilih Satuan</option>
+    {getUniqueOptions("satuan").map((val) => (
+      <option key={val} value={val}>
+        {val}
+      </option>
+    ))}
+  </select>
+</div>
+
+      {/* Sisanya tetap input number / text */}
+      <Input
+        label="Thickness (mm)"
+        type="number"
+        value={item.thickness_mm}
+        onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+      />
+      <Input
+        label="Width (mm)"
+        type="number"
+        value={item.width_mm}
+        onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+      />
+      <Input
+        label="Length (mm)"
+        type="number"
+        value={item.length_mm}
+        onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+      />
+      <Input
+        label="Length Type"
+        value={item.length_type}
+        onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
+      />
+      <Input
+        label="Quantity"
+        type="number"
+        value={item.quantity}
+        onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+      />
+      <Input
+        label="Location"
+        value={item.location}
+        onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
+      />
+      <Input
+        label="Notes"
+        value={item.notes}
+        onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
+      />
+    </div>
+  </Card>
+))}
+
     </div>
   )
 }
 
 // --- Komponen Halaman Detail PO ---
 interface PODetailPageProps {
-    po: POHeader | null;
-    onBackToList: () => void;
+  po: POHeader | null;
+  onBackToList: () => void;
 }
 
 const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
-    const [items, setItems] = useState<POItem[]>([]);
-    const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [items, setItems] = useState<POItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(true);
 
-    useEffect(() => {
-        if (po) {
-            const fetchItems = async () => {
-                try {
-                    setIsLoadingItems(true);
-                    // @ts-ignore
-                    const poItems = await window.api.listPOItems(po.id);
-                    setItems(poItems);
-                    console.log("Items untuk detail PO berhasil dimuat:", poItems);
-                } catch (error) {
-                    console.error("Gagal memuat item untuk detail:", error);
-                } finally {
-                    setIsLoadingItems(false);
-                }
-            };
-            fetchItems();
+  useEffect(() => {
+    if (po) {
+      const fetchItems = async () => {
+        try {
+          setIsLoadingItems(true);
+          // @ts-ignore
+          const poItems = await window.api.listPOItems(po.id);
+          setItems(poItems);
+          console.log("Items untuk detail PO berhasil dimuat:", poItems);
+        } catch (error) {
+          console.error("Gagal memuat item untuk detail:", error);
+        } finally {
+          setIsLoadingItems(false);
         }
-    }, [po]);
-
-    if (!po) {
-        return (
-            <div className="page-container">
-                <p>Data PO tidak ditemukan.</p>
-                <Button onClick={onBackToList}>Kembali ke Daftar</Button>
-            </div>
-        );
+      };
+      fetchItems();
     }
+  }, [po]);
 
+  if (!po) {
     return (
-        <div className="page-container">
-            <div className="page-header">
-                <div>
-                    <h1>Detail Purchase Order: {po.po_number}</h1>
-                    <p>Informasi lengkap dan daftar item untuk PO ini.</p>
-                </div>
-                <Button onClick={onBackToList}>Kembali</Button>
-            </div>
-            <Card>
-                <h2>Informasi Dasar</h2>
-                <div className="detail-grid">
-                    <div><b>Nomor PO:</b> {po.po_number}</div>
-                    <div><b>Nama Customer:</b> {po.project_name}</div>
-                    <div><b>Tanggal Masuk:</b> {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}</div>
-                    <div><b>Target Kirim:</b> {po.deadline ? new Date(po.deadline).toLocaleDateString() : '-'}</div>
-                    <div><b>Prioritas:</b> {po.priority}</div>
-                    <div><b>Status:</b> {po.status}</div>
-                </div>
-                {po.notes && (
-                    <div>
-                        <h3>Catatan:</h3>
-                        <p>{po.notes}</p>
-                    </div>
-                )}
-            </Card>
-
-            <div className="item-section-header">
-                <h2>Daftar Item</h2>
-            </div>
-            {isLoadingItems ? (
-                <div className="loading-spinner">⏳ Loading item...</div>
-            ) : items.length === 0 ? (
-                <p>Tidak ada item terdaftar untuk PO ini.</p>
-            ) : (
-                items.map((item, index) => (
-                    <Card key={item.id} className="item-card">
-                        <div className="item-card-header">
-                            <h4>Item #{index + 1}</h4>
-                        </div>
-                        <div className="form-grid">
-                           <Input label="Produk ID" value={item.product_id} disabled />
-  <Input label="Nama Produk" value={item.product_name} disabled />
-  <Input label="Jenis Kayu" value={item.wood_type} disabled />
-  <Input label="Profil" value={item.profile} disabled />
-  <Input label="Warna" value={item.color} disabled />
-  <Input label="Finishing" value={item.finishing} disabled />
-  <Input label="Sample" value={item.sample} disabled />
-  <Input label="Marketing" value={item.marketing} disabled />
-  <Input label="Tebal (mm)" type="number" value={item.thickness_mm} disabled />
-  <Input label="Lebar (mm)" type="number" value={item.width_mm} disabled />
-  <Input label="Panjang (mm)" type="number" value={item.length_mm} disabled />
-  <Input label="Jenis Panjang" value={item.length_type} disabled />
-  <Input label="Qty" type="number" value={item.quantity} disabled />
-  <Input label="Satuan" value={item.satuan} disabled />
-  <Input label="Lokasi" value={item.location} disabled />
-  <Input label="Catatan / Notes" value={item.notes} disabled />
-                        </div>
-                    </Card>
-                ))
-            )}
-        </div>
+      <div className="page-container">
+        <p>Data PO tidak ditemukan.</p>
+        <Button onClick={onBackToList}>Kembali ke Daftar</Button>
+      </div>
     );
+  }
+
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <div>
+          <h1>Detail Purchase Order: {po.po_number}</h1>
+          <p>Informasi lengkap dan daftar item untuk PO ini.</p>
+        </div>
+        <Button onClick={onBackToList}>Kembali</Button>
+      </div>
+      <Card>
+        <h2>Informasi Dasar</h2>
+        <div className="detail-grid">
+          <div><b>Nomor PO:</b> {po.po_number}</div>
+          <div><b>Nama Customer:</b> {po.project_name}</div>
+          <div><b>Tanggal Masuk:</b> {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}</div>
+          <div><b>Target Kirim:</b> {po.deadline ? new Date(po.deadline).toLocaleDateString() : '-'}</div>
+          <div><b>Prioritas:</b> {po.priority}</div>
+          <div><b>Status:</b> {po.status}</div>
+        </div>
+        {po.notes && (
+          <div>
+            <h3>Catatan:</h3>
+            <p>{po.notes}</p>
+          </div>
+        )}
+      </Card>
+
+      <div className="item-section-header">
+        <h2>Daftar Item</h2>
+      </div>
+      {isLoadingItems ? (
+        <div className="loading-spinner">⏳ Loading item...</div>
+      ) : items.length === 0 ? (
+        <p>Tidak ada item terdaftar untuk PO ini.</p>
+      ) : (
+        items.map((item, index) => (
+          <Card key={item.id} className="item-card">
+            <div className="item-card-header">
+              <h4>Item #{index + 1}</h4>
+            </div>
+            <div className="form-grid">
+              <Input label="Produk ID" value={item.product_id} disabled />
+              <Input label="Nama Produk" value={item.product_name} disabled />
+              <Input label="Jenis Kayu" value={item.wood_type} disabled />
+              <Input label="Profil" value={item.profile} disabled />
+              <Input label="Warna" value={item.color} disabled />
+              <Input label="Finishing" value={item.finishing} disabled />
+              <Input label="Sample" value={item.sample} disabled />
+              <Input label="Marketing" value={item.marketing} disabled />
+              <Input label="Tebal (mm)" type="number" value={item.thickness_mm} disabled />
+              <Input label="Lebar (mm)" type="number" value={item.width_mm} disabled />
+              <Input label="Panjang (mm)" type="number" value={item.length_mm} disabled />
+              <Input label="Jenis Panjang" value={item.length_type} disabled />
+              <Input label="Qty" type="number" value={item.quantity} disabled />
+              <Input label="Satuan" value={item.satuan} disabled />
+              <Input label="Lokasi" value={item.location} disabled />
+              <Input label="Catatan / Notes" value={item.notes} disabled />
+            </div>
+          </Card>
+        ))
+      )}
+    </div>
+  );
 };
 
 

@@ -11,7 +11,8 @@ const api = {
   listPOs: () => ipcRenderer.invoke('po:list'),
   deletePO: (poId: string) => ipcRenderer.invoke('po:delete', poId),
   updatePO: (data: any) => ipcRenderer.invoke('po:update', data),
-  listPOItems: (poId: string) => ipcRenderer.invoke('po:listItems', poId)
+  listPOItems: (poId: string) => ipcRenderer.invoke('po:listItems', poId),
+  getProducts: () => ipcRenderer.invoke('product:get')
 }
 
 // Proses 'expose' atau pendaftaran API ke window object di UI

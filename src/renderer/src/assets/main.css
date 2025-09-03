@@ -131,24 +131,7 @@ body {
   color: var(--text-secondary);
 }
 
-.form-group input,
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
 
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
-}
 
 /* --- Buttons --- */
 .btn {
@@ -249,4 +232,129 @@ body {
 
 .item-card-header h4 {
   margin: 0;
+}
+/* Style umum untuk semua form field */
+input,
+select,
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px; /* konsisten */
+  height: 42px;       /* kunci tinggi */
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  vertical-align: middle; /* teks sejajar */
+}
+
+select option[disabled],
+select option[hidden],
+select option[value=""] {
+  color: var(--text-secondary); /* sama dengan placeholder input */
+}
+
+/* Fokus */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #f7931e;
+  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+}
+
+/* Select: samakan dengan input + custom arrow */
+select {
+  padding-right: 36px; /* ruang untuk arrow */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23757575' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Supaya label rapi */
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+   color: var(--text-primary);
+}
+
+/* Semua form field sama: input, select, textarea */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111827;               /* isi normal hitam */
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  height: 42px;                 /* kunci tinggi sama */
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  vertical-align: middle;
+}
+
+/* Placeholder input + placeholder select (option kosong) */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #757575;               /* abu sama kayak label */
+}
+
+.form-group select option[disabled],
+.form-group select option[hidden],
+.form-group select option[value=""] {
+  color: #757575;               /* placeholder select */
+}
+
+/* Fokus */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #f7931e;
+  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+}
+
+/* Custom arrow untuk select */
+.form-group select {
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23757575' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Label */
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem 2rem;
+  align-items: center;
 }
