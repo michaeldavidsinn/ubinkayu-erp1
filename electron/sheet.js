@@ -194,30 +194,31 @@ export async function listPOItems(poId) {
 
     const itemRows = await itemSheet.getRows();
     const items = itemRows.filter(r => r._rawData[1] === poId).map(r => ({
-      // Perhatikan penggunaan indeks _rawData
+      // Menggunakan indeks _rawData untuk pemetaan yang andal
       id: r._rawData[0],
-    purchase_order_id: r._rawData[1],
-    revision_id: r._rawData[2],
-    product_id: r._rawData[3],
-    product_name: r._rawData[4],
-    wood_type: r._rawData[5],
-    profile: r._rawData[6],
-    color: r._rawData[7],
-    finishing: r._rawData[8],
-    sample: r._rawData[9],
-    marketing: r._rawData[10],
-    thickness_mm: Number(r._rawData[11]),
-    width_mm: Number(r._rawData[12]),
-    length_mm: Number(r._rawData[13]),
-    length_type: r._rawData[14],
-    quantity: Number(r._rawData[15]),
-    satuan: r._rawData[16],
-    location: r._rawData[17],
-    notes: r._rawData[18],
+      purchase_order_id: r._rawData[1],
+      revision_id: r._rawData[2],
+      product_id: r._rawData[3],
+      product_name: r._rawData[4],
+      wood_type: r._rawData[5],
+      profile: r._rawData[6],
+      color: r._rawData[7],
+      finishing: r._rawData[8],
+      sample: r._rawData[9],
+      marketing: r._rawData[10],
+      thickness_mm: Number(r._rawData[11]),
+      width_mm: Number(r._rawData[12]),
+      length_mm: Number(r._rawData[13]),
+      length_type: r._rawData[14],
+      quantity: Number(r._rawData[15]),
+      satuan: r._rawData[16],
+      location: r._rawData[17],
+      notes: r._rawData[18],
     }));
+
     return items;
   } catch (error) {
-    console.error(`Gagal mengambil item PO untuk ID ${poId}:`, error);
+    console.error(`Gagal memuat item PO untuk ID ${poId}:`, error);
     return [];
   }
 }
