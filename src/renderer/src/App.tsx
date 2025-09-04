@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable prettier/prettier */
 import React, { useState, useEffect } from 'react'
 import { Card } from './components/Card'
 import { Input } from './components/Input'
@@ -382,6 +385,7 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
           <p>{editingPO ? 'Perbarui data PO' : 'Buat PO baru dengan spesifikasi detail produk'}</p>
         </div>
         <div className="header-actions">
+          <Button onClick={onSaveSuccess}>Kembali</Button>
           <Button onClick={handlePingTest} style={{ backgroundColor: '#2F855A' }}>
             Tes Jembatan (Ping)
           </Button>
@@ -766,9 +770,6 @@ const Navbar: React.FC<NavbarProps> = ({ activeLink }) => (
       </a>
       <a href="#" className={activeLink === 'Purchase Orders' ? 'active' : ''}>
         Purchase Orders
-      </a>
-      <a href="#" className={activeLink === '+ Input PO' ? 'active' : ''}>
-        + Input PO
       </a>
       <a href="#" className={activeLink === 'Progress Tracking' ? 'active' : ''}>
         Progress Tracking
