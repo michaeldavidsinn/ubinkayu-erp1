@@ -7,7 +7,6 @@ import { Input } from './components/Input'
 import { Textarea } from './components/textarea'
 import { Button } from './components/Button'
 
-
 // --- Tipe Data ---
 interface POItem {
   id: number
@@ -39,7 +38,18 @@ interface POHeader {
   status?: string
   priority?: string
   deadline?: string
-  notes?: string;
+  notes?: string
+}
+
+interface PORevision {
+  id: string
+  purchase_order_id: string
+  revision_number: string
+  deadline: string
+  status: string
+  priority: string
+  notes: string
+  created_at: string
 }
 
 // --- Komponen Utama Aplikasi ---
@@ -47,22 +57,22 @@ function App() {
   const [view, setView] = useState<'list' | 'input' | 'detail'>('list')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
-  const [detailPO, setDetailPO] = useState<POHeader | null>(null);
+  const [detailPO, setDetailPO] = useState<POHeader | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
     async function loadProducts() {
       try {
-        const result = await window.api.getProducts();
-        console.log("Produk dari sheet:", result);
-        setProducts(result);
+        const result = await window.api.getProducts()
+        console.log('Produk dari sheet:', result)
+        setProducts(result)
       } catch (err) {
-        console.error("Gagal load produk:", err);
+        console.error('Gagal load produk:', err)
       }
     }
-    loadProducts();
-  }, []);
+    loadProducts()
+  }, [])
 
   const fetchPOs = async () => {
     setIsLoading(true)
@@ -111,9 +121,9 @@ function App() {
   }
 
   const handleShowDetail = (po: POHeader) => {
-    setDetailPO(po);
-    setView('detail');
-  };
+    setDetailPO(po)
+    setView('detail')
+  }
 
   const handleBackToList = () => {
     setEditingPO(null)
@@ -122,9 +132,9 @@ function App() {
   }
 
   const handleBackFromDetail = () => {
-    setDetailPO(null);
-    setView('list');
-  };
+    setDetailPO(null)
+    setView('list')
+  }
 
   useEffect(() => {
     fetchPOs()
@@ -144,10 +154,7 @@ function App() {
             isLoading={isLoading}
           />
         ) : view === 'input' ? (
-          <InputPOPage
-            onSaveSuccess={handleBackToList}
-            editingPO={editingPO}
-          />
+          <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />
         ) : (
           <PODetailPage po={detailPO} onBackToList={handleBackFromDetail} />
         )}
@@ -162,11 +169,18 @@ interface POListPageProps {
   onAddPO: () => void
   onDeletePO: (poId: string) => Promise<void>
   onEditPO: (po: POHeader) => void
-  onShowDetail: (po: POHeader) => void;
+  onShowDetail: (po: POHeader) => void
   isLoading: boolean
 }
 
-const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onDeletePO, onEditPO, onShowDetail }) => (
+const POListPage: React.FC<POListPageProps> = ({
+  poList,
+  onAddPO,
+  isLoading,
+  onDeletePO,
+  onEditPO,
+  onShowDetail
+}) => (
   <div className="page-container">
     <div className="page-header">
       <div>
@@ -210,12 +224,11 @@ const POListPage: React.FC<POListPageProps> = ({ poList, onAddPO, isLoading, onD
               </span>
             </div>
             <div className="po-card-footer">
-              <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
+              <Button variant="secondary" onClick={() => onShowDetail(po)}>
+                Detail
+              </Button>
               <Button onClick={() => onEditPO(po)}>Revisi</Button>
-              <Button
-                variant="secondary"
-                onClick={() => onDeletePO(po.id)}
-              >
+              <Button variant="secondary" onClick={() => onDeletePO(po.id)}>
                 Hapus
               </Button>
             </div>
@@ -234,7 +247,7 @@ interface InputPOPageProps {
 
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
-  const [productList, setProductList] = useState<any[]>([]);
+  const [productList, setProductList] = useState<any[]>([])
   const [poData, setPoData] = useState({
     nomorPo: editingPO?.po_number || '',
     namaCustomer: editingPO?.project_name || '',
@@ -242,16 +255,16 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     tanggalKirim: editingPO?.deadline || '',
     prioritas: editingPO?.priority || 'Normal',
     alamatKirim: '',
-    catatan: editingPO?.notes || '',
+    catatan: editingPO?.notes || ''
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
-const getUniqueOptions = (field: keyof typeof productList[0]) => {
-  return productList
-    .map((p) => p[field])       // ambil kolom yang dipilih
-    .filter(Boolean)            // buang yang kosong/null
-    .filter((v, i, a) => a.indexOf(v) === i); // filter duplikat manual
-};
+  const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
+    return productList
+      .map((p) => p[field]) // ambil kolom yang dipilih
+      .filter(Boolean) // buang yang kosong/null
+      .filter((v, i, a) => a.indexOf(v) === i) // filter duplikat manual
+  }
 
   // Perbarui useEffect untuk memuat item PO
   useEffect(() => {
@@ -264,23 +277,22 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
         tanggalKirim: editingPO.deadline || '',
         prioritas: editingPO.priority || 'Normal',
         alamatKirim: '',
-        catatan: editingPO.notes || '',
-      });
+        catatan: editingPO.notes || ''
+      })
 
       // Panggil backend untuk mengambil item yang terkait
       const fetchPOItems = async () => {
         try {
           // @ts-ignore
-          const poItems = await window.api.listPOItems(editingPO.id);
-          setItems(poItems);
-          console.log("Item PO berhasil dimuat:", poItems);
+          const poItems = await window.api.listPOItems(editingPO.id)
+          setItems(poItems)
+          console.log('Item PO berhasil dimuat:', poItems)
         } catch (error) {
-          console.error("Gagal memuat item PO:", error);
+          console.error('Gagal memuat item PO:', error)
         }
-      };
+      }
 
-      fetchPOItems();
-
+      fetchPOItems()
     } else {
       // Reset form jika bukan mode edit
       setPoData({
@@ -290,24 +302,26 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
         tanggalKirim: '',
         prioritas: 'Normal',
         alamatKirim: '',
-        catatan: '',
-      });
-      setItems([]);
+        catatan: ''
+      })
+      setItems([])
     }
     const fetchProducts = async () => {
       try {
         // @ts-ignore
-        const products = await window.api.getProducts();
-        setProductList(products);
+        const products = await window.api.getProducts()
+        setProductList(products)
       } catch (error) {
-        console.error("Gagal memuat daftar produk:", error);
+        console.error('Gagal memuat daftar produk:', error)
       }
-    };
-    fetchProducts();
-  }, [editingPO]);
+    }
+    fetchProducts()
+  }, [editingPO])
 
   const handleDataChange = (
-    e: React.ChangeEvent<HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement> | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement> | HTMLSelectElement
+    >
   ) => setPoData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
 
   const handleAddItem = () =>
@@ -362,7 +376,9 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
     try {
       const payload = { ...poData, items, poId: editingPO?.id }
       // @ts-ignore
-      const result = editingPO ? await window.api.updatePO(payload) : await window.api.saveNewPO(payload);
+      const result = editingPO
+        ? await window.api.updatePO(payload)
+        : await window.api.saveNewPO(payload)
 
       if (result.success) {
         alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
@@ -391,7 +407,7 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
           </Button>
           <Button variant="secondary">◎ Preview</Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
-            {isSaving ? 'Menyimpan...' : (editingPO ? 'Perbarui PO' : 'Simpan PO')}
+            {isSaving ? 'Menyimpan...' : editingPO ? 'Perbarui PO' : 'Simpan PO'}
           </Button>
         </div>
       </div>
@@ -461,226 +477,251 @@ const getUniqueOptions = (field: keyof typeof productList[0]) => {
       </div>
 
       {items.map((item, index) => (
-  <Card key={item.id} className="item-card">
-    <div className="item-card-header">
-      <h4>Item #{index + 1}</h4>
-      <Button variant="secondary" onClick={() => handleRemoveItem(item.id)}>
-        Hapus
-      </Button>
-    </div>
+        <Card key={item.id} className="item-card">
+          <div className="item-card-header">
+            <h4>Item #{index + 1}</h4>
+            <Button variant="secondary" onClick={() => handleRemoveItem(item.id)}>
+              Hapus
+            </Button>
+          </div>
 
-    <div className="form-grid">
-      {/* Product ID tetap input */}
-      <Input
-        label="Product ID"
-        value={item.product_id}
-        onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
-      />
+          <div className="form-grid">
+            {/* Product ID tetap input */}
+            <Input
+              label="Product ID"
+              value={item.product_id}
+              onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
+            />
 
-      {/* Product Name */}
-<div className="form-field">
-  <label>Product Name</label>
-  <select
-    value={item.product_name}
-    onChange={(e) => handleItemChange(item.id, "product_name", e.target.value)}
-  >
-    <option value="">Pilih Produk</option>
-    {getUniqueOptions("product_name").map((name) => (
-      <option key={name} value={name}>
-        {name}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Product Name */}
+            <div className="form-field">
+              <label>Product Name</label>
+              <select
+                value={item.product_name}
+                onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
+              >
+                <option value="">Pilih Produk</option>
+                {getUniqueOptions('product_name').map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Wood Type */}
-<div className="form-field">
-  <label>Wood Type</label>
-  <select
-    value={item.wood_type}
-    onChange={(e) => handleItemChange(item.id, "wood_type", e.target.value)}
-  >
-    <option value="">Pilih Wood Type</option>
-    {getUniqueOptions("wood_type").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Wood Type */}
+            <div className="form-field">
+              <label>Wood Type</label>
+              <select
+                value={item.wood_type}
+                onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
+              >
+                <option value="">Pilih Wood Type</option>
+                {getUniqueOptions('wood_type').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Profile */}
-<div className="form-field">
-  <label>Profile</label>
-  <select
-    value={item.profile}
-    onChange={(e) => handleItemChange(item.id, "profile", e.target.value)}
-  >
-    <option value="">Pilih Profile</option>
-    {getUniqueOptions("profile").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Profile */}
+            <div className="form-field">
+              <label>Profile</label>
+              <select
+                value={item.profile}
+                onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
+              >
+                <option value="">Pilih Profile</option>
+                {getUniqueOptions('profile').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Color */}
-<div className="form-field">
-  <label>Color</label>
-  <select
-    value={item.color}
-    onChange={(e) => handleItemChange(item.id, "color", e.target.value)}
-  >
-    <option value="">Pilih Color</option>
-    {getUniqueOptions("color").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Color */}
+            <div className="form-field">
+              <label>Color</label>
+              <select
+                value={item.color}
+                onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+              >
+                <option value="">Pilih Color</option>
+                {getUniqueOptions('color').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Finishing */}
-<div className="form-field">
-  <label>Finishing</label>
-  <select
-    value={item.finishing}
-    onChange={(e) => handleItemChange(item.id, "finishing", e.target.value)}
-  >
-    <option value="">Pilih Finishing</option>
-    {getUniqueOptions("finishing").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Finishing */}
+            <div className="form-field">
+              <label>Finishing</label>
+              <select
+                value={item.finishing}
+                onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
+              >
+                <option value="">Pilih Finishing</option>
+                {getUniqueOptions('finishing').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Sample */}
-<div className="form-field">
-  <label>Sample</label>
-  <select
-    value={item.sample}
-    onChange={(e) => handleItemChange(item.id, "sample", e.target.value)}
-  >
-    <option value="">Pilih Sample</option>
-    {getUniqueOptions("sample").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Sample */}
+            <div className="form-field">
+              <label>Sample</label>
+              <select
+                value={item.sample}
+                onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
+              >
+                <option value="">Pilih Sample</option>
+                {getUniqueOptions('sample').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Marketing */}
-<div className="form-field">
-  <label>Marketing</label>
-  <select
-    value={item.marketing}
-    onChange={(e) => handleItemChange(item.id, "marketing", e.target.value)}
-  >
-    <option value="">Pilih Marketing</option>
-    {getUniqueOptions("marketing").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Marketing */}
+            <div className="form-field">
+              <label>Marketing</label>
+              <select
+                value={item.marketing}
+                onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
+              >
+                <option value="">Pilih Marketing</option>
+                {getUniqueOptions('marketing').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-{/* Satuan */}
-<div className="form-field">
-  <label>Satuan</label>
-  <select
-    value={item.satuan}
-    onChange={(e) => handleItemChange(item.id, "satuan", e.target.value)}
-  >
-    <option value="">Pilih Satuan</option>
-    {getUniqueOptions("satuan").map((val) => (
-      <option key={val} value={val}>
-        {val}
-      </option>
-    ))}
-  </select>
-</div>
+            {/* Satuan */}
+            <div className="form-field">
+              <label>Satuan</label>
+              <select
+                value={item.satuan}
+                onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
+              >
+                <option value="">Pilih Satuan</option>
+                {getUniqueOptions('satuan').map((val) => (
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {/* Sisanya tetap input number / text */}
-      <Input
-        label="Thickness (mm)"
-        type="number"
-        value={item.thickness_mm}
-        onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
-      />
-      <Input
-        label="Width (mm)"
-        type="number"
-        value={item.width_mm}
-        onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
-      />
-      <Input
-        label="Length (mm)"
-        type="number"
-        value={item.length_mm}
-        onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
-      />
-      <Input
-        label="Length Type"
-        value={item.length_type}
-        onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
-      />
-      <Input
-        label="Quantity"
-        type="number"
-        value={item.quantity}
-        onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
-      />
-      <Input
-        label="Location"
-        value={item.location}
-        onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
-      />
-      <Input
-        label="Notes"
-        value={item.notes}
-        onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-      />
-    </div>
-  </Card>
-))}
-
+            {/* Sisanya tetap input number / text */}
+            <Input
+              label="Thickness (mm)"
+              type="number"
+              value={item.thickness_mm}
+              onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+            />
+            <Input
+              label="Width (mm)"
+              type="number"
+              value={item.width_mm}
+              onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+            />
+            <Input
+              label="Length (mm)"
+              type="number"
+              value={item.length_mm}
+              onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+            />
+            <Input
+              label="Length Type"
+              value={item.length_type}
+              onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
+            />
+            <Input
+              label="Quantity"
+              type="number"
+              value={item.quantity}
+              onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+            />
+            <Input
+              label="Location"
+              value={item.location}
+              onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
+            />
+            <Input
+              label="Notes"
+              value={item.notes}
+              onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
+            />
+          </div>
+        </Card>
+      ))}
     </div>
   )
 }
 
 // --- Komponen Halaman Detail PO ---
 interface PODetailPageProps {
-  po: POHeader | null;
-  onBackToList: () => void;
+  po: POHeader | null
+  onBackToList: () => void
 }
 
 const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
-  const [items, setItems] = useState<POItem[]>([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [revisions, setRevisions] = useState<PORevision[]>([])
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null)
+  const [items, setItems] = useState<POItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
+  // Efek 1: Ambil daftar revisi saat PO berubah
   useEffect(() => {
     if (po) {
-      const fetchItems = async () => {
+      const fetchRevisions = async () => {
+        setIsLoading(true)
         try {
-          setIsLoadingItems(true);
           // @ts-ignore
-          const poItems = await window.api.listPOItems(po.id);
-          setItems(poItems);
-          console.log("Items untuk detail PO berhasil dimuat:", poItems);
+          const revs = await window.api.listPORevisions(po.id)
+          setRevisions(revs)
+          // Otomatis pilih revisi terbaru (paling atas setelah diurutkan)
+          if (revs.length > 0) {
+            setSelectedRevisionId(revs[0].id)
+          } else {
+            setIsLoading(false) // Tidak ada revisi, berhenti loading
+          }
         } catch (error) {
-          console.error("Gagal memuat item untuk detail:", error);
-        } finally {
-          setIsLoadingItems(false);
+          console.error('Gagal memuat daftar revisi:', error)
+          setIsLoading(false)
         }
-      };
-      fetchItems();
+      }
+      fetchRevisions()
     }
-  }, [po]);
+  }, [po])
+
+  // Efek 2: Ambil item setiap kali revisi yang dipilih berubah
+  useEffect(() => {
+    if (selectedRevisionId) {
+      const fetchItemsForRevision = async () => {
+        setIsLoading(true)
+        try {
+          // @ts-ignore
+          const poItems = await window.api.listPOItemsByRevision(selectedRevisionId)
+          setItems(poItems)
+        } catch (error) {
+          console.error(`Gagal memuat item untuk revisi ${selectedRevisionId}:`, error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchItemsForRevision()
+    }
+  }, [selectedRevisionId])
 
   if (!po) {
     return (
@@ -688,8 +729,11 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
         <p>Data PO tidak ditemukan.</p>
         <Button onClick={onBackToList}>Kembali ke Daftar</Button>
       </div>
-    );
+    )
   }
+
+  // Cari data dari revisi yang sedang aktif untuk ditampilkan
+  const currentRevision = revisions.find((r) => r.id === selectedRevisionId)
 
   return (
     <div className="page-container">
@@ -700,31 +744,100 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
         </div>
         <Button onClick={onBackToList}>Kembali</Button>
       </div>
+
       <Card>
-        <h2>Informasi Dasar</h2>
-        <div className="detail-grid">
-          <div><b>Nomor PO:</b> {po.po_number}</div>
-          <div><b>Nama Customer:</b> {po.project_name}</div>
-          <div><b>Tanggal Masuk:</b> {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}</div>
-          <div><b>Target Kirim:</b> {po.deadline ? new Date(po.deadline).toLocaleDateString() : '-'}</div>
-          <div><b>Prioritas:</b> {po.priority}</div>
-          <div><b>Status:</b> {po.status}</div>
-        </div>
-        {po.notes && (
+        {/* Menggunakan grid layout sederhana dengan 2 kolom */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '24px'
+          }}
+        >
+          {/* === Kolom Kiri === */}
           <div>
-            <h3>Catatan:</h3>
-            <p>{po.notes}</p>
+            {/* Info PO & Customer */}
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Nomor PO</p>
+            <h3 style={{ margin: '4px 0 20px 0', fontSize: '1.5rem', color: '#111827' }}>
+              {po.po_number}
+            </h3>
+
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Nama Customer</p>
+            <h4 style={{ margin: '4px 0 20px 0', fontWeight: 500, color: '#1f2937' }}>
+              {po.project_name}
+            </h4>
+
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Status</p>
+            <h4 style={{ margin: '4px 0 0 0', fontWeight: 600, color: '#1f2937' }}>
+              {currentRevision?.status || '-'}
+            </h4>
           </div>
+
+          {/* === Kolom Kanan === */}
+          <div>
+            {/* Info Tanggal & Prioritas */}
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Tanggal Input PO</p>
+            <h4 style={{ margin: '4px 0 20px 0', fontWeight: 500, color: '#1f2937' }}>
+              {po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}
+            </h4>
+
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Target Kirim</p>
+            <h4 style={{ margin: '4px 0 20px 0', fontWeight: 500, color: '#1f2937' }}>
+              {currentRevision?.deadline
+                ? new Date(currentRevision.deadline).toLocaleDateString('id-ID')
+                : '-'}
+            </h4>
+
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Prioritas</p>
+            <h4 style={{ margin: '4px 0 0 0', fontWeight: 'bold', color: '#1f2937' }}>
+              {currentRevision?.priority || '-'}
+            </h4>
+          </div>
+        </div>
+
+        {/* === Bagian Catatan === */}
+        {currentRevision?.notes && (
+          <>
+            <hr style={{ margin: '24px 0 16px 0', border: 0, borderTop: '1px solid #e5e7eb' }} />
+            <div>
+              <h4 style={{ margin: 0, color: '#374151' }}>
+                Catatan (Revisi #{currentRevision.revision_number})
+              </h4>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-wrap', color: '#1f2937' }}>
+                {currentRevision.notes}
+              </p>
+            </div>
+          </>
         )}
       </Card>
 
       <div className="item-section-header">
         <h2>Daftar Item</h2>
+        <div className="form-group">
+          <label htmlFor="revision-select" style={{ marginRight: '10px' }}>
+            Tampilkan Histori:
+          </label>
+          <select
+            id="revision-select"
+            value={selectedRevisionId || ''}
+            onChange={(e) => setSelectedRevisionId(e.target.value)}
+            disabled={revisions.length === 0}
+          >
+            {revisions.map((rev) => (
+              <option key={rev.id} value={rev.id}>
+                Revisi #{rev.revision_number} ({new Date(rev.created_at).toLocaleString('id-ID')})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      {isLoadingItems ? (
-        <div className="loading-spinner">⏳ Loading item...</div>
+
+      {isLoading ? (
+        <div className="loading-spinner">⏳ Loading data revisi...</div>
       ) : items.length === 0 ? (
-        <p>Tidak ada item terdaftar untuk PO ini.</p>
+        <Card>
+          <p>Tidak ada item terdaftar untuk revisi ini.</p>
+        </Card>
       ) : (
         items.map((item, index) => (
           <Card key={item.id} className="item-card">
@@ -732,6 +845,7 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
               <h4>Item #{index + 1}</h4>
             </div>
             <div className="form-grid">
+              {/* Semua input di-disable karena ini halaman detail */}
               <Input label="Produk ID" value={item.product_id} disabled />
               <Input label="Nama Produk" value={item.product_name} disabled />
               <Input label="Jenis Kayu" value={item.wood_type} disabled />
@@ -753,9 +867,8 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
         ))
       )}
     </div>
-  );
-};
-
+  )
+}
 
 // --- Komponen Statis: Navbar ---
 interface NavbarProps {

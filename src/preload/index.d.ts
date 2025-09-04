@@ -11,6 +11,8 @@ interface ICustomAPI {
   deletePO: (poId: string) => Promise<void>
   updatePO: (data: any) => Promise<{ success: boolean; error?: string }>
   listPOItems: (poId: string) => Promise<any[]>
+  listPORevisions: (poId: string) => Promise<IPORevision[]>;
+  listPOItemsByRevision: (revisionId: string) => Promise<any[]>;
 }
 
 // Perluas tipe 'Window' global

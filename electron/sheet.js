@@ -2,65 +2,69 @@
 /* eslint-disable prettier/prettier */
 // File: electron/sheet.js
 
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-import path from 'node:path';
-import fs from 'node:fs';
+import { GoogleSpreadsheet } from 'google-spreadsheet'
+import { JWT } from 'google-auth-library'
+import path from 'node:path'
+import fs from 'node:fs'
 
 // --- BAGIAN 1: OTENTIKASI DAN KONEKSI ---
 function getAuth() {
-  const credPath = path.join(process.cwd(), 'electron', 'credentials.json');
+  const credPath = path.join(process.cwd(), 'electron', 'credentials.json')
   if (!fs.existsSync(credPath)) {
-    throw new Error('File credentials.json tidak ditemukan di folder "electron". Pastikan lokasinya benar.');
+    throw new Error(
+      'File credentials.json tidak ditemukan di folder "electron". Pastikan lokasinya benar.'
+    )
   }
-  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
   return new JWT({
     email: creds.client_email,
     key: creds.private_key,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+  })
 }
 
 async function openDoc() {
-  const spreadsheetId = "15Wj9b-2GKk5xH5ygfxBu7Q05GC7H_Rfkd-pEs-2MERE";
-  const auth = getAuth();
-  const doc = new GoogleSpreadsheet(spreadsheetId, auth);
-  return doc;
+  const spreadsheetId = '15Wj9b-2GKk5xH5ygfxBu7Q05GC7H_Rfkd-pEs-2MERE'
+  const auth = getAuth()
+  const doc = new GoogleSpreadsheet(spreadsheetId, auth)
+  return doc
 }
 
 // --- BAGIAN 2: FUNGSI HELPER ---
 async function nextId(sheet) {
-  const rows = await sheet.getRows();
-  return String(rows.length + 1);
+  const rows = await sheet.getRows()
+  return String(rows.length + 1)
 }
 
 // --- BAGIAN 3: FUNGSI YANG DI-EXPORT ---
 
 export async function testSheetConnection() {
-  console.log("Mencoba menghubungkan ke Google Sheets untuk tes...");
+  console.log('Mencoba menghubungkan ke Google Sheets untuk tes...')
   try {
-    const doc = await openDoc();
-    await doc.loadInfo();
-    console.log(`✅ Tes koneksi berhasil! Judul Dokumen: "${doc.title}"`);
+    const doc = await openDoc()
+    await doc.loadInfo()
+    console.log(`✅ Tes koneksi berhasil! Judul Dokumen: "${doc.title}"`)
   } catch (error) {
-    console.error("❌ GAGAL melakukan tes koneksi ke Google Sheets!");
+    console.error('❌ GAGAL melakukan tes koneksi ke Google Sheets!')
     if (error.response?.status === 403) {
-      console.error("Error: Izin Ditolak (403). Pastikan email service account sudah diundang sebagai 'Editor'.");
+      console.error(
+        "Error: Izin Ditolak (403). Pastikan email service account sudah diundang sebagai 'Editor'."
+      )
     } else {
-      console.error("Error Detail:", error.message);
+      console.error('Error Detail:', error.message)
     }
   }
 }
 
 export async function listPOs() {
-  console.log("Mencoba mengambil data PO dari Google Sheets...");
+  console.log('Mencoba mengambil data PO dari Google Sheets...')
   try {
-    const doc = await openDoc();
-    await doc.loadInfo();
-    const poSheet = doc.sheetsByTitle['purchase_orders'];
-    if (!poSheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!");
-    const poRows = await poSheet.getRows();
-    const combinedPOs = poRows.map(r => ({
+    const doc = await openDoc()
+    await doc.loadInfo()
+    const poSheet = doc.sheetsByTitle['purchase_orders']
+    if (!poSheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!")
+    const poRows = await poSheet.getRows()
+    const combinedPOs = poRows.map((r) => ({
       id: r._rawData[0],
       po_number: r._rawData[1],
       project_name: r._rawData[2],
@@ -68,25 +72,25 @@ export async function listPOs() {
       status: r._rawData[4],
       priority: r._rawData[5],
       notes: r._rawData[6],
-      created_at: r._rawData[7],
-    }));
-    console.log(`✅ Berhasil mengambil dan memetakan ${combinedPOs.length} PO.`);
-    console.log("Data PO yang dikirim ke frontend:", combinedPOs);
-    return combinedPOs;
+      created_at: r._rawData[7]
+    }))
+    console.log(`✅ Berhasil mengambil dan memetakan ${combinedPOs.length} PO.`)
+    console.log('Data PO yang dikirim ke frontend:', combinedPOs)
+    return combinedPOs
   } catch (error) {
-    console.error('❌ Gagal mengambil daftar PO dari Google Sheets:', error);
-    return [];
+    console.error('❌ Gagal mengambil daftar PO dari Google Sheets:', error)
+    return []
   }
 }
 
 export async function saveNewPO(data) {
   try {
-    const doc = await openDoc();
-    await doc.loadInfo();
-    const now = new Date().toISOString();
-    const poSheet = doc.sheetsByTitle['purchase_orders'];
-    if (!poSheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!");
-    const poId = await nextId(poSheet);
+    const doc = await openDoc()
+    await doc.loadInfo()
+    const now = new Date().toISOString()
+    const poSheet = doc.sheetsByTitle['purchase_orders']
+    if (!poSheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!")
+    const poId = await nextId(poSheet)
     await poSheet.addRow({
       id: poId,
       po_number: data.nomorPo,
@@ -95,12 +99,12 @@ export async function saveNewPO(data) {
       deadline: data.tanggalKirim,
       status: 'Open',
       priority: data.prioritas,
-      notes: data.catatan,
-    });
-    console.log('Purchase Order header saved with ID:', poId);
-    const revisionSheet = doc.sheetsByTitle['purchase_order_revisions'];
-    if (!revisionSheet) throw new Error("Sheet 'purchase_order_revisions' tidak ditemukan!");
-    const revId = await nextId(revisionSheet);
+      notes: data.catatan
+    })
+    console.log('Purchase Order header saved with ID:', poId)
+    const revisionSheet = doc.sheetsByTitle['purchase_order_revisions']
+    if (!revisionSheet) throw new Error("Sheet 'purchase_order_revisions' tidak ditemukan!")
+    const revId = await nextId(revisionSheet)
     await revisionSheet.addRow({
       id: revId,
       purchase_order_id: poId,
@@ -109,117 +113,191 @@ export async function saveNewPO(data) {
       status: 'Open',
       priority: data.prioritas,
       notes: data.catatan,
-      created_at: now,
-    });
-    console.log('Revision 0 saved with ID:', revId);
-    const itemSheet = doc.sheetsByTitle['purchase_order_items'];
-    if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!");
+      created_at: now
+    })
+    console.log('Revision 0 saved with ID:', revId)
+    const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!")
     for (const item of data.items) {
-      const itemId = await nextId(itemSheet);
+      const itemId = await nextId(itemSheet)
       await itemSheet.addRow({
         id: itemId,
-  purchase_order_id: poId,
-  revision_id: revId,
-  product_id: item.product_id,
-  product_name: item.product_name,
-  wood_type: item.wood_type,
-  profile: item.profile,
-  color: item.color,
-  finishing: item.finishing,
-  sample: item.sample,
-  marketing: item.marketing,
-  thickness_mm: item.thickness_mm,
-  width_mm: item.width_mm,
-  length_mm: item.length_mm,
-  length_type: item.length_type,
-  quantity: item.quantity,
-  satuan: item.satuan,
-  location: item.location,
-  notes: item.notes
-      });
+        purchase_order_id: poId,
+        revision_id: revId,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        wood_type: item.wood_type,
+        profile: item.profile,
+        color: item.color,
+        finishing: item.finishing,
+        sample: item.sample,
+        marketing: item.marketing,
+        thickness_mm: item.thickness_mm,
+        width_mm: item.width_mm,
+        length_mm: item.length_mm,
+        length_type: item.length_type,
+        quantity: item.quantity,
+        satuan: item.satuan,
+        location: item.location,
+        notes: item.notes
+      })
     }
-    console.log('✅ Semua data PO berhasil disimpan!');
-    return { success: true, poId };
+    console.log('✅ Semua data PO berhasil disimpan!')
+    return { success: true, poId }
   } catch (error) {
-    console.error('❌ Gagal menyimpan PO ke Google Sheets:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Gagal menyimpan PO ke Google Sheets:', error)
+    return { success: false, error: error.message }
   }
 }
 
 export async function deletePO(poId) {
-  console.log(`Mencoba menghapus PO dengan ID: ${poId}`);
+  console.log(`Mencoba menghapus PO dengan ID: ${poId}`)
+  try {
+    const doc = await openDoc()
+    await doc.loadInfo()
+    const poSheet = doc.sheetsByTitle['purchase_orders']
+    const poRows = await poSheet.getRows()
+    const poToDelete = poRows.find((row) => row._rawData[0] === poId)
+    if (!poToDelete) {
+      console.error(`❌ GAGAL: PO dengan ID ${poId} tidak ditemukan di sheet 'purchase_orders'.`)
+    }
+    if (poToDelete) {
+      await poToDelete.delete()
+      console.log(`✅ PO header dengan ID ${poId} berhasil dihapus.`)
+    }
+    const revSheet = doc.sheetsByTitle['purchase_order_revisions']
+    const revRows = await revSheet.getRows()
+    const revsToDelete = revRows.filter((row) => row._rawData[1] === poId)
+    for (const rev of revsToDelete) {
+      await rev.delete()
+    }
+    console.log(`✅ ${revsToDelete.length} revisi untuk PO ${poId} berhasil dihapus.`)
+    const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    const itemRows = await itemSheet.getRows()
+    const itemsToDelete = itemRows.filter((row) => row._rawData[1] === poId)
+    for (const item of itemsToDelete) {
+      await item.delete()
+    }
+    console.log(`✅ ${itemsToDelete.length} item untuk PO ${poId} berhasil dihapus.`)
+    console.log(`✅ Semua data terkait PO ${poId} berhasil dihapus.`)
+    return { success: true }
+  } catch (error) {
+    console.error(`❌ Gagal menghapus PO ${poId}:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function listPORevisions(poId) {
+  console.log(`Mencoba mengambil daftar revisi untuk PO ID: ${poId}`);
   try {
     const doc = await openDoc();
     await doc.loadInfo();
-    const poSheet = doc.sheetsByTitle['purchase_orders'];
-    const poRows = await poSheet.getRows();
-    const poToDelete = poRows.find(row => row._rawData[0] === poId);
-    if (!poToDelete) {
-      console.error(`❌ GAGAL: PO dengan ID ${poId} tidak ditemukan di sheet 'purchase_orders'.`);
-    }
-    if (poToDelete) {
-      await poToDelete.delete();
-      console.log(`✅ PO header dengan ID ${poId} berhasil dihapus.`);
-    }
-    const revSheet = doc.sheetsByTitle['purchase_order_revisions'];
-    const revRows = await revSheet.getRows();
-    const revsToDelete = revRows.filter(row => row._rawData[1] === poId);
-    for (const rev of revsToDelete) {
-      await rev.delete();
-    }
-    console.log(`✅ ${revsToDelete.length} revisi untuk PO ${poId} berhasil dihapus.`);
-    const itemSheet = doc.sheetsByTitle['purchase_order_items'];
-    const itemRows = await itemSheet.getRows();
-    const itemsToDelete = itemRows.filter(row => row._rawData[1] === poId);
-    for (const item of itemsToDelete) {
-      await item.delete();
-    }
-    console.log(`✅ ${itemsToDelete.length} item untuk PO ${poId} berhasil dihapus.`);
-    console.log(`✅ Semua data terkait PO ${poId} berhasil dihapus.`);
-    return { success: true };
+    const revisionSheet = doc.sheetsByTitle['purchase_order_revisions'];
+    if (!revisionSheet) throw new Error("Sheet 'purchase_order_revisions' tidak ditemukan!");
+
+    const revisionRows = await revisionSheet.getRows();
+    // Filter berdasarkan kolom ke-2 (index 1), yaitu purchase_order_id
+    const revisions = revisionRows.filter(r => r.get('purchase_order_id') === poId).map(r => ({
+        id: r.get('id'),
+        purchase_order_id: r.get('purchase_order_id'),
+        revision_number: r.get('revision_number'),
+        deadline: r.get('deadline'),
+        status: r.get('status'),
+        priority: r.get('priority'),
+        notes: r.get('notes'),
+        created_at: r.get('created_at'),
+    }));
+
+    console.log(`✅ Berhasil mengambil ${revisions.length} revisi untuk PO ID ${poId}`);
+    // Urutkan dari revisi terbaru ke terlama (nomor revisi terbesar dulu)
+    return revisions.sort((a, b) => Number(b.revision_number) - Number(a.revision_number));
   } catch (error) {
-    console.error(`❌ Gagal menghapus PO ${poId}:`, error);
-    return { success: false, error: error.message };
+    console.error(`Gagal memuat daftar revisi untuk PO ID ${poId}:`, error);
+    return [];
+  }
+}
+
+// ✨ TAMBAHKAN FUNGSI BARU INI JUGA
+// Mengambil item berdasarkan REVISION_ID
+export async function listPOItemsByRevision(revisionId) {
+  console.log(`Mencoba mengambil item PO untuk REVISION ID: ${revisionId}`);
+  try {
+    const doc = await openDoc();
+    await doc.loadInfo();
+    const itemSheet = doc.sheetsByTitle['purchase_order_items'];
+    if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!");
+
+    const itemRows = await itemSheet.getRows();
+    // Filter berdasarkan kolom ke-3 (index 2), yaitu revision_id
+    const items = itemRows.filter(r => r.get('revision_id') === revisionId).map(r => ({
+      id: r.get('id'),
+      purchase_order_id: r.get('purchase_order_id'),
+      revision_id: r.get('revision_id'),
+      product_id: r.get('product_id'),
+      product_name: r.get('product_name'),
+      wood_type: r.get('wood_type'),
+      profile: r.get('profile'),
+      color: r.get('color'),
+      finishing: r.get('finishing'),
+      sample: r.get('sample'),
+      marketing: r.get('marketing'),
+      thickness_mm: Number(r.get('thickness_mm')),
+      width_mm: Number(r.get('width_mm')),
+      length_mm: Number(r.get('length_mm')),
+      length_type: r.get('length_type'),
+      quantity: Number(r.get('quantity')),
+      satuan: r.get('satuan'),
+      location: r.get('location'),
+      notes: r.get('notes'),
+    }));
+
+    console.log(`✅ Berhasil mengambil ${items.length} item untuk Revisi ID ${revisionId}`);
+    return items;
+  } catch (error) {
+    console.error(`Gagal memuat item PO untuk Revisi ID ${revisionId}:`, error);
+    return [];
   }
 }
 
 // ✨ Tambahkan fungsi baru untuk mengambil item
 export async function listPOItems(poId) {
-  console.log(`Mencoba mengambil item PO untuk ID: ${poId}`);
+  console.log(`Mencoba mengambil item PO untuk ID: ${poId}`)
   try {
-    const doc = await openDoc();
-    await doc.loadInfo();
-    const itemSheet = doc.sheetsByTitle['purchase_order_items'];
-    if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!");
+    const doc = await openDoc()
+    await doc.loadInfo()
+    const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!")
 
-    const itemRows = await itemSheet.getRows();
-    const items = itemRows.filter(r => r._rawData[1] === poId).map(r => ({
-      // Menggunakan indeks _rawData untuk pemetaan yang andal
-      id: r._rawData[0],
-      purchase_order_id: r._rawData[1],
-      revision_id: r._rawData[2],
-      product_id: r._rawData[3],
-      product_name: r._rawData[4],
-      wood_type: r._rawData[5],
-      profile: r._rawData[6],
-      color: r._rawData[7],
-      finishing: r._rawData[8],
-      sample: r._rawData[9],
-      marketing: r._rawData[10],
-      thickness_mm: Number(r._rawData[11]),
-      width_mm: Number(r._rawData[12]),
-      length_mm: Number(r._rawData[13]),
-      length_type: r._rawData[14],
-      quantity: Number(r._rawData[15]),
-      satuan: r._rawData[16],
-      location: r._rawData[17],
-      notes: r._rawData[18],
-    }));
+    const itemRows = await itemSheet.getRows()
+    const items = itemRows
+      .filter((r) => r._rawData[1] === poId)
+      .map((r) => ({
+        // Menggunakan indeks _rawData untuk pemetaan yang andal
+        id: r._rawData[0],
+        purchase_order_id: r._rawData[1],
+        revision_id: r._rawData[2],
+        product_id: r._rawData[3],
+        product_name: r._rawData[4],
+        wood_type: r._rawData[5],
+        profile: r._rawData[6],
+        color: r._rawData[7],
+        finishing: r._rawData[8],
+        sample: r._rawData[9],
+        marketing: r._rawData[10],
+        thickness_mm: Number(r._rawData[11]),
+        width_mm: Number(r._rawData[12]),
+        length_mm: Number(r._rawData[13]),
+        length_type: r._rawData[14],
+        quantity: Number(r._rawData[15]),
+        satuan: r._rawData[16],
+        location: r._rawData[17],
+        notes: r._rawData[18]
+      }))
 
-    return items;
+    return items
   } catch (error) {
-    console.error(`Gagal memuat item PO untuk ID ${poId}:`, error);
-    return [];
+    console.error(`Gagal memuat item PO untuk ID ${poId}:`, error)
+    return []
   }
 }
 
@@ -243,13 +321,13 @@ export async function updatePO(data) {
     }
     console.log(`✅ Baris PO berhasil ditemukan. Melakukan update...`);
 
-    // Perbarui nilai di baris yang ditemukan
-    poToUpdate._rawData[1] = data.nomorPo;
-    poToUpdate._rawData[2] = data.namaCustomer;
-    poToUpdate._rawData[3] = data.tanggalKirim;
-    poToUpdate._rawData[4] = data.status;
-    poToUpdate._rawData[5] = data.prioritas;
-    poToUpdate._rawData[6] = data.catatan;
+    poToUpdate.set('po_number', data.nomorPo);
+    poToUpdate.set('project_name', data.namaCustomer);
+    poToUpdate.set('deadline', data.tanggalKirim);
+    // Kita tidak mengupdate status dari form edit, karena status harusnya punya alur sendiri
+    // poToUpdate.set('status', data.status);
+    poToUpdate.set('priority', data.prioritas);
+    poToUpdate.set('notes', data.catatan);
 
     await poToUpdate.save(); // Simpan perubahan ke Google Sheets
     console.log(`✅ PO header dengan ID ${data.poId} berhasil diperbarui.`);
@@ -260,8 +338,8 @@ export async function updatePO(data) {
 
     const revRows = await revisionSheet.getRows();
     const currentMaxRev = revRows
-      .filter(r => r._rawData[1] === data.poId)
-      .reduce((max, r) => Math.max(max, parseInt(r._rawData[2])), -1);
+      .filter(r => r.get('purchase_order_id') === data.poId)
+      .reduce((max, r) => Math.max(max, parseInt(r.get('revision_number'))), -1);
 
     const newRevNumber = currentMaxRev + 1;
     const newRevId = await nextId(revisionSheet);
@@ -271,7 +349,7 @@ export async function updatePO(data) {
       purchase_order_id: data.poId,
       revision_number: newRevNumber,
       deadline: data.tanggalKirim,
-      status: data.status,
+      status: poToUpdate.get('status'), // Ambil status terakhir dari PO header
       priority: data.prioritas,
       notes: data.catatan,
       created_at: now,
@@ -282,25 +360,38 @@ export async function updatePO(data) {
     const itemSheet = doc.sheetsByTitle['purchase_order_items'];
     if (!itemSheet) throw new Error("Sheet 'purchase_order_items' tidak ditemukan!");
 
+    // Logika ini kurang efisien. Lebih baik tidak menghapus semua item yang terkait poId,
+    // karena bisa jadi ada item dari revisi lama. Namun untuk saat ini kita ikuti alur yang ada.
     const existingItems = await itemSheet.getRows();
-    const itemsToDelete = existingItems.filter(row => row._rawData[1] === data.poId);
+    const itemsToDelete = existingItems.filter(row => row.get('purchase_order_id') === data.poId);
     for (const item of itemsToDelete) {
-        await item.delete();
+      await item.delete();
     }
     console.log(`✅ ${itemsToDelete.length} item lama berhasil dihapus.`);
 
+    // ❗ BAGIAN YANG DIPERBAIKI ADA DI SINI
     for (const item of data.items) {
       const itemId = await nextId(itemSheet);
       await itemSheet.addRow({
         id: itemId,
         purchase_order_id: data.poId,
         revision_id: newRevId,
-        product_id: item.productId,
-        thickness_mm: item.thickness,
-        width_mm: item.width,
-        length_mm: item.length,
-        quantity: item.qty,
+        // Pastikan semua properti di bawah ini cocok dengan data dari frontend
+        product_id: item.product_id,
+        product_name: item.product_name,
+        wood_type: item.wood_type,
+        profile: item.profile,
+        color: item.color,
+        finishing: item.finishing,
+        sample: item.sample,
+        marketing: item.marketing,
+        thickness_mm: item.thickness_mm,
+        width_mm: item.width_mm,
+        length_mm: item.length_mm,
+        length_type: item.length_type,
+        quantity: item.quantity,
         satuan: item.satuan,
+        location: item.location,
         notes: item.notes
       });
     }
@@ -316,15 +407,15 @@ export async function updatePO(data) {
 // Tambahkan fungsi ini di paling bawah file electron/sheet.js
 
 export async function getProducts() {
-  console.log("Mencoba mengambil data dari sheet 'product_master'...");
+  console.log("Mencoba mengambil data dari sheet 'product_master'...")
   try {
-    const doc = await openDoc();
-    await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['product_master'];
-    if (!sheet) throw new Error("Sheet 'product_master' tidak ditemukan!");
+    const doc = await openDoc()
+    await doc.loadInfo()
+    const sheet = doc.sheetsByTitle['product_master']
+    if (!sheet) throw new Error("Sheet 'product_master' tidak ditemukan!")
 
-    const rows = await sheet.getRows();
-    const products = rows.map(r => ({
+    const rows = await sheet.getRows()
+    const products = rows.map((r) => ({
       product_name: r._rawData[0],
       wood_type: r._rawData[1],
       profile: r._rawData[2],
@@ -332,14 +423,14 @@ export async function getProducts() {
       finishing: r._rawData[4],
       sample: r._rawData[5],
       marketing: r._rawData[6],
-      satuan: r._rawData[7],
-    }));
+      satuan: r._rawData[7]
+    }))
 
-    console.log(`✅ Berhasil mengambil ${products.length} produk dari master.`);
-    console.log("Data Produk yang dikirim ke frontend:", products);
-    return products;
+    console.log(`✅ Berhasil mengambil ${products.length} produk dari master.`)
+    console.log('Data Produk yang dikirim ke frontend:', products)
+    return products
   } catch (error) {
-    console.error("❌ Gagal mengambil daftar produk:", error);
-    return [];
+    console.error('❌ Gagal mengambil daftar produk:', error)
+    return []
   }
 }

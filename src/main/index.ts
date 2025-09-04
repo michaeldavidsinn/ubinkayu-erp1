@@ -5,7 +5,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 // Pastikan path ini benar sesuai struktur folder Anda
-import { testSheetConnection, saveNewPO, listPOs, deletePO, updatePO, listPOItems, getProducts } from '../../electron/sheet.js';
+import {
+  testSheetConnection, saveNewPO, listPOs, deletePO, updatePO, listPOItems, getProducts,
+  listPORevisions, listPOItemsByRevision
+} from '../../electron/sheet.js';
 
 
 // FIX UNTUK MASALAH CACHE: Diletakkan di paling atas, sebelum app ready.
@@ -76,6 +79,14 @@ ipcMain.handle('ping', () => {
 
   ipcMain.handle('product:get', async () => {
     return await getProducts();
+  });
+
+  ipcMain.handle('po:listRevisions', async (_event, poId) => {
+    return await listPORevisions(poId);
+  });
+
+  ipcMain.handle('po:listItemsByRevision', async (_event, revisionId) => {
+    return await listPOItemsByRevision(revisionId);
   });
 
   // 3. Setelah semua persiapan selesai, buat dan tampilkan jendela aplikasi
