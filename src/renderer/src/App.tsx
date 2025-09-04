@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable prettier/prettier */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card } from './components/Card'
 import { Input } from './components/Input'
 import { Textarea } from './components/textarea'
@@ -163,14 +163,104 @@ function App() {
   )
 }
 
+interface FilterPanelProps {
+  filters: any;
+  onFilterChange: (name: string, value: any) => void;
+  poCount: { displayed: number; total: number };
+}
+
+const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFilterChange, poCount }) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    onFilterChange(e.target.name, e.target.value);
+  };
+
+  return (
+    <Card className="filter-panel">
+      <div className="filter-header">
+        <h3>📊 Sort & Filter Purchase Order</h3>
+        <span>
+          Menampilkan {poCount.displayed} dari {poCount.total} PO
+        </span>
+      </div>
+
+      <div className="filter-grid">
+        {/* --- Urutkan --- */}
+        <div className="form-group">
+          <label>Urutkan Berdasarkan</label>
+          <select name="sortBy" value={filters.sortBy} onChange={handleInputChange}>
+            <option value="deadline-asc">Tanggal Kirim (Terdekat)</option>
+            <option value="deadline-desc">Tanggal Kirim (Terjauh)</option>
+            <option value="created-desc">PO Terbaru</option>
+            <option value="created-asc">PO Terlama</option>
+            <option value="priority">Prioritas (Urgent &gt; High &gt; Normal)</option>
+          </select>
+        </div>
+
+        {/* --- Pencarian --- */}
+        <div className="form-group search-bar">
+          <label>Pencarian</label>
+          <Input
+            type="text"
+            name="searchQuery"
+            placeholder="Cari berdasarkan nomor PO atau nama customer..."
+            value={filters.searchQuery}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        {/* --- Filter Dropdown --- */}
+        <div className="form-group">
+          <label>Status PO</label>
+          <select name="status" value={filters.status} onChange={handleInputChange}>
+            <option value="all">Semua Status</option>
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Prioritas</label>
+          <select name="priority" value={filters.priority} onChange={handleInputChange}>
+            <option value="all">Semua Prioritas</option>
+            <option value="Urgent">Urgent</option>
+            <option value="High">High</option>
+            <option value="Normal">Normal</option>
+          </select>
+        </div>
+
+        {/* --- Filter Tanggal --- */}
+        <div className="form-group">
+          <label>Tanggal Input Dari</label>
+          <Input type="date" name="dateFrom" value={filters.dateFrom} onChange={handleInputChange} />
+        </div>
+        <div className="form-group">
+          <label>Tanggal Input Sampai</label>
+          <Input type="date" name="dateTo" value={filters.dateTo} onChange={handleInputChange} />
+        </div>
+
+        <div className="form-group">
+          <label>Tanggal Kirim Dari</label>
+          <Input type="date" name="deadlineFrom" value={filters.deadlineFrom} onChange={handleInputChange} />
+        </div>
+        <div className="form-group">
+          <label>Tanggal Kirim Sampai</label>
+          <Input type="date" name="deadlineTo" value={filters.deadlineTo} onChange={handleInputChange} />
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 // --- Halaman: Daftar Purchase Order ---
 interface POListPageProps {
-  poList: POHeader[]
-  onAddPO: () => void
-  onDeletePO: (poId: string) => Promise<void>
-  onEditPO: (po: POHeader) => void
-  onShowDetail: (po: POHeader) => void
-  isLoading: boolean
+  poList: POHeader[];
+  onAddPO: () => void;
+  onDeletePO: (poId: string) => Promise<void>;
+  onEditPO: (po: POHeader) => void;
+  onShowDetail: (po: POHeader) => void;
+  isLoading: boolean;
 }
 
 const POListPage: React.FC<POListPageProps> = ({
@@ -180,64 +270,152 @@ const POListPage: React.FC<POListPageProps> = ({
   onDeletePO,
   onEditPO,
   onShowDetail
-}) => (
-  <div className="page-container">
-    <div className="page-header">
-      <div>
-        <h1>Kelola Purchase Order</h1>
-        <p>Pantau dan kelola semua pesanan produksi</p>
+}) => {
+  // State untuk menyimpan semua kriteria filter
+  const [filters, setFilters] = useState({
+    sortBy: 'deadline-asc',
+    searchQuery: '',
+    status: 'all',
+    priority: 'all',
+    dateFrom: '',
+    dateTo: '',
+    deadlineFrom: '',
+    deadlineTo: ''
+  });
+
+  const handleFilterChange = (name: string, value: any) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Logika untuk memfilter dan mengurutkan data PO
+  const filteredAndSortedPOs = useMemo(() => {
+    let processedPOs = [...poList];
+
+    // 1. Terapkan Filter Pencarian
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      processedPOs = processedPOs.filter(
+        po =>
+          po.po_number.toLowerCase().includes(query) ||
+          po.project_name.toLowerCase().includes(query)
+      );
+    }
+
+    // 2. Terapkan Filter Status
+    if (filters.status !== 'all') {
+      processedPOs = processedPOs.filter(po => po.status === filters.status);
+    }
+
+    // 3. Terapkan Filter Prioritas
+    if (filters.priority !== 'all') {
+      processedPOs = processedPOs.filter(po => po.priority === filters.priority);
+    }
+
+    // 4. Terapkan Filter Tanggal Input
+    if (filters.dateFrom) {
+      processedPOs = processedPOs.filter(po => new Date(po.created_at) >= new Date(filters.dateFrom));
+    }
+    if (filters.dateTo) {
+      processedPOs = processedPOs.filter(po => new Date(po.created_at) <= new Date(filters.dateTo + 'T23:59:59'));
+    }
+
+    // 5. Terapkan Filter Tanggal Kirim
+    if (filters.deadlineFrom) {
+      processedPOs = processedPOs.filter(po => po.deadline && new Date(po.deadline) >= new Date(filters.deadlineFrom));
+    }
+    if (filters.deadlineTo) {
+      processedPOs = processedPOs.filter(po => po.deadline && new Date(po.deadline) <= new Date(filters.deadlineTo + 'T23:59:59'));
+    }
+
+    // 6. Terapkan Logika Pengurutan (Sorting)
+    const priorityMap = { Urgent: 1, High: 2, Normal: 3 };
+    switch (filters.sortBy) {
+      case 'deadline-asc':
+        processedPOs.sort((a, b) => new Date(a.deadline || 0).getTime() - new Date(b.deadline || 0).getTime());
+        break;
+      case 'deadline-desc':
+        processedPOs.sort((a, b) => new Date(b.deadline || 0).getTime() - new Date(a.deadline || 0).getTime());
+        break;
+      case 'created-desc':
+        processedPOs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'created-asc':
+        processedPOs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'priority':
+        processedPOs.sort((a, b) => (priorityMap[a.priority] || 4) - (priorityMap[b.priority] || 4));
+        break;
+    }
+
+    return processedPOs;
+  }, [poList, filters]);
+
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <div>
+          <h1>Kelola Purchase Order</h1>
+          <p>Pantau dan kelola semua pesanan produksi dengan fitur sort dan filter</p>
+        </div>
+        <Button onClick={onAddPO}>+ Tambah PO Baru</Button>
       </div>
-      <Button onClick={onAddPO}>+ Tambah PO Baru</Button>
-    </div>
-    <Card>
-      <p>
-        Menampilkan {poList.length} dari {poList.length} PO
-      </p>
-    </Card>
-    <div className="po-grid">
-      {isLoading ? (
-        <div className="loading-spinner">⏳ Loading data PO dari Google Sheets...</div>
-      ) : poList.length === 0 ? (
-        <p>Belum ada data Purchase Order.</p>
-      ) : (
-        poList.map((po) => (
-          <Card key={po.id} className="po-item-card">
-            <div className="po-card-header">
-              <span>
-                <b>PO:</b> {po.po_number}
-              </span>
-              <span className={`status-badge ${(po.priority || 'Normal').toLowerCase()}`}>
-                {po.priority || 'Normal'}
-              </span>
-            </div>
-            <p className="customer-name">{po.project_name}</p>
-            <div className="po-card-info">
-              <span>
-                <b>Tanggal Input:</b>{' '}
-                {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}
-              </span>
-            </div>
-            <div className="po-card-info">
-              <span>
-                <b>Target Kirim:</b>{' '}
-                {po.deadline ? new Date(po.deadline).toLocaleDateString() : '-'}
-              </span>
-            </div>
-            <div className="po-card-footer">
-              <Button variant="secondary" onClick={() => onShowDetail(po)}>
-                Detail
-              </Button>
-              <Button onClick={() => onEditPO(po)}>Revisi</Button>
-              <Button variant="secondary" onClick={() => onDeletePO(po.id)}>
-                Hapus
-              </Button>
-            </div>
+
+      {/* Tampilkan Panel Filter di sini */}
+      <FilterPanel
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        poCount={{ displayed: filteredAndSortedPOs.length, total: poList.length }}
+      />
+
+      <div className="po-grid">
+        {isLoading ? (
+          <div className="loading-spinner">⏳ Loading data PO dari Google Sheets...</div>
+        ) : filteredAndSortedPOs.length === 0 ? (
+          <Card>
+            <p>Tidak ada data Purchase Order yang cocok dengan kriteria filter Anda.</p>
           </Card>
-        ))
-      )}
+        ) : (
+          // Gunakan data yang sudah difilter untuk me-render kartu
+          filteredAndSortedPOs.map((po) => (
+            <Card key={po.id} className="po-item-card">
+              <div className="po-card-header">
+                <span>
+                  <b>PO:</b> {po.po_number}
+                </span>
+                <span className={`status-badge ${(po.priority || 'Normal').toLowerCase()}`}>
+                  {po.priority || 'Normal'}
+                </span>
+              </div>
+              <p className="customer-name">{po.project_name}</p>
+              <div className="po-card-info">
+                <span>
+                  <b>Status PO:</b> {po.status || 'Open'}
+                </span>
+              </div>
+              <div className="po-card-info">
+                <span>
+                  <b>Tanggal Input:</b>{' '}
+                  {po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}
+                </span>
+              </div>
+              <div className="po-card-info">
+                <span>
+                  <b>Target Kirim:</b>{' '}
+                  {po.deadline ? new Date(po.deadline).toLocaleDateString('id-ID') : '-'}
+                </span>
+              </div>
+              <div className="po-card-footer">
+                <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
+                <Button onClick={() => onEditPO(po)}>Revisi</Button>
+                <Button variant="secondary" onClick={() => onDeletePO(po.id)}>Hapus</Button>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
-  </div>
-)
+  );
+};
 
 // --- Halaman: Input Purchase Order ---
 interface InputPOPageProps {

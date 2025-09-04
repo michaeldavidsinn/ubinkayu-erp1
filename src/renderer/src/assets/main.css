@@ -358,3 +358,60 @@ label {
   gap: 1.25rem 2rem;
   align-items: center;
 }
+
+/* ================================== */
+/* STYLING UNTUK PANEL SORT & FILTER  */
+/* ================================== */
+
+.filter-panel {
+  padding: 24px;
+  margin-bottom: 24px; /* Memberi jarak ke daftar PO di bawah */
+  background-color: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filter-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.filter-header span {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+/* Kunci utama layoutnya ada di sini */
+.filter-grid {
+  display: grid;
+  /* Membuat kolom responsif, minimal 220px */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px 16px; /* Jarak vertikal dan horizontal */
+}
+
+/* Membuat bar pencarian memanjang penuh */
+.search-bar {
+  grid-column: 1 / -1;
+}
+
+/* Sedikit penyesuaian untuk form-group yang sudah ada */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+}
