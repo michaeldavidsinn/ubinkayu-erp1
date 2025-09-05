@@ -11,17 +11,29 @@ import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
 import InputPOPage from './pages/InputPOPage'
 import PODetailPage from './pages/PODetailPage'
+import ProgressTrackingPage from './pages/ProgressTrackingPage' // <-- BARU: Impor halaman baru
+
+// --- DUMMY DATA UNTUK HALAMAN TRACKING ---
+const dummyTrackingData = [
+  { id: '1', po_number: '29938231223', project_name: 'UDjiptama', priority: 'Urgent', progress: 0, deadline: '2025-08-28', is_overdue: true },
+  { id: '2', po_number: 'ggv', project_name: 'jkhkx', priority: 'Normal', progress: 25, deadline: '2025-09-15', is_overdue: false },
+  { id: '3', po_number: 'albert', project_name: 'albert', priority: 'High', progress: 75, deadline: '2025-09-20', is_overdue: false },
+  { id: '4', po_number: 'PO-004', project_name: 'Proyek Delta', priority: 'Normal', progress: 100, deadline: '2025-09-01', is_overdue: false },
+]
 
 function App() {
-  const [view, setView] = useState<'list' | 'input' | 'detail'>('list')
+  // BARU: Tambahkan 'tracking' sebagai salah satu kemungkinan view
+  const [view, setView] = useState<'list' | 'input' | 'detail' | 'tracking'>('list')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
   const [detailPO, setDetailPO] = useState<POHeader | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // ... (fungsi fetchPOs, handleDeletePO, dll. tetap sama) ...
   const fetchPOs = async () => {
     setIsLoading(true)
     try {
+      // @ts-ignore
       const pos: POHeader[] = await window.api.listPOs()
       setPurchaseOrders(pos)
     } catch (error) {
@@ -34,7 +46,6 @@ function App() {
   useEffect(() => {
     fetchPOs()
   }, [])
-
   const handleDeletePO = async (poId: string) => {
     if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
       setIsLoading(true)
@@ -43,7 +54,7 @@ function App() {
         const result = await window.api.deletePO(poId)
         if (result.success) {
           alert('PO berhasil dihapus.')
-          await fetchPOs() // Muat ulang daftar setelah hapus
+          await fetchPOs()
         } else {
           throw new Error(result.error)
         }
@@ -70,11 +81,18 @@ function App() {
     setView('detail')
   }
 
+  // BARU: Fungsi untuk menangani navigasi dari Navbar
+  const handleNavigate = (targetView: 'list' | 'tracking') => {
+    if (targetView === 'list') {
+      fetchPOs() // Muat ulang data PO saat kembali ke list
+    }
+    setView(targetView)
+  }
+
   const handleBackToList = () => {
     setEditingPO(null)
     setDetailPO(null)
-    fetchPOs() // Selalu muat ulang data saat kembali ke daftar
-    setView('list')
+    handleNavigate('list')
   }
 
   const renderContent = () => {
@@ -83,6 +101,9 @@ function App() {
         return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />
       case 'detail':
         return <PODetailPage po={detailPO} onBackToList={handleBackToList} />
+      // BARU: Tambahkan case untuk 'tracking'
+      case 'tracking':
+        return <ProgressTrackingPage poList={dummyTrackingData} />
       case 'list':
       default:
         return (
@@ -100,7 +121,8 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Navbar activeLink="Purchase Orders" />
+      {/* BARU: Kirim 'view' dan 'handleNavigate' sebagai props */}
+      <Navbar currentView={view} onNavigate={handleNavigate} />
       <main className="main-content">{renderContent()}</main>
     </div>
   )
