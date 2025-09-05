@@ -415,3 +415,111 @@ label {
   font-weight: 500;
   color: #4a5568;
 }
+
+/* Tambahkan di bawah bagian .po-item-card atau di akhir file */
+
+/* ================================== */
+/* STYLING UNTUK PO DETAIL PAGE       */
+/* ================================== */
+
+.detail-po-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsif, min 350px */
+  gap: 1.5rem; /* Jarak antar kartu */
+  margin-bottom: 2rem;
+}
+
+.po-summary-card {
+  /* Border kiri untuk menonjolkan PO */
+  border-left: 4px solid var(--primary-color);
+}
+
+.po-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.po-summary-po-number {
+  margin: 0;
+  font-size: 1.5rem; /* Lebih besar dari h2 Card */
+  font-weight: 700;
+  color: var(--primary-color); /* Warna PO number */
+}
+
+.po-summary-customer {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.po-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.info-item span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Badge untuk status PO di detail page */
+.status-badge.status-open { background-color: #3182CE; } /* Blue */
+.status-badge.status-in-progress { background-color: #D69E2E; } /* Orange */
+.status-badge.status-completed { background-color: #38A169; } /* Green */
+.status-badge.status-cancelled { background-color: #C53030; } /* Red */
+
+
+.notes-card {
+  /* Jika Anda ingin kartu catatan memiliki border kiri yang berbeda */
+  border-left: 4px solid #A0AEC0; /* Abu-abu */
+}
+
+.notes-card h4 {
+  margin-top: 0;
+  color: var(--text-primary);
+}
+
+.notes-card p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Penyesuaian untuk input di dalam detail item */
+.item-card .form-grid {
+    gap: 1rem; /* Kurangi sedikit jarak di sini */
+}
+.item-card .form-grid .form-group {
+    margin-bottom: 0; /* Hindari margin berlebihan */
+}
+
+.info-item .status-badge {
+  color: white;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem; /* Sedikit tambah padding vertikal */
+  line-height: 1;
+
+  /* --- PERUBAHAN DI SINI --- */
+  text-align: center;      /* 1. Membuat teks rata tengah */
+  align-self: flex-start;  /* 2. Mencegah badge meregang selebar kolom */
+  min-width: 80px;         /* 3. (Opsional) Memberi lebar minimum agar konsisten */
+}
