@@ -181,7 +181,8 @@ export async function listPOs() {
       status: r._rawData[4],
       priority: r._rawData[5],
       notes: r._rawData[6],
-      created_at: r._rawData[7]
+      created_at: r._rawData[7],
+      kubikasi_total: Number(r._rawData[8]) || 0 
     }))
   } catch (err) {
     console.error('❌ listPOs error:', err.message)
@@ -208,7 +209,8 @@ export async function saveNewPO(data) {
       deadline: data.tanggalKirim,
       status: 'Open',
       priority: data.prioritas,
-      notes: data.catatan
+      notes: data.catatan,
+      kubikasi_total: data.kubikasi_total || 0
     })
 
     const revId = await nextId(revSheet)
@@ -244,7 +246,8 @@ export async function saveNewPO(data) {
         quantity: item.quantity,
         satuan: item.satuan,
         location: item.location,
-        notes: item.notes
+        notes: item.notes,
+        kubikasi: item.kubikasi || 0 
       })
     }
 
@@ -280,6 +283,8 @@ export async function updatePO(data) {
     poToUpdate.set('deadline', data.tanggalKirim)
     poToUpdate.set('priority', data.prioritas)
     poToUpdate.set('notes', data.catatan)
+    poToUpdate.set('kubikasi_total', data.kubikasi_total || 0) // <<< tambahan
+
     await poToUpdate.save()
 
     const revRows = await revSheet.getRows()
@@ -323,7 +328,9 @@ export async function updatePO(data) {
         quantity: item.quantity,
         satuan: item.satuan,
         location: item.location,
-        notes: item.notes
+        notes: item.notes,
+        kubikasi: item.kubikasi || 0  // <<< tambahan
+
       })
     }
 
@@ -390,7 +397,8 @@ export async function listPOItems(poId) {
       quantity: Number(r._rawData[15]),
       satuan: r._rawData[16],
       location: r._rawData[17],
-      notes: r._rawData[18]
+      notes: r._rawData[18],
+      kubikasi: Number(r._rawData[19]) || 0
     }))
   } catch (err) {
     console.error('❌ listPOItems error:', err.message)
@@ -445,7 +453,9 @@ export async function listPOItemsByRevision(revisionId) {
       quantity: Number(r.get('quantity')),
       satuan: r.get('satuan'),
       location: r.get('location'),
-      notes: r.get('notes')
+      notes: r.get('notes'),
+      kubikasi: Number(r.get('kubikasi')) || 0   // <<< tambahan
+
     }))
   } catch (err) {
     console.error('❌ listPOItemsByRevision error:', err.message)

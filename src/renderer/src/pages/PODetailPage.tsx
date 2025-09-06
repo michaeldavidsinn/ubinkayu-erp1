@@ -125,6 +125,12 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
                     <label>Prioritas</label>
                     <span className={getPriorityBadgeClass(currentRevision?.priority)}>{currentRevision?.priority || '-'}</span>
                 </div>
+                
+<div className="info-item">
+  <label>Total Kubikasi</label>
+  <span>{po.kubikasi_total ? po.kubikasi_total.toFixed(3) + ' m³' : '-'}</span>
+</div>
+
             </div>
         </Card>
 
@@ -178,6 +184,12 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
               <Input label="Panjang (mm)" value={item.length_mm} disabled />
               <Input label="Qty" value={`${item.quantity} ${item.satuan}`} disabled />
               <Input label="Catatan Item" value={item.notes || '-'} disabled />
+              <Input label="Sample" value={item.sample || '-'} disabled />
+<Input label="Marketing" value={item.marketing || '-'} disabled />
+<Input label="Length Type" value={item.length_type || '-'} disabled />
+<Input label="Lokasi" value={item.location || '-'} disabled />
+<Input label="Kubikasi (m³)" value={item.kubikasi?.toFixed(3) || '0'} disabled />
+
             </div>
           </Card>
         ))

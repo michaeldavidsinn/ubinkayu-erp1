@@ -20,6 +20,7 @@ export interface POItem {
   satuan: string
   location: string
   notes: string
+  kubikasi?: number   
 }
 
 export interface POHeader {
@@ -31,6 +32,7 @@ export interface POHeader {
   priority?: string
   deadline?: string
   notes?: string
+  kubikasi_total?: number
 }
 
 export interface PORevision {

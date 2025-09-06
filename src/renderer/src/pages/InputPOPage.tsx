@@ -15,6 +15,8 @@ interface InputPOPageProps {
   editingPO: POHeader | null
 }
 
+
+
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
   const [productList, setProductList] = useState<any[]>([])
@@ -124,32 +126,76 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handleSaveOrUpdatePO = async () => {
-    if (!poData.nomorPo || !poData.namaCustomer) {
-      return alert('Nomor PO dan Nama Customer harus diisi!')
-    }
-    if (items.length === 0) {
-      return alert('Tambahkan minimal satu item.')
-    }
-    setIsSaving(true)
-    try {
-      const payload = { ...poData, items, poId: editingPO?.id }
-      // @ts-ignore
-      const result = editingPO
-        ? await window.api.updatePO(payload)
-        : await window.api.saveNewPO(payload)
-
-      if (result.success) {
-        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
-        onSaveSuccess()
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      alert(`Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
-    } finally {
-      setIsSaving(false)
-    }
+  if (!poData.nomorPo || !poData.namaCustomer) {
+    return alert('Nomor PO dan Nama Customer harus diisi!')
   }
+  if (items.length === 0) {
+    return alert('Tambahkan minimal satu item.')
+  }
+  setIsSaving(true)
+  try {
+    // pakai calculateKubikasi di sini
+    const itemsWithKubikasi = items.map((item) => ({
+      ...item,
+      kubikasi: calculateKubikasi(item),
+    }))
+
+    const kubikasiTotal = itemsWithKubikasi.reduce(
+      (acc, item) => acc + (item.kubikasi || 0),
+      0
+    )
+
+    const payload = { 
+      ...poData, 
+      items: itemsWithKubikasi, 
+      kubikasi_total: kubikasiTotal,   // <<< tambahan
+      poId: editingPO?.id 
+    }
+
+    // @ts-ignore
+    const result = editingPO
+      ? await window.api.updatePO(payload)
+      : await window.api.saveNewPO(payload)
+
+    if (result.success) {
+      alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
+      onSaveSuccess()
+    } else {
+      throw new Error(result.error)
+    }
+  } catch (error) {
+    alert(`Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
+  } finally {
+    setIsSaving(false)
+  }
+}
+
+
+
+const calculateKubikasi = (item: POItem) => {
+  if (item.satuan === 'pcs') {
+    return (
+      ((item.thickness_mm || 0) *
+        (item.width_mm || 0) *
+        (item.length_mm || 0) *
+        (item.quantity || 0)) /
+      1_000_000_000
+    )
+  }
+  if (item.satuan === 'm1') {
+    return (
+      ((item.thickness_mm || 0) *
+        (item.width_mm || 0) *
+        (item.quantity || 0)) /
+      1_000_000_000
+    )
+  }
+  return 0
+}
+
+const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
+
+
 
   return (
     <div className="page-container">
@@ -384,9 +430,25 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               value={item.notes}
               onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
             />
+            
           </div>
+          <div className="form-group">
+  <label>Kubikasi Item</label>
+  <p><b>{calculateKubikasi(item).toFixed(3)} m³</b></p>
+</div>
         </Card>
+        
       ))}
+<Card>
+  <h2>Kubikasi Total</h2>
+  <p>
+    <b>
+      {items.reduce((acc, item) => acc + calculateKubikasi(item), 0).toFixed(3)} m³
+    </b>
+  </p>
+</Card>
+
+
     </div>
   )
 }
