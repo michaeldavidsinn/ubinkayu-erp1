@@ -5,10 +5,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    // PERBAIKAN DITAMBAHKAN DI SINI
     build: {
       rollupOptions: {
-        external: ['google-spreadsheet', 'google-auth-library']
+        external: [
+          'google-spreadsheet',
+          'google-auth-library',
+          'pdfkit',       // ⬅️ tambahin ini
+          'fs-extra'      // ⬅️ kalau kamu pakai fs-extra
+        ]
       }
     }
   },
