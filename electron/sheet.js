@@ -38,9 +38,11 @@ async function nextId(sheet) {
 }
 
 // ===============================
-// PDF GENERATOR (formatted table)
+// PDF GENERATOR
 // ===============================
-ratePOPDF(poHeader, items, revisionNumber = 0) {
+// PERBAIKAN 1: Mengubah deklarasi fungsi menjadi 'async function' yang benar
+// PERBAIKAN 2: Mengganti nama fungsi menjadi 'generatePOPDF' agar konsisten
+async function generatePOPDF(poHeader, items, revisionNumber = 0) {
   return new Promise((resolve, reject) => {
     try {
       const dir = path.join(process.cwd(), 'generated_pdfs')
@@ -141,7 +143,7 @@ ratePOPDF(poHeader, items, revisionNumber = 0) {
       doc.end()
 
       stream.on('finish', () => {
-        shell.openPath(filePath) // auto open
+        shell.openPath(filePath) // Buka PDF secara otomatis
         resolve(filePath)
       })
       stream.on('error', reject)
