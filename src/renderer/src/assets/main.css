@@ -671,3 +671,91 @@ label {
     text-align: center;
     padding: 2rem 0;
 }
+
+/* ================================== */
+/* STYLING UNTUK VIEW SWITCHER & TABLE */
+/* ================================== */
+
+.view-switcher {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+  background-color: var(--secondary-color);
+  padding: 4px;
+  border-radius: 8px;
+  width: fit-content;
+  margin-left: auto;
+}
+
+.view-switcher-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: transparent;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.view-switcher-btn:hover {
+  color: var(--text-primary);
+}
+
+.view-switcher-btn.active {
+  background-color: var(--card-bg);
+  color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.po-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.po-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.po-table th, .po-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.po-table th {
+  background-color: var(--secondary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.po-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.po-table tbody td {
+  font-size: 0.9rem;
+}
+
+.po-table-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.po-table-actions .button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Badge untuk status PO di dalam tabel */
+.status-badge.status-open { background-color: #3182CE; }
+.status-badge.status-in-progress { background-color: #D69E2E; }
+.status-badge.status-completed { background-color: #38A169; }
+.status-badge.status-cancelled { background-color: #C53030; }
