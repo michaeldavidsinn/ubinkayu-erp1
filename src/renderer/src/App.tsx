@@ -89,6 +89,7 @@ function App() {
   const handleBackToList = () => {
     setEditingPO(null)
     setDetailPO(null)
+    fetchPOs()
     handleNavigate('list')
   }
 

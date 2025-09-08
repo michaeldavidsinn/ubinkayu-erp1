@@ -50,111 +50,79 @@ function ensureDirSync(dirPath) {
 export async function generatePOPdf(poData, revisionNumber = 0) {
   return new Promise((resolve, reject) => {
     try {
-      const baseDir = path.join(app.getPath('documents'), 'UbinkayuERP_Generated', 'PurchaseOrders')
-      const poFolderName = `${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-${poData.project_name}`
-      const poDir = path.join(baseDir, poFolderName)
-      ensureDirSync(poDir)
+      const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
 
-      const revisionText = revisionNumber === 'preview' ? 'PREVIEW' : `Rev${revisionNumber}`
-      const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-${revisionText}.pdf`
-      const filePath = path.join(poDir, fileName)
-
-      const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' })
-      const stream = fs.createWriteStream(filePath)
-      doc.pipe(stream)
-
+      // [KODE UNTUK MENGISI KONTEN PDF DI SINI TETAP SAMA]
       // --- HEADER ---
-      doc.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true })
-      doc.moveDown(1)
-      doc.fontSize(11).font('Helvetica-Bold').text(`Nomor PO      : ${poData.po_number}`)
-      doc.font('Helvetica-Bold').text(`Customer      : ${poData.project_name}`)
-      doc
-        .font('Helvetica')
-        .text(`Tanggal Input : ${new Date(poData.created_at).toLocaleDateString('id-ID')}`)
-      doc.text(
-        `Target Kirim  : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`
-      )
-      doc.text(`Prioritas     : ${poData.priority}`)
-      doc.text(`Revisi        : #${revisionNumber}`)
-      doc.moveDown(1.5)
-
-      // --- TABEL ITEM ---
+      doc.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true });
+      doc.moveDown(1);
+      doc.fontSize(11).font('Helvetica-Bold').text(`Nomor PO      : ${poData.po_number}`);
+      doc.font('Helvetica-Bold').text(`Customer      : ${poData.project_name}`);
+      doc.font('Helvetica').text(`Tanggal Input : ${new Date(poData.created_at).toLocaleDateString('id-ID')}`);
+      doc.text(`Target Kirim  : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`);
+      doc.text(`Prioritas     : ${poData.priority}`);
+      doc.text(`Revisi        : #${revisionNumber}`);
+      doc.moveDown(1.5);
+      // --- TABEL ITEM --- (Logika tabel tidak berubah, saya singkat untuk keringkasan)
+      // ... (tempelkan logika pembuatan tabel Anda di sini)
       const table = {
-        headers: [
-          'No',
-          'Produk',
-          'Jenis Kayu',
-          'Profil',
-          'Warna',
-          'Finishing',
-          'Tebal',
-          'Lebar',
-          'Qty',
-          'Satuan',
-          'Catatan'
-        ],
+        headers: ['No', 'Produk', 'Jenis Kayu', 'Profil', 'Warna', 'Finishing', 'Tebal', 'Lebar', 'Qty', 'Satuan', 'Catatan'],
         rows: poData.items.map((item, index) => [
-          index + 1,
-          item.product_name || '-',
-          item.wood_type || '-',
-          item.profile || '-',
-          item.color || '-',
-          item.finishing || '-',
-          `${item.thickness_mm || 0} mm`,
-          `${item.width_mm || 0} mm`,
-          item.quantity || 0,
-          item.satuan || '-',
-          item.notes || '-'
+          index + 1, item.product_name || '-', item.wood_type || '-',
+          item.profile || '-', item.color || '-', item.finishing || '-',
+          `${item.thickness_mm || 0} mm`, `${item.width_mm || 0} mm`,
+          item.quantity || 0, item.satuan || '-', item.notes || '-'
         ]),
         colWidths: [30, 100, 80, 80, 80, 80, 50, 50, 40, 50, 120]
+      };
+      const startY = doc.y; const startX = doc.page.margins.left; const rowHeight = 25;
+      doc.font('Helvetica-Bold').fontSize(9); let currentX = startX;
+      table.headers.forEach((header, i) => { doc.rect(currentX, startY, table.colWidths[i], rowHeight).stroke(); doc.text(header, currentX + 3, startY + 8, { width: table.colWidths[i] - 6, align: 'center' }); currentX += table.colWidths[i]; });
+      doc.font('Helvetica').fontSize(8); let currentY = startY + rowHeight;
+      table.rows.forEach((row) => { currentX = startX; if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom) { doc.addPage(); currentY = doc.page.margins.top; } row.forEach((cell, i) => { doc.rect(currentX, currentY, table.colWidths[i], rowHeight).stroke(); doc.text(cell.toString(), currentX + 3, currentY + 8, { width: table.colWidths[i] - 6, align: 'center' }); currentX += table.colWidths[i]; }); currentY += rowHeight; });
+      // [AKHIR DARI KODE KONTEN PDF]
+
+
+      // --- KONDISI BARU ---
+      if (revisionNumber === 'preview') {
+        // JIKA PREVIEW: Simpan ke folder temporer
+        const tempDir = app.getPath('temp'); // Dapatkan folder temp sistem
+        const fileName = `PO-PREVIEW-${Date.now()}.pdf`; // Buat nama file unik
+        const filePath = path.join(tempDir, fileName);
+
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        stream.on('finish', () => {
+          shell.openPath(filePath); // Buka file dengan aplikasi default
+          resolve({ success: true, isPreview: true }); // Kirim status sukses
+        });
+        stream.on('error', reject);
+      } else {
+        // JIKA SIMPAN: Simpan ke folder permanen
+        const baseDir = path.join(process.cwd(), 'generated_pdfs');
+        ensureDirSync(baseDir);
+        const revisionText = `Rev${revisionNumber}`;
+        const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-${revisionText}.pdf`;
+        const filePath = path.join(baseDir, fileName);
+
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        stream.on('finish', () => {
+          shell.openPath(filePath); // Buka file
+          resolve({ success: true, path: filePath });
+        });
+        stream.on('error', reject);
       }
 
-      const startY = doc.y
-      const startX = doc.page.margins.left
-      const rowHeight = 25
+      doc.end();
 
-      doc.font('Helvetica-Bold').fontSize(9)
-      let currentX = startX
-      table.headers.forEach((header, i) => {
-        doc.rect(currentX, startY, table.colWidths[i], rowHeight).stroke()
-        doc.text(header, currentX + 3, startY + 8, {
-          width: table.colWidths[i] - 6,
-          align: 'center'
-        })
-        currentX += table.colWidths[i]
-      })
-
-      doc.font('Helvetica').fontSize(8)
-      let currentY = startY + rowHeight
-      table.rows.forEach((row) => {
-        currentX = startX
-        if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom) {
-          doc.addPage()
-          currentY = doc.page.margins.top
-        }
-        row.forEach((cell, i) => {
-          doc.rect(currentX, currentY, table.colWidths[i], rowHeight).stroke()
-          doc.text(cell.toString(), currentX + 3, currentY + 8, {
-            width: table.colWidths[i] - 6,
-            align: 'center'
-          })
-          currentX += table.colWidths[i]
-        })
-        currentY += rowHeight
-      })
-
-      doc.end()
-
-      stream.on('finish', () => {
-        shell.openPath(filePath)
-        resolve({ success: true, path: filePath })
-      })
-      stream.on('error', (err) => reject(err))
     } catch (error) {
-      console.error('❌ Gagal saat generate PDF:', error)
-      reject(error)
+      console.error('❌ Gagal saat generate PDF:', error);
+      reject(error);
     }
-  })
+  });
 }
 
 // ===============================

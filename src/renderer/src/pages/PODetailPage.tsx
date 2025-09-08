@@ -52,29 +52,20 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
 
     try {
       const payload = {
+        // Kita perlu menyamakan format dengan apa yang diharapkan `previewPO` di backend
         nomorPo: po.po_number,
         namaCustomer: po.project_name,
-        tanggalKirim: po.deadline,
+        created_at: po.created_at, // Kirim juga tanggal input agar konsisten
+        deadline: po.deadline,
         priority: po.priority,
-        catatan: po.notes,
         items: items,
+        notes: po.notes,
       };
 
       // @ts-ignore
-      const result = await window.api.previewPO(payload);
+      // Cukup panggil fungsinya, backend yang akan urus sisanya
+      await window.api.previewPO(payload);
 
-      if (result && result.success && result.base64Data) {
-        const pdfWindow = window.open("");
-        if (pdfWindow) {
-          pdfWindow.document.write(
-            `<title>Preview PO: ${po.po_number}</title><style>body{margin:0;}</style><iframe src="data:application/pdf;base64,${result.base64Data}" width="100%" height="100%" frameborder="0"></iframe>`
-          );
-        } else {
-          alert('Gagal membuka jendela baru. Mohon izinkan pop-up untuk aplikasi ini.');
-        }
-      } else {
-        throw new Error(result.error || 'Data Base64 tidak diterima dari backend.');
-      }
     } catch (err) {
       console.error('Error saat preview PDF:', err);
       alert(`Gagal membuat preview PDF: ${(err as Error).message}`);
