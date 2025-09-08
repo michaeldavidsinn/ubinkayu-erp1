@@ -16,19 +16,22 @@ interface PODetailPageProps {
 
 const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
   const [revisions, setRevisions] = useState<PORevision[]>([])
-  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null)
+  const [selectedRevisionNumber, setSelectedRevisionNumber] = useState<string | null>(null)
   const [items, setItems] = useState<POItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // Hook #1: Mengambil daftar revisi saat PO berubah
   useEffect(() => {
-    if (po) {
+    if (po?.id) {
       const fetchRevisions = async () => {
+        setItems([])
         setIsLoading(true)
         try {
+          // @ts-ignore
           const revs = await window.api.listPORevisions(po.id)
           setRevisions(revs)
-          if (revs.length > 0) {
-            setSelectedRevisionId(revs[0].id)
+          if (revs && revs.length > 0) {
+            setSelectedRevisionNumber(revs[0].revision_number)
           } else {
             setIsLoading(false)
           }
@@ -41,181 +44,67 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
     }
   }, [po])
 
+  // Hook #2: Mengambil item setelah nomor revisi valid dipilih
   useEffect(() => {
-    if (selectedRevisionId) {
+    if (po?.id && selectedRevisionNumber !== null && typeof selectedRevisionNumber !== 'undefined') {
       const fetchItemsForRevision = async () => {
-        setIsLoading(true)
+        setIsLoading(true) // Set loading saat kita mulai fetching item
         try {
-          const poItems = await window.api.listPOItemsByRevision(selectedRevisionId)
+          // @ts-ignore
+          const poItems = await window.api.listPOItemsByRevision(po.id, selectedRevisionNumber)
           setItems(poItems)
         } catch (error) {
-          console.error(`Gagal memuat item untuk revisi ${selectedRevisionId}:`, error)
+          console.error(`Gagal memuat item untuk revisi ${selectedRevisionNumber}:`, error)
         } finally {
-          setIsLoading(false)
+          setIsLoading(false) // Set loading selesai setelah fetch berhasil atau gagal
         }
       }
       fetchItemsForRevision()
     }
-  }, [selectedRevisionId])
+  }, [selectedRevisionNumber, po?.id])
 
-  if (!po) {
-    return (
-      <div className="page-container">
-        <p>Data PO tidak ditemukan.</p>
-        <Button onClick={onBackToList}>Kembali ke Daftar</Button>
-      </div>
-    )
-  }
+  if (!po) return (<div className="page-container"><p>Data PO tidak ditemukan.</p></div>);
 
-  const currentRevision = revisions.find((r) => r.id === selectedRevisionId)
-
-  const getPriorityBadgeClass = (priority: string | undefined) => {
-    switch (priority) {
-      case 'Urgent': return 'status-badge urgent'
-      case 'High': return 'status-badge high'
-      case 'Normal': return 'status-badge normal'
-      default: return 'status-badge normal'
-    }
-  }
-
-  const getStatusBadgeClass = (status: string | undefined) => {
-    switch (status) {
-      case 'Open': return 'status-badge status-open'
-      case 'In Progress': return 'status-badge status-in-progress'
-      case 'Completed': return 'status-badge status-completed'
-      case 'Cancelled': return 'status-badge status-cancelled'
-      default: return 'status-badge status-open'
-    }
-  }
-
-  const handlePreviewPO = async () => {
-    try {
-      const payload = {
-        ...po,
-        items,
-        kubikasi_total: po.kubikasi_total || 0,
-        revision_number: currentRevision?.revision_number || 0,
-      }
-      // @ts-ignore
-      const result = await window.api.previewPO(payload)
-      if (result.success) {
-        const byteCharacters = atob(result.base64Data)
-        const byteNumbers = new Array(byteCharacters.length)
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i)
-        }
-        const byteArray = new Uint8Array(byteNumbers)
-        const blob = new Blob([byteArray], { type: 'application/pdf' })
-        const url = URL.createObjectURL(blob)
-        window.open(url, '_blank')
-      } else {
-        alert('❌ Gagal preview: ' + result.error)
-      }
-    } catch (err) {
-      alert('❌ Error preview: ' + (err as Error).message)
-    }
-  }
+  const currentRevision = revisions.find((r) => r.revision_number === selectedRevisionNumber)
+  const formatDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
+  const formatDateTime = (d: string | undefined) => d ? new Date(d).toLocaleString('id-ID') : 'No Date';
+  const getPriorityBadgeClass = (p: string | undefined) => `status-badge ${(p || 'normal').toLowerCase()}`;
+  const getStatusBadgeClass = (s: string | undefined) => `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`;
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <div>
-          <h1>Detail Purchase Order: {po.po_number}</h1>
-          <p>Informasi lengkap dan daftar item untuk PO ini.</p>
-        </div>
-        <div className="header-actions">
-          <Button onClick={onBackToList}>Kembali</Button>
-          <Button variant="secondary" onClick={handlePreviewPO}>◎ Preview PDF</Button>
-        </div>
+        <div><h1>Detail Purchase Order: {po.po_number}</h1><p>Informasi lengkap dan daftar item untuk PO ini.</p></div>
+        <div className="header-actions"><Button onClick={onBackToList}>Kembali</Button><Button variant="secondary">◎ Preview PDF</Button></div>
       </div>
-
       <div className="detail-po-info">
         <Card className="po-summary-card">
-          <div className="po-summary-header">
-            <h3 className="po-summary-po-number">PO: {po.po_number}</h3>
-            <span className={getStatusBadgeClass(currentRevision?.status || po.status)}>
-              {currentRevision?.status || po.status || 'Open'}
-            </span>
-          </div>
-          <p className="po-summary-customer">
-            <strong>Customer:</strong> {po.project_name}
-          </p>
-
+          <div className="po-summary-header"><h3 className="po-summary-po-number">PO: {po.po_number}</h3><span className={getStatusBadgeClass(currentRevision?.status || po.status)}>{currentRevision?.status || po.status || 'Open'}</span></div>
+          <p className="po-summary-customer"><strong>Customer:</strong> {po.project_name}</p>
           <div className="po-summary-grid">
-            <div className="info-item">
-              <label>Tanggal Input PO</label>
-              <span>{po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}</span>
-            </div>
-            <div className="info-item">
-              <label>Target Kirim</label>
-              <span>{currentRevision?.deadline ? new Date(currentRevision.deadline).toLocaleDateString('id-ID') : '-'}</span>
-            </div>
-            <div className="info-item">
-              <label>Prioritas</label>
-              <span className={getPriorityBadgeClass(currentRevision?.priority)}>{currentRevision?.priority || '-'}</span>
-            </div>
-            <div className="info-item">
-              <label>Total Kubikasi</label>
-              <span>{po.kubikasi_total ? po.kubikasi_total.toFixed(3) + ' m³' : '-'}</span>
-            </div>
+            <div className="info-item"><label>Tanggal Input PO</label><span>{formatDate(po.created_at)}</span></div>
+            <div className="info-item"><label>Target Kirim</label><span>{formatDate(currentRevision?.deadline)}</span></div>
+            <div className="info-item"><label>Prioritas</label><span className={getPriorityBadgeClass(currentRevision?.priority)}>{currentRevision?.priority || '-'}</span></div>
+            <div className="info-item"><label>Total Kubikasi</label><span>{po.kubikasi_total ? `${Number(po.kubikasi_total).toFixed(3)} m³` : '0.000 m³'}</span></div>
           </div>
         </Card>
-
-        {currentRevision?.notes && (
-          <Card className="notes-card">
-            <h4>Catatan Revisi #{currentRevision.revision_number}</h4>
-            <p>{currentRevision.notes}</p>
-          </Card>
-        )}
+        {currentRevision?.notes && (<Card className="notes-card"><h4>Catatan Revisi #{currentRevision.revision_number}</h4><p>{currentRevision.notes}</p></Card>)}
       </div>
-
       <div className="item-section-header">
         <h2>Daftar Item</h2>
         <div className="form-group">
           <label htmlFor="revision-select">Tampilkan Histori:</label>
-          <select
-            id="revision-select"
-            value={selectedRevisionId || ''}
-            onChange={(e) => setSelectedRevisionId(e.target.value)}
-            disabled={revisions.length === 0}
-          >
-            {revisions.map((rev) => (
-              <option key={rev.id} value={rev.id}>
-                Revisi #{rev.revision_number} ({new Date(rev.created_at).toLocaleString('id-ID')})
-              </option>
-            ))}
+          <select id="revision-select" value={selectedRevisionNumber || ''} onChange={(e) => setSelectedRevisionNumber(e.target.value)} disabled={revisions.length === 0}>
+            {revisions.map((rev) => (<option key={rev.id} value={rev.revision_number}>Revisi #{rev.revision_number} ({formatDateTime(rev.created_at)})</option>))}
           </select>
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="loading-spinner">⏳ Loading data item...</div>
-      ) : items.length === 0 ? (
-        <Card>
-          <p>Tidak ada item terdaftar untuk revisi ini.</p>
-        </Card>
-      ) : (
+      {isLoading ? (<p>⏳ Loading data item...</p>) : items.length === 0 ? (<Card><p>Tidak ada item terdaftar untuk revisi ini.</p></Card>) : (
         items.map((item, index) => (
-          <Card key={item.id} className="item-card">
-            <div className="item-card-header">
-              <h4>Item #{index + 1}: {item.product_name}</h4>
-            </div>
+          <Card key={item.id || index} className="item-card">
+            <div className="item-card-header"><h4>Item #{index + 1}: {item.product_name}</h4></div>
             <div className="form-grid">
-              <Input label="Produk ID" value={item.product_id} disabled />
-              <Input label="Jenis Kayu" value={item.wood_type} disabled />
-              <Input label="Profil" value={item.profile} disabled />
-              <Input label="Warna" value={item.color} disabled />
-              <Input label="Finishing" value={item.finishing} disabled />
-              <Input label="Tebal (mm)" value={item.thickness_mm} disabled />
-              <Input label="Lebar (mm)" value={item.width_mm} disabled />
-              <Input label="Panjang (mm)" value={item.length_mm} disabled />
-              <Input label="Qty" value={`${item.quantity} ${item.satuan}`} disabled />
-              <Input label="Catatan Item" value={item.notes || '-'} disabled />
-              <Input label="Sample" value={item.sample || '-'} disabled />
-              <Input label="Marketing" value={item.marketing || '-'} disabled />
-              <Input label="Length Type" value={item.length_type || '-'} disabled />
-              <Input label="Lokasi" value={item.location || '-'} disabled />
-              <Input label="Kubikasi (m³)" value={item.kubikasi?.toFixed(3) || '0'} disabled />
+              {Object.entries({'Produk ID': item.product_id, 'Jenis Kayu': item.wood_type, 'Profil': item.profile, 'Warna': item.color,'Finishing': item.finishing, 'Sample': item.sample, 'Marketing': item.marketing, 'Tebal (mm)': item.thickness_mm,'Lebar (mm)': item.width_mm, 'Panjang (mm)': item.length_mm, 'Qty': `${item.quantity || 0} ${item.satuan || ''}`,'Catatan Item': item.notes, 'Length Type': item.length_type, 'Lokasi': item.location,'Kubikasi (m³)': (Number(item.kubikasi) || 0).toFixed(3)}).map(([label, value]) => <Input key={label} label={label} value={value || (label.includes('mm') || label.includes('Qty') ? 0 : '-')} disabled />)}
             </div>
           </Card>
         ))
@@ -224,4 +113,4 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
   )
 }
 
-export default PODetailPage
+export default PODetailPage;

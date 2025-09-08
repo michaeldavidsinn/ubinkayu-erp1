@@ -7,10 +7,10 @@ import { JWT } from 'google-auth-library'
 import path from 'node:path'
 import fs from 'node:fs'
 import PDFDocument from 'pdfkit'
-import { shell } from 'electron'
+import { app, shell } from 'electron'
 
 // ===============================
-// AUTHENTICATION
+// AUTHENTICATION & HELPERS (Internal, tidak perlu di-export)
 // ===============================
 function getAuth() {
   const credPath = path.join(process.cwd(), 'electron', 'credentials.json')
@@ -34,130 +34,133 @@ async function openDoc() {
 
 async function nextId(sheet) {
   const rows = await sheet.getRows()
-  return String(rows.length + 1)
+  // Tambah 2 karena header (baris 1) dan array (mulai dari 0)
+  return String(rows.length + 2)
+}
+
+function ensureDirSync(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true })
+  }
 }
 
 // ===============================
-// PDF GENERATOR
+// PDF GENERATOR (Hanya satu versi yang diekspor)
 // ===============================
-async function generatePOPDF(poHeader, items, revisionNumber = 0) {
+export async function generatePOPdf(poData, revisionNumber = 0) {
   return new Promise((resolve, reject) => {
     try {
-      const dir = path.join(process.cwd(), 'generated_pdfs')
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      const baseDir = path.join(app.getPath('documents'), 'UbinkayuERP_Generated', 'PurchaseOrders')
+      const poFolderName = `${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-${poData.project_name}`
+      const poDir = path.join(baseDir, poFolderName)
+      ensureDirSync(poDir)
 
-      const filename = `PO_${poHeader.po_number}_Rev${revisionNumber}.pdf`
-      const filePath = path.join(dir, filename)
+      const revisionText = revisionNumber === 'preview' ? 'PREVIEW' : `Rev${revisionNumber}`
+      const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-${revisionText}.pdf`
+      const filePath = path.join(poDir, fileName)
 
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 })
+      const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' })
       const stream = fs.createWriteStream(filePath)
       doc.pipe(stream)
 
       // --- HEADER ---
       doc.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true })
       doc.moveDown(1)
-      doc.fontSize(12).text(`Nomor PO: ${poHeader.po_number}`)
-      doc.text(`Customer: ${poHeader.project_name}`)
+      doc.fontSize(11).font('Helvetica-Bold').text(`Nomor PO      : ${poData.po_number}`)
+      doc.font('Helvetica-Bold').text(`Customer      : ${poData.project_name}`)
+      doc
+        .font('Helvetica')
+        .text(`Tanggal Input : ${new Date(poData.created_at).toLocaleDateString('id-ID')}`)
       doc.text(
-        `Tanggal Input: ${
-          poHeader.created_at ? new Date(poHeader.created_at).toLocaleDateString('id-ID') : '-'
-        }`
+        `Target Kirim  : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`
       )
-      doc.text(
-        `Target Kirim: ${
-          poHeader.deadline ? new Date(poHeader.deadline).toLocaleDateString('id-ID') : '-'
-        }`
-      )
-      doc.text(`Prioritas: ${poHeader.priority || 'Normal'}`)
-      doc.text(`Status: ${poHeader.status || 'Open'}`)
-      doc.text(`Revisi: ${revisionNumber}`)
-      if (poHeader.notes) {
-        doc.moveDown(0.5).text(`Catatan: ${poHeader.notes}`)
-      }
+      doc.text(`Prioritas     : ${poData.priority}`)
+      doc.text(`Revisi        : #${revisionNumber}`)
+      doc.moveDown(1.5)
 
-      doc.moveDown(1)
-
-      // --- TABLE STRUCTURE ---
-      const tableTop = doc.y
-      const startX = 40
-      const rowHeight = 22
-      const colWidths = [35, 70, 110, 70, 70, 70, 70, 60, 60, 50, 50, 120]
-
-      const headers = [
-        'No',
-        'Product ID',
-        'Nama Produk',
-        'Kayu',
-        'Profil',
-        'Warna',
-        'Finishing',
-        'Sample',
-        'Marketing',
-        'Qty',
-        'Satuan',
-        'Notes'
-      ]
-
-      // --- DRAW HEADER ROW ---
-      let x = startX
-      headers.forEach((h, i) => {
-        doc.rect(x, tableTop, colWidths[i], rowHeight).stroke()
-        doc.font('Helvetica-Bold').fontSize(9).text(h, x + 2, tableTop + 6, {
-          width: colWidths[i] - 4,
-          align: 'center'
-        })
-        x += colWidths[i]
-      })
-
-      // --- DRAW ITEM ROWS ---
-      let y = tableTop + rowHeight
-      items.forEach((item, idx) => {
-        const row = [
-          String(idx + 1),
-          item.product_id || '-',
+      // --- TABEL ITEM ---
+      const table = {
+        headers: [
+          'No',
+          'Produk',
+          'Jenis Kayu',
+          'Profil',
+          'Warna',
+          'Finishing',
+          'Tebal',
+          'Lebar',
+          'Qty',
+          'Satuan',
+          'Catatan'
+        ],
+        rows: poData.items.map((item, index) => [
+          index + 1,
           item.product_name || '-',
           item.wood_type || '-',
           item.profile || '-',
           item.color || '-',
           item.finishing || '-',
-          item.sample || '-',
-          item.marketing || '-',
-          String(item.quantity || 0),
+          `${item.thickness_mm || 0} mm`,
+          `${item.width_mm || 0} mm`,
+          item.quantity || 0,
           item.satuan || '-',
           item.notes || '-'
-        ]
-        x = startX
-        row.forEach((val, i) => {
-          doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.font('Helvetica').fontSize(8).text(val, x + 2, y + 6, {
-            width: colWidths[i] - 4,
+        ]),
+        colWidths: [30, 100, 80, 80, 80, 80, 50, 50, 40, 50, 120]
+      }
+
+      const startY = doc.y
+      const startX = doc.page.margins.left
+      const rowHeight = 25
+
+      doc.font('Helvetica-Bold').fontSize(9)
+      let currentX = startX
+      table.headers.forEach((header, i) => {
+        doc.rect(currentX, startY, table.colWidths[i], rowHeight).stroke()
+        doc.text(header, currentX + 3, startY + 8, {
+          width: table.colWidths[i] - 6,
+          align: 'center'
+        })
+        currentX += table.colWidths[i]
+      })
+
+      doc.font('Helvetica').fontSize(8)
+      let currentY = startY + rowHeight
+      table.rows.forEach((row) => {
+        currentX = startX
+        if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom) {
+          doc.addPage()
+          currentY = doc.page.margins.top
+        }
+        row.forEach((cell, i) => {
+          doc.rect(currentX, currentY, table.colWidths[i], rowHeight).stroke()
+          doc.text(cell.toString(), currentX + 3, currentY + 8, {
+            width: table.colWidths[i] - 6,
             align: 'center'
           })
-          x += colWidths[i]
+          currentX += table.colWidths[i]
         })
-        y += rowHeight
+        currentY += rowHeight
       })
 
       doc.end()
 
       stream.on('finish', () => {
-        const pdfBuffer = fs.readFileSync(filePath)
-        const base64Data = pdfBuffer.toString('base64')
-
-        shell.openPath(filePath) // buka otomatis di sistem
-        resolve({ filePath, base64Data })
+        shell.openPath(filePath)
+        resolve({ success: true, path: filePath })
       })
-      stream.on('error', reject)
-    } catch (err) {
-      reject(err)
+      stream.on('error', (err) => reject(err))
+    } catch (error) {
+      console.error('❌ Gagal saat generate PDF:', error)
+      reject(error)
     }
   })
 }
 
 // ===============================
-// CRUD FUNCTIONS
+// CRUD FUNCTIONS (Semua diekspor)
 // ===============================
-async function testSheetConnection() {
+export async function testSheetConnection() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -167,31 +170,22 @@ async function testSheetConnection() {
   }
 }
 
-async function listPOs() {
+export async function listPOs() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
     const sheet = doc.sheetsByTitle['purchase_orders']
     if (!sheet) throw new Error("Sheet 'purchase_orders' tidak ditemukan!")
     const rows = await sheet.getRows()
-    return rows.map(r => ({
-      id: r._rawData[0],
-      po_number: r._rawData[1],
-      project_name: r._rawData[2],
-      deadline: r._rawData[3],
-      status: r._rawData[4],
-      priority: r._rawData[5],
-      notes: r._rawData[6],
-      created_at: r._rawData[7],
-      kubikasi_total: Number(r._rawData[8]) || 0
-    }))
+    return rows.map((r) => r.toObject())
   } catch (err) {
     console.error('❌ listPOs error:', err.message)
     return []
   }
 }
 
-async function saveNewPO(data) {
+export async function saveNewPO(data) {
+  // Menggunakan kode dari jawaban sebelumnya yang sudah benar
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -200,6 +194,7 @@ async function saveNewPO(data) {
     const poSheet = doc.sheetsByTitle['purchase_orders']
     const revSheet = doc.sheetsByTitle['purchase_order_revisions']
     const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    const itemRevisionsSheet = doc.sheetsByTitle['purchase_order_items_revisions']
 
     const poId = await nextId(poSheet)
     await poSheet.addRow({
@@ -227,45 +222,45 @@ async function saveNewPO(data) {
     })
 
     for (const item of data.items) {
-      const itemId = await nextId(itemSheet)
-      await itemSheet.addRow({
-        id: itemId,
+      const { id, ...itemToSave } = item // Hapus id sementara dari frontend
+      const basePayload = {
         purchase_order_id: poId,
         revision_id: revId,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        wood_type: item.wood_type,
-        profile: item.profile,
-        color: item.color,
-        finishing: item.finishing,
-        sample: item.sample,
-        marketing: item.marketing,
-        thickness_mm: item.thickness_mm,
-        width_mm: item.width_mm,
-        length_mm: item.length_mm,
-        length_type: item.length_type,
-        quantity: item.quantity,
-        satuan: item.satuan,
-        location: item.location,
-        notes: item.notes,
-        kubikasi: item.kubikasi || 0
+        ...itemToSave
+      }
+
+      const liveItemId = await nextId(itemSheet)
+      await itemSheet.addRow({ id: liveItemId, ...basePayload })
+
+      const itemRevId = await nextId(itemRevisionsSheet)
+      await itemRevisionsSheet.addRow({
+        id: itemRevId,
+        revision_number: 0,
+        ...basePayload
       })
     }
 
-    const pdf = await generatePOPDF(
-      { po_number: data.nomorPo, project_name: data.namaCustomer, created_at: now, deadline: data.tanggalKirim, priority: data.prioritas, status: 'Open', notes: data.catatan },
-      data.items,
+    await generatePOPdf(
+      {
+        po_number: data.nomorPo,
+        project_name: data.namaCustomer,
+        created_at: now,
+        deadline: data.tanggalKirim,
+        priority: data.prioritas,
+        items: data.items
+      },
       0
     )
 
-    return { success: true, poId, pdf }
+    return { success: true, poId }
   } catch (err) {
     console.error('❌ saveNewPO error:', err.message)
     return { success: false, error: err.message }
   }
 }
 
-async function updatePO(data) {
+export async function updatePO(data) {
+  // Menggunakan kode dari jawaban sebelumnya yang sudah benar
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -274,12 +269,12 @@ async function updatePO(data) {
     const poSheet = doc.sheetsByTitle['purchase_orders']
     const revSheet = doc.sheetsByTitle['purchase_order_revisions']
     const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    const itemRevisionsSheet = doc.sheetsByTitle['purchase_order_items_revisions']
 
     const poRows = await poSheet.getRows()
-    const poToUpdate = poRows.find(r => r._rawData[0] === data.poId)
-    if (!poToUpdate) throw new Error(`PO ${data.poId} tidak ditemukan`)
+    const poToUpdate = poRows.find((r) => r.get('id') === data.poId)
+    if (!poToUpdate) throw new Error(`PO dengan ID ${data.poId} tidak ditemukan`)
 
-    poToUpdate.set('po_number', data.nomorPo)
     poToUpdate.set('project_name', data.namaCustomer)
     poToUpdate.set('deadline', data.tanggalKirim)
     poToUpdate.set('priority', data.prioritas)
@@ -288,14 +283,17 @@ async function updatePO(data) {
     await poToUpdate.save()
 
     const revRows = await revSheet.getRows()
-    const currentMaxRev = revRows.filter(r => r.get('purchase_order_id') === data.poId)
+    const currentMaxRev = revRows
+      .filter((r) => r.get('purchase_order_id') === data.poId)
       .reduce((max, r) => Math.max(max, parseInt(r.get('revision_number'))), -1)
-    const newRev = currentMaxRev + 1
+
+    const newRevNumber = currentMaxRev + 1
     const newRevId = await nextId(revSheet)
+
     await revSheet.addRow({
       id: newRevId,
       purchase_order_id: data.poId,
-      revision_number: newRev,
+      revision_number: newRevNumber,
       deadline: data.tanggalKirim,
       status: poToUpdate.get('status'),
       priority: data.prioritas,
@@ -304,222 +302,291 @@ async function updatePO(data) {
     })
 
     const existingItems = await itemSheet.getRows()
-    const itemsToDelete = existingItems.filter(r => r.get('purchase_order_id') === data.poId)
-    for (const it of itemsToDelete) await it.delete()
+    const itemsToDelete = existingItems.filter((r) => r.get('purchase_order_id') === data.poId)
+    for (let i = itemsToDelete.length - 1; i >= 0; i--) {
+      await itemsToDelete[i].delete()
+    }
 
     for (const item of data.items) {
-      const itemId = await nextId(itemSheet)
-      await itemSheet.addRow({
-        id: itemId,
+      const { id, ...itemToSave } = item
+      const basePayload = {
         purchase_order_id: data.poId,
         revision_id: newRevId,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        wood_type: item.wood_type,
-        profile: item.profile,
-        color: item.color,
-        finishing: item.finishing,
-        sample: item.sample,
-        marketing: item.marketing,
-        thickness_mm: item.thickness_mm,
-        width_mm: item.width_mm,
-        length_mm: item.length_mm,
-        length_type: item.length_type,
-        quantity: item.quantity,
-        satuan: item.satuan,
-        location: item.location,
-        notes: item.notes,
-        kubikasi: item.kubikasi || 0
+        ...itemToSave
+      }
+
+      const liveItemId = await nextId(itemSheet)
+      await itemSheet.addRow({ id: liveItemId, ...basePayload })
+
+      const itemRevId = await nextId(itemRevisionsSheet)
+      await itemRevisionsSheet.addRow({
+        id: itemRevId,
+        revision_number: newRevNumber,
+        ...basePayload
       })
     }
 
-    const pdf = await generatePOPDF(
-      { po_number: data.nomorPo, project_name: data.namaCustomer, created_at: now, deadline: data.tanggalKirim, priority: data.prioritas, status: poToUpdate.get('status'), notes: data.catatan },
-      data.items,
-      newRev
-    )
+    await generatePOPdf({ ...poToUpdate.toObject(), items: data.items }, newRevNumber)
 
-    return { success: true, pdf }
+    return { success: true }
   } catch (err) {
     console.error('❌ updatePO error:', err.message)
     return { success: false, error: err.message }
   }
 }
 
-async function deletePO(poId) {
+export async function deletePO(poId) {
+  // Menggunakan kode dari jawaban sebelumnya yang sudah benar
   try {
     const doc = await openDoc()
     await doc.loadInfo()
+
     const poSheet = doc.sheetsByTitle['purchase_orders']
     const revSheet = doc.sheetsByTitle['purchase_order_revisions']
     const itemSheet = doc.sheetsByTitle['purchase_order_items']
+    const itemRevisionsSheet = doc.sheetsByTitle['purchase_order_items_revisions']
 
     const poRows = await poSheet.getRows()
-    const po = poRows.find(r => r._rawData[0] === poId)
-    if (po) await po.delete()
+    const poToDelete = poRows.find((r) => r.get('id') === poId)
+    if (poToDelete) await poToDelete.delete()
 
     const revRows = await revSheet.getRows()
-    for (const r of revRows.filter(x => x._rawData[1] === poId)) await r.delete()
+    const revsToDelete = revRows.filter((r) => r.get('purchase_order_id') === poId)
+    for (let i = revsToDelete.length - 1; i >= 0; i--) await revsToDelete[i].delete()
 
     const itemRows = await itemSheet.getRows()
-    for (const it of itemRows.filter(x => x._rawData[1] === poId)) await it.delete()
+    const itemsToDelete = itemRows.filter((r) => r.get('purchase_order_id') === poId)
+    for (let i = itemsToDelete.length - 1; i >= 0; i--) await itemsToDelete[i].delete()
+
+    if (itemRevisionsSheet) {
+      const itemRevisionRows = await itemRevisionsSheet.getRows()
+      const itemRevsToDelete = itemRevisionRows.filter((r) => r.get('purchase_order_id') === poId)
+      for (let i = itemRevsToDelete.length - 1; i >= 0; i--) await itemRevsToDelete[i].delete()
+    }
 
     return { success: true }
   } catch (err) {
-    console.error('❌ deletePO error:', err.message)
+    console.error(`❌ Gagal menghapus PO ID ${poId}:`, err.message)
     return { success: false, error: err.message }
   }
 }
 
-async function listPOItems(poId) {
+export async function listPOItems(poId) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
     const sheet = doc.sheetsByTitle['purchase_order_items']
     const rows = await sheet.getRows()
-    return rows.filter(r => r._rawData[1] === poId).map(r => ({
-      id: r._rawData[0],
-      purchase_order_id: r._rawData[1],
-      revision_id: r._rawData[2],
-      product_id: r._rawData[3],
-      product_name: r._rawData[4],
-      wood_type: r._rawData[5],
-      profile: r._rawData[6],
-      color: r._rawData[7],
-      finishing: r._rawData[8],
-      sample: r._rawData[9],
-      marketing: r._rawData[10],
-      thickness_mm: Number(r._rawData[11]),
-      width_mm: Number(r._rawData[12]),
-      length_mm: Number(r._rawData[13]),
-      length_type: r._rawData[14],
-      quantity: Number(r._rawData[15]),
-      satuan: r._rawData[16],
-      location: r._rawData[17],
-      notes: r._rawData[18],
-      kubikasi: Number(r._rawData[19]) || 0
-    }))
+    return rows.filter((r) => r.get('purchase_order_id') === poId).map((r) => r.toObject())
   } catch (err) {
     console.error('❌ listPOItems error:', err.message)
     return []
   }
 }
 
-async function listPORevisions(poId) {
+export async function listPORevisions(poId) {
+  console.log(`\n\n-=-=-=-=-=-=-= 🕵️‍♂️ [DEBUG REVISI] MEMULAI 🕵️‍♂️ -=-=-=-=-=-=-=`)
+  console.log(`[DEBUG REVISI] Mencari revisi untuk PO ID: "${poId}"`)
   try {
     const doc = await openDoc()
-    await doc.loadInfo()
+    await doc.loadInfo(true)
     const sheet = doc.sheetsByTitle['purchase_order_revisions']
+    if (!sheet) {
+      console.error('[DEBUG REVISI] ERROR: Sheet "purchase_order_revisions" tidak ditemukan!')
+      return []
+    }
+    console.log(`[DEBUG REVISI] Sheet "purchase_order_revisions" ditemukan.`)
+
+    // Memaksa library membaca header
+    await sheet.loadHeaderRow()
+    const headers = sheet.headerValues
+    console.log(`[DEBUG REVISI] Header yang terdeteksi oleh library:`, headers)
+
     const rows = await sheet.getRows()
-    return rows.filter(r => r.get('purchase_order_id') === poId).map(r => ({
-      id: r.get('id'),
-      purchase_order_id: r.get('purchase_order_id'),
-      revision_number: r.get('revision_number'),
-      deadline: r.get('deadline'),
-      status: r.get('status'),
-      priority: r.get('priority'),
-      notes: r.get('notes'),
-      created_at: r.get('created_at')
-    }))
+    console.log(`[DEBUG REVISI] Ditemukan total ${rows.length} baris revisi.`)
+
+    if (rows.length === 0) return []
+
+    const revisions = rows
+      .filter((r) => String(r.get('purchase_order_id')) === String(poId))
+      .map((r, index) => {
+        // Log detail HANYA untuk baris pertama yang cocok
+        if (index === 0) {
+          console.log(`\n[DEBUG REVISI] Menganalisa baris revisi pertama yang cocok...`)
+          console.log(`  - Raw data baris via .toObject():`, r.toObject())
+          console.log(`  - Mencoba ambil 'revision_number' via .get():`, r.get('revision_number'))
+          console.log(`  - Tipe datanya adalah:`, typeof r.get('revision_number'))
+        }
+
+        // Membuat objek secara manual
+        const revisionObject = {
+          id: r.get('id'),
+          purchase_order_id: r.get('purchase_order_id'),
+          revision_number: r.get('revision_number'),
+          deadline: r.get('deadline'),
+          status: r.get('status'),
+          priority: r.get('priority'),
+          notes: r.get('notes'),
+          created_at: r.get('created_at')
+        }
+        return revisionObject
+      })
+
+    console.log(`\n[DEBUG REVISI] Ditemukan ${revisions.length} revisi yang cocok dengan PO ID.`)
+    if (revisions.length > 0) {
+      // Urutkan sebelum mengambil yang pertama
+      revisions.sort((a, b) => Number(b.revision_number) - Number(a.revision_number))
+      console.log(
+        `[DEBUG REVISI] Objek revisi PERTAMA yang akan dikirim ke frontend:`,
+        revisions[0]
+      )
+    }
+
+    console.log(`-=-=-=-=-=-=-=-= 🏁 [DEBUG REVISI] SELESAI 🏁 -=-=-=-=-=-=-=-=\n\n`)
+    return revisions
   } catch (err) {
     console.error('❌ listPORevisions error:', err.message)
     return []
   }
 }
 
-async function listPOItemsByRevision(revisionId) {
+export async function listPOItemsByRevision(poId, revisionNumber) {
+  console.log(`\n\n-=-=-=-=-=-=-= 🕵️‍♂️ MEMULAI DEBUG 🕵️‍♂️ -=-=-=-=-=-=-=`)
+  console.log(`Mencari item untuk PO ID: "${poId}" (Tipe: ${typeof poId})`)
+  console.log(`DAN Nomor Revisi: "${revisionNumber}" (Tipe: ${typeof revisionNumber})`)
+  console.log(`--------------------------------------------------`)
+
   try {
     const doc = await openDoc()
     await doc.loadInfo()
-    const sheet = doc.sheetsByTitle['purchase_order_items']
+    const sheet = doc.sheetsByTitle['purchase_order_items_revisions']
+    if (!sheet) throw new Error("Sheet 'purchase_order_items_revisions' tidak ditemukan!")
+
     const rows = await sheet.getRows()
-    return rows.filter(r => r.get('revision_id') === revisionId).map(r => ({
-      id: r.get('id'),
-      purchase_order_id: r.get('purchase_order_id'),
-      revision_id: r.get('revision_id'),
-      product_id: r.get('product_id'),
-      product_name: r.get('product_name'),
-      wood_type: r.get('wood_type'),
-      profile: r.get('profile'),
-      color: r.get('color'),
-      finishing: r.get('finishing'),
-      sample: r.get('sample'),
-      marketing: r.get('marketing'),
-      thickness_mm: Number(r.get('thickness_mm')),
-      width_mm: Number(r.get('width_mm')),
-      length_mm: Number(r.get('length_mm')),
-      length_type: r.get('length_type'),
-      quantity: Number(r.get('quantity')),
-      satuan: r.get('satuan'),
-      location: r.get('location'),
-      notes: r.get('notes'),
-      kubikasi: Number(r.get('kubikasi')) || 0
-    }))
+    console.log(`Ditemukan total ${rows.length} baris di sheet histori.`)
+
+    if (rows.length === 0) {
+      console.log(`-=-=-=-=-=-=-=-= 🏁 DEBUG SELESAI 🏁 -=-=-=-=-=-=-=-=\n\n`)
+      return []
+    }
+
+    console.log(`\nMenganalisa beberapa baris pertama dari Google Sheet...`)
+    const filteredItems = rows
+      .filter((r, index) => {
+        // Ambil data mentah dari sheet
+        const sheet_poId = r.get('purchase_order_id')
+        const sheet_revNum = r.get('revision_number')
+
+        // Lakukan perbandingan (dengan .trim() untuk jaga-jaga)
+        const poIdMatch = String(sheet_poId).trim() === String(poId).trim()
+        const revNumMatch = String(sheet_revNum).trim() === String(revisionNumber).trim()
+
+        // Tampilkan laporan hanya untuk 5 baris pertama agar tidak spam
+        if (index < 5) {
+          console.log(`\n[Analisa Baris di Sheet #${index + 2}]`)
+          console.log(
+            `  - Data 'purchase_order_id' di sheet: "${sheet_poId}" (Tipe: ${typeof sheet_poId})`
+          )
+          console.log(
+            `  - Data 'revision_number' di sheet:   "${sheet_revNum}" (Tipe: ${typeof sheet_revNum})`
+          )
+          console.log(
+            `  - Cek PO ID: "${String(sheet_poId).trim()}" === "${String(poId).trim()}"  --> ${poIdMatch}`
+          )
+          console.log(
+            `  - Cek Rev Num: "${String(sheet_revNum).trim()}" === "${String(revisionNumber).trim()}" --> ${revNumMatch}`
+          )
+          console.log(`  --> Hasil Gabungan: Lolos Filter? ${poIdMatch && revNumMatch}`)
+        }
+
+        return poIdMatch && revNumMatch
+      })
+      .map((r) => r.toObject())
+
+    console.log(`\n--------------------------------------------------`)
+    console.log(`HASIL AKHIR: Ditemukan ${filteredItems.length} item yang cocok setelah filtering.`)
+    console.log(`-=-=-=-=-=-=-=-= 🏁 DEBUG SELESAI 🏁 -=-=-=-=-=-=-=-=\n\n`)
+    return filteredItems
   } catch (err) {
-    console.error('❌ listPOItemsByRevision error:', err.message)
+    console.error(`❌ Error dalam listPOItemsByRevision:`, err.message)
+    console.log(`-=-=-=-=-=-=-=-= 🏁 DEBUG SELESAI (DENGAN ERROR) 🏁 -=-=-=-=-=-=-=-=\n\n`)
     return []
   }
 }
 
-async function getProducts() {
+export async function getProducts() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
     const sheet = doc.sheetsByTitle['product_master']
     const rows = await sheet.getRows()
-    return rows.map(r => ({
-      product_name: r._rawData[0],
-      wood_type: r._rawData[1],
-      profile: r._rawData[2],
-      color: r._rawData[3],
-      finishing: r._rawData[4],
-      sample: r._rawData[5],
-      marketing: r._rawData[6],
-      satuan: r._rawData[7]
-    }))
+    return rows.map((r) => r.toObject())
   } catch (err) {
     console.error('❌ getProducts error:', err.message)
     return []
   }
 }
 
-// ===============================
-// PREVIEW FUNCTION
-// ===============================
 export async function previewPO(data) {
   try {
-    const pdf = await generatePOPDF(
+    const pdfResult = await generatePOPdf(
       {
         po_number: data.nomorPo,
         project_name: data.namaCustomer,
         created_at: new Date().toISOString(),
         deadline: data.tanggalKirim,
         priority: data.prioritas,
-        status: 'Preview',
-        notes: data.catatan,
+        items: data.items
       },
-      data.items,
       'preview'
     )
-    return { success: true, ...pdf }
+    return { success: true, ...pdfResult }
   } catch (err) {
     console.error('❌ previewPO error:', err.message)
     return { success: false, error: err.message }
   }
 }
 
-// ===============================
-// EXPORT ALL FUNCTIONS
-// ===============================
-export {
-  testSheetConnection,
-  listPOs,
-  saveNewPO,
-  updatePO,
-  deletePO,
-  listPOItems,
-  listPORevisions,
-  listPOItemsByRevision,
-  getProducts,
-  generatePOPDF
+export async function getRevisionHistory(poId) {
+  try {
+    const doc = await openDoc();
+    await doc.loadInfo(true);
+
+    const revisionsSheet = doc.sheetsByTitle['purchase_order_revisions'];
+    const itemsRevisionsSheet = doc.sheetsByTitle['purchase_order_items_revisions'];
+
+    // 1. Ambil semua baris dari kedua sheet
+    const allRevisionsRows = await revisionsSheet.getRows();
+    const allItemsRows = await itemsRevisionsSheet.getRows();
+
+    // 2. Filter hanya revisi untuk PO yang dipilih
+    const poRevisions = allRevisionsRows
+      .filter(r => String(r.get('purchase_order_id')) === String(poId))
+      .map(r => r.toObject());
+
+    // 3. Filter hanya item untuk PO yang dipilih
+    const poItems = allItemsRows
+      .filter(r => String(r.get('purchase_order_id')) === String(poId))
+      .map(r => r.toObject());
+
+    // 4. Gabungkan data di backend
+    const historyData = poRevisions.map(revision => {
+      const itemsForThisRevision = poItems.filter(item =>
+        String(item.revision_number) === String(revision.revision_number)
+      );
+      return {
+        revision: revision,
+        items: itemsForThisRevision
+      };
+    });
+
+    // 5. Urutkan dari revisi terbaru ke terlama
+    historyData.sort((a, b) => Number(b.revision.revision_number) - Number(a.revision.revision_number));
+
+    return historyData;
+
+  } catch (error) {
+    console.error(`Gagal total mengambil riwayat untuk PO ID ${poId}:`, error);
+    return [];
+  }
 }
