@@ -16,10 +16,10 @@ const api = {
   listPORevisions: (poId: string) => ipcRenderer.invoke('po:listRevisions', poId),
   listPOItemsByRevision: (revisionId: string) => ipcRenderer.invoke('po:listItemsByRevision', revisionId)
 }
-
 // Proses 'expose' atau pendaftaran API ke window object di UI
 try {
   contextBridge.exposeInMainWorld('api', api)
 } catch (error) {
   console.error(error)
 }
+

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable prettier/prettier */
@@ -15,8 +16,6 @@ interface InputPOPageProps {
   editingPO: POHeader | null
 }
 
-
-
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
   const [productList, setProductList] = useState<any[]>([])
@@ -31,6 +30,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
 
   const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
     return productList
@@ -47,7 +47,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
         tanggalKirim: editingPO.deadline || '',
         prioritas: editingPO.priority || 'Normal',
-        alamatKirim: '', // Alamat kirim tidak disimpan di POHeader, jadi reset
+        alamatKirim: '',
         catatan: editingPO.notes || ''
       })
 
@@ -57,7 +57,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           const poItems = await window.api.listPOItems(editingPO.id)
           setItems(poItems)
         } catch (error) {
-          console.error('Gagal memuat item PO:', error)
+          console.error('❌ Gagal memuat item PO:', error)
         }
       }
       fetchPOItems()
@@ -80,7 +80,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         const products = await window.api.getProducts()
         setProductList(products)
       } catch (error) {
-        console.error('Gagal memuat daftar produk:', error)
+        console.error('❌ Gagal memuat daftar produk:', error)
       }
     }
     fetchProducts()
@@ -103,22 +103,27 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         profile: '',
         color: '',
         finishing: '',
-        sample: '',      // BARU
-        marketing: '',    // BARU
+        sample: '',
+        marketing: '',
         thickness_mm: 0,
         width_mm: 0,
         length_mm: 0,
-        length_type: '',  // BARU
+        length_type: '',
         quantity: 1,
         satuan: 'pcs',
-        location: '',     // BARU
-        notes: ''
+        location: '',
+        notes: '',
+        kubikasi: 0
       }
     ])
   }
 
   const handleItemChange = (id: number, field: keyof POItem, value: string | number) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: value, kubikasi: calculateKubikasi({ ...item, [field]: value }) } : item
+      )
+    )
   }
 
   const handleRemoveItem = (id: number) => {
@@ -126,76 +131,107 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handleSaveOrUpdatePO = async () => {
-  if (!poData.nomorPo || !poData.namaCustomer) {
-    return alert('Nomor PO dan Nama Customer harus diisi!')
-  }
-  if (items.length === 0) {
-    return alert('Tambahkan minimal satu item.')
-  }
-  setIsSaving(true)
-  try {
-    // pakai calculateKubikasi di sini
-    const itemsWithKubikasi = items.map((item) => ({
-      ...item,
-      kubikasi: calculateKubikasi(item),
-    }))
-
-    const kubikasiTotal = itemsWithKubikasi.reduce(
-      (acc, item) => acc + (item.kubikasi || 0),
-      0
-    )
-
-    const payload = { 
-      ...poData, 
-      items: itemsWithKubikasi, 
-      kubikasi_total: kubikasiTotal,   // <<< tambahan
-      poId: editingPO?.id 
+    if (!poData.nomorPo || !poData.namaCustomer) {
+      return alert('Nomor PO dan Nama Customer harus diisi!')
     }
-
-    // @ts-ignore
-    const result = editingPO
-      ? await window.api.updatePO(payload)
-      : await window.api.saveNewPO(payload)
-
-    if (result.success) {
-      alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
-      onSaveSuccess()
-    } else {
-      throw new Error(result.error)
+    if (items.length === 0) {
+      return alert('Tambahkan minimal satu item.')
     }
-  } catch (error) {
-    alert(`Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
-  } finally {
-    setIsSaving(false)
+    setIsSaving(true)
+    try {
+      const itemsWithKubikasi = items.map((item) => ({
+        ...item,
+        kubikasi: calculateKubikasi(item),
+      }))
+
+      const kubikasiTotal = itemsWithKubikasi.reduce(
+        (acc, item) => acc + (item.kubikasi || 0),
+        0
+      )
+
+      const payload = {
+        ...poData,
+        items: itemsWithKubikasi,
+        kubikasi_total: kubikasiTotal,
+        poId: editingPO?.id
+      }
+
+      // @ts-ignore
+      const result = editingPO
+        ? await window.api.updatePO(payload)
+        : await window.api.saveNewPO(payload)
+
+      if (result.success) {
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
+        onSaveSuccess()
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      alert(`❌ Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
 
+  const handlePreviewPO = async () => {
+    if (items.length === 0) {
+      return alert('Tambahkan minimal satu item untuk preview.')
+    }
+    setIsPreviewing(true)
+    try {
+      const itemsWithKubikasi = items.map((item) => ({
+        ...item,
+        kubikasi: calculateKubikasi(item),
+      }))
 
+      const payload = {
+        ...poData,
+        items: itemsWithKubikasi,
+      }
 
-const calculateKubikasi = (item: POItem) => {
-  if (item.satuan === 'pcs') {
-    return (
-      ((item.thickness_mm || 0) *
-        (item.width_mm || 0) *
-        (item.length_mm || 0) *
-        (item.quantity || 0)) /
-      1_000_000_000
-    )
+      // @ts-ignore
+      const result = await window.api.previewPO(payload)
+
+      if (result.success) {
+        const pdfWindow = window.open()
+        if (pdfWindow) {
+          pdfWindow.document.write(
+            `<iframe src="data:application/pdf;base64,${result.base64Data}" width="100%" height="100%"></iframe>`
+          )
+        }
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      alert(`❌ Gagal preview PO: ${(error as Error).message}`)
+    } finally {
+      setIsPreviewing(false)
+    }
   }
-  if (item.satuan === 'm1') {
-    return (
-      ((item.thickness_mm || 0) *
-        (item.width_mm || 0) *
-        (item.quantity || 0)) /
-      1_000_000_000
-    )
+
+  const calculateKubikasi = (item: POItem) => {
+    if (item.satuan === 'pcs') {
+      return (
+        ((item.thickness_mm || 0) *
+          (item.width_mm || 0) *
+          (item.length_mm || 0) *
+          (item.quantity || 0)) /
+        1_000_000_000
+      )
+    }
+    if (item.satuan === 'm1') {
+      return (
+        ((item.thickness_mm || 0) *
+          (item.width_mm || 0) *
+          (item.quantity || 0)) /
+        1_000_000_000
+      )
+    }
+    return 0
   }
-  return 0
-}
 
-const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
-
-
+  const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
 
   return (
     <div className="page-container">
@@ -206,12 +242,16 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
         </div>
         <div className="header-actions">
           <Button onClick={onSaveSuccess}>Kembali</Button>
-          <Button variant="secondary">◎ Preview</Button>
+          <Button variant="secondary" onClick={handlePreviewPO} disabled={isPreviewing}>
+            {isPreviewing ? 'Membuka Preview...' : '◎ Preview'}
+          </Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
             {isSaving ? 'Menyimpan...' : editingPO ? 'Simpan Revisi' : 'Simpan PO Baru'}
           </Button>
         </div>
       </div>
+
+      {/* Informasi Dasar */}
       <Card>
         <h2>Informasi Dasar PO</h2>
         <div className="form-grid">
@@ -259,11 +299,12 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
           name="catatan"
           value={poData.catatan}
           onChange={handleDataChange}
-          placeholder="Catatan khusus untuk PO ini (akan disimpan di revisi)..."
+          placeholder="Catatan khusus untuk PO ini..."
           rows={3}
         />
       </Card>
 
+      {/* Daftar Item */}
       <div className="item-section-header">
         <h2>Daftar Item</h2>
         <Button onClick={handleAddItem}>+ Tambah Item</Button>
@@ -278,7 +319,7 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
             </Button>
           </div>
           <div className="form-grid">
-            {/* --- Product Fields --- */}
+            {/* Fields Produk & Spesifikasi */}
             <Input
               label="Product ID"
               value={item.product_id}
@@ -297,7 +338,6 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
               </select>
             </div>
 
-            {/* --- Specification Fields --- */}
             <div className="form-group">
               <label>Wood Type</label>
               <select
@@ -334,7 +374,7 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
                 ))}
               </select>
             </div>
-             <div className="form-group">
+            <div className="form-group">
               <label>Finishing</label>
               <select
                 value={item.finishing}
@@ -347,33 +387,31 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
               </select>
             </div>
 
-            {/* --- BARU: Sample & Marketing --- */}
             <div className="form-group">
-                <label>Sample</label>
-                <select
-                    value={item.sample}
-                    onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
-                >
-                    <option value="">Pilih Sample</option>
-                    {getUniqueOptions('sample').map((val) => (
-                        <option key={val} value={val}>{val}</option>
-                    ))}
-                </select>
+              <label>Sample</label>
+              <select
+                value={item.sample}
+                onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
+              >
+                <option value="">Pilih Sample</option>
+                {getUniqueOptions('sample').map((val) => (
+                  <option key={val} value={val}>{val}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
-                <label>Marketing</label>
-                <select
-                    value={item.marketing}
-                    onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
-                >
-                    <option value="">Pilih Marketing</option>
-                    {getUniqueOptions('marketing').map((val) => (
-                        <option key={val} value={val}>{val}</option>
-                    ))}
-                </select>
+              <label>Marketing</label>
+              <select
+                value={item.marketing}
+                onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
+              >
+                <option value="">Pilih Marketing</option>
+                {getUniqueOptions('marketing').map((val) => (
+                  <option key={val} value={val}>{val}</option>
+                ))}
+              </select>
             </div>
 
-            {/* --- Dimension & Quantity Fields --- */}
             <Input
               label="Thickness (mm)"
               type="number"
@@ -392,7 +430,6 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
               value={item.length_mm}
               onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
             />
-            {/* BARU: Length Type */}
             <Input
               label="Length Type"
               value={item.length_type}
@@ -405,50 +442,41 @@ const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item),
               value={item.quantity}
               onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
             />
-             <div className="form-group">
+            <div className="form-group">
               <label>Satuan</label>
               <select
                 value={item.satuan}
                 onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
               >
-                <option value="">Pilih Satuan</option>
-                {getUniqueOptions('satuan').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
+                <option value="pcs">pcs</option>
+                <option value="m1">m1</option>
               </select>
             </div>
-
-             {/* --- BARU: Location & Notes --- */}
             <Input
               label="Location"
               value={item.location}
               onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
               placeholder="e.g., Gudang A"
             />
-             <Input
+            <Input
               label="Catatan Item"
               value={item.notes}
               onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
             />
-            
           </div>
           <div className="form-group">
-  <label>Kubikasi Item</label>
-  <p><b>{calculateKubikasi(item).toFixed(3)} m³</b></p>
-</div>
+            <label>Kubikasi Item</label>
+            <p><b>{calculateKubikasi(item).toFixed(3)} m³</b></p>
+          </div>
         </Card>
-        
       ))}
-<Card>
-  <h2>Kubikasi Total</h2>
-  <p>
-    <b>
-      {items.reduce((acc, item) => acc + calculateKubikasi(item), 0).toFixed(3)} m³
-    </b>
-  </p>
-</Card>
 
-
+      <Card>
+        <h2>Kubikasi Total</h2>
+        <p>
+          <b>{totalKubikasi.toFixed(3)} m³</b>
+        </p>
+      </Card>
     </div>
   )
 }

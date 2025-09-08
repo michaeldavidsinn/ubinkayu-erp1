@@ -40,8 +40,6 @@ async function nextId(sheet) {
 // ===============================
 // PDF GENERATOR
 // ===============================
-// PERBAIKAN 1: Mengubah deklarasi fungsi menjadi 'async function' yang benar
-// PERBAIKAN 2: Mengganti nama fungsi menjadi 'generatePOPDF' agar konsisten
 async function generatePOPDF(poHeader, items, revisionNumber = 0) {
   return new Promise((resolve, reject) => {
     try {
@@ -143,8 +141,11 @@ async function generatePOPDF(poHeader, items, revisionNumber = 0) {
       doc.end()
 
       stream.on('finish', () => {
-        shell.openPath(filePath) // Buka PDF secara otomatis
-        resolve(filePath)
+        const pdfBuffer = fs.readFileSync(filePath)
+        const base64Data = pdfBuffer.toString('base64')
+
+        shell.openPath(filePath) // buka otomatis di sistem
+        resolve({ filePath, base64Data })
       })
       stream.on('error', reject)
     } catch (err) {
@@ -156,7 +157,7 @@ async function generatePOPDF(poHeader, items, revisionNumber = 0) {
 // ===============================
 // CRUD FUNCTIONS
 // ===============================
-export async function testSheetConnection() {
+async function testSheetConnection() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -166,7 +167,7 @@ export async function testSheetConnection() {
   }
 }
 
-export async function listPOs() {
+async function listPOs() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -182,7 +183,7 @@ export async function listPOs() {
       priority: r._rawData[5],
       notes: r._rawData[6],
       created_at: r._rawData[7],
-      kubikasi_total: Number(r._rawData[8]) || 0 
+      kubikasi_total: Number(r._rawData[8]) || 0
     }))
   } catch (err) {
     console.error('❌ listPOs error:', err.message)
@@ -190,7 +191,7 @@ export async function listPOs() {
   }
 }
 
-export async function saveNewPO(data) {
+async function saveNewPO(data) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -247,24 +248,24 @@ export async function saveNewPO(data) {
         satuan: item.satuan,
         location: item.location,
         notes: item.notes,
-        kubikasi: item.kubikasi || 0 
+        kubikasi: item.kubikasi || 0
       })
     }
 
-    await generatePOPDF(
+    const pdf = await generatePOPDF(
       { po_number: data.nomorPo, project_name: data.namaCustomer, created_at: now, deadline: data.tanggalKirim, priority: data.prioritas, status: 'Open', notes: data.catatan },
       data.items,
       0
     )
 
-    return { success: true, poId }
+    return { success: true, poId, pdf }
   } catch (err) {
     console.error('❌ saveNewPO error:', err.message)
     return { success: false, error: err.message }
   }
 }
 
-export async function updatePO(data) {
+async function updatePO(data) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -283,8 +284,7 @@ export async function updatePO(data) {
     poToUpdate.set('deadline', data.tanggalKirim)
     poToUpdate.set('priority', data.prioritas)
     poToUpdate.set('notes', data.catatan)
-    poToUpdate.set('kubikasi_total', data.kubikasi_total || 0) // <<< tambahan
-
+    poToUpdate.set('kubikasi_total', data.kubikasi_total || 0)
     await poToUpdate.save()
 
     const revRows = await revSheet.getRows()
@@ -329,25 +329,24 @@ export async function updatePO(data) {
         satuan: item.satuan,
         location: item.location,
         notes: item.notes,
-        kubikasi: item.kubikasi || 0  // <<< tambahan
-
+        kubikasi: item.kubikasi || 0
       })
     }
 
-    await generatePOPDF(
+    const pdf = await generatePOPDF(
       { po_number: data.nomorPo, project_name: data.namaCustomer, created_at: now, deadline: data.tanggalKirim, priority: data.prioritas, status: poToUpdate.get('status'), notes: data.catatan },
       data.items,
       newRev
     )
 
-    return { success: true }
+    return { success: true, pdf }
   } catch (err) {
     console.error('❌ updatePO error:', err.message)
     return { success: false, error: err.message }
   }
 }
 
-export async function deletePO(poId) {
+async function deletePO(poId) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -372,7 +371,7 @@ export async function deletePO(poId) {
   }
 }
 
-export async function listPOItems(poId) {
+async function listPOItems(poId) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -406,7 +405,7 @@ export async function listPOItems(poId) {
   }
 }
 
-export async function listPORevisions(poId) {
+async function listPORevisions(poId) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -428,7 +427,7 @@ export async function listPORevisions(poId) {
   }
 }
 
-export async function listPOItemsByRevision(revisionId) {
+async function listPOItemsByRevision(revisionId) {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -454,8 +453,7 @@ export async function listPOItemsByRevision(revisionId) {
       satuan: r.get('satuan'),
       location: r.get('location'),
       notes: r.get('notes'),
-      kubikasi: Number(r.get('kubikasi')) || 0   // <<< tambahan
-
+      kubikasi: Number(r.get('kubikasi')) || 0
     }))
   } catch (err) {
     console.error('❌ listPOItemsByRevision error:', err.message)
@@ -463,7 +461,7 @@ export async function listPOItemsByRevision(revisionId) {
   }
 }
 
-export async function getProducts() {
+async function getProducts() {
   try {
     const doc = await openDoc()
     await doc.loadInfo()
@@ -483,4 +481,45 @@ export async function getProducts() {
     console.error('❌ getProducts error:', err.message)
     return []
   }
+}
+
+// ===============================
+// PREVIEW FUNCTION
+// ===============================
+export async function previewPO(data) {
+  try {
+    const pdf = await generatePOPDF(
+      {
+        po_number: data.nomorPo,
+        project_name: data.namaCustomer,
+        created_at: new Date().toISOString(),
+        deadline: data.tanggalKirim,
+        priority: data.prioritas,
+        status: 'Preview',
+        notes: data.catatan,
+      },
+      data.items,
+      'preview'
+    )
+    return { success: true, ...pdf }
+  } catch (err) {
+    console.error('❌ previewPO error:', err.message)
+    return { success: false, error: err.message }
+  }
+}
+
+// ===============================
+// EXPORT ALL FUNCTIONS
+// ===============================
+export {
+  testSheetConnection,
+  listPOs,
+  saveNewPO,
+  updatePO,
+  deletePO,
+  listPOItems,
+  listPORevisions,
+  listPOItemsByRevision,
+  getProducts,
+  generatePOPDF
 }

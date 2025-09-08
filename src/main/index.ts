@@ -2,9 +2,17 @@
 /* eslint-disable prettier/prettier */
 // File: src/main/index.ts
 
+
+
+
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 // Pastikan path ini benar sesuai struktur folder Anda
+import { previewPO } from '../../electron/sheet.js'
+
+ipcMain.handle('po:preview', async (_, data) => {
+  return await previewPO(data)
+})
 import {
   testSheetConnection, saveNewPO, listPOs, deletePO, updatePO, listPOItems, getProducts,
   listPORevisions, listPOItemsByRevision

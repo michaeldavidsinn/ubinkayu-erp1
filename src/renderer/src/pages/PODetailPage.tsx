@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable prettier/prettier */
 // src/renderer/src/pages/PODetailPage.tsx
@@ -68,27 +69,52 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
 
   const currentRevision = revisions.find((r) => r.id === selectedRevisionId)
 
-  // Helper untuk mendapatkan kelas badge prioritas
   const getPriorityBadgeClass = (priority: string | undefined) => {
     switch (priority) {
-      case 'Urgent': return 'status-badge urgent';
-      case 'High': return 'status-badge high';
-      case 'Normal': return 'status-badge normal';
-      default: return 'status-badge normal'; // Default jika tidak ada
+      case 'Urgent': return 'status-badge urgent'
+      case 'High': return 'status-badge high'
+      case 'Normal': return 'status-badge normal'
+      default: return 'status-badge normal'
     }
-  };
+  }
 
-  // Helper untuk mendapatkan kelas badge status
   const getStatusBadgeClass = (status: string | undefined) => {
     switch (status) {
-      case 'Open': return 'status-badge status-open';
-      case 'In Progress': return 'status-badge status-in-progress';
-      case 'Completed': return 'status-badge status-completed';
-      case 'Cancelled': return 'status-badge status-cancelled';
-      default: return 'status-badge status-open';
+      case 'Open': return 'status-badge status-open'
+      case 'In Progress': return 'status-badge status-in-progress'
+      case 'Completed': return 'status-badge status-completed'
+      case 'Cancelled': return 'status-badge status-cancelled'
+      default: return 'status-badge status-open'
     }
-  };
+  }
 
+  const handlePreviewPO = async () => {
+    try {
+      const payload = {
+        ...po,
+        items,
+        kubikasi_total: po.kubikasi_total || 0,
+        revision_number: currentRevision?.revision_number || 0,
+      }
+      // @ts-ignore
+      const result = await window.api.previewPO(payload)
+      if (result.success) {
+        const byteCharacters = atob(result.base64Data)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: 'application/pdf' })
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+      } else {
+        alert('❌ Gagal preview: ' + result.error)
+      }
+    } catch (err) {
+      alert('❌ Error preview: ' + (err as Error).message)
+    }
+  }
 
   return (
     <div className="page-container">
@@ -97,45 +123,46 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
           <h1>Detail Purchase Order: {po.po_number}</h1>
           <p>Informasi lengkap dan daftar item untuk PO ini.</p>
         </div>
-        <Button onClick={onBackToList}>Kembali</Button>
+        <div className="header-actions">
+          <Button onClick={onBackToList}>Kembali</Button>
+          <Button variant="secondary" onClick={handlePreviewPO}>◎ Preview PDF</Button>
+        </div>
       </div>
 
-      <div className="detail-po-info"> {/* Wrapper baru untuk layout yang lebih baik */}
-        <Card className="po-summary-card"> {/* Gunakan kelas untuk styling khusus */}
-            <div className="po-summary-header">
-                <h3 className="po-summary-po-number">PO: {po.po_number}</h3>
-                <span className={getStatusBadgeClass(currentRevision?.status || po.status)}>
-                  {currentRevision?.status || po.status || 'Open'}
-                </span>
-            </div>
-            <p className="po-summary-customer">
-                <strong>Customer:</strong> {po.project_name}
-            </p>
+      <div className="detail-po-info">
+        <Card className="po-summary-card">
+          <div className="po-summary-header">
+            <h3 className="po-summary-po-number">PO: {po.po_number}</h3>
+            <span className={getStatusBadgeClass(currentRevision?.status || po.status)}>
+              {currentRevision?.status || po.status || 'Open'}
+            </span>
+          </div>
+          <p className="po-summary-customer">
+            <strong>Customer:</strong> {po.project_name}
+          </p>
 
-            <div className="po-summary-grid">
-                <div className="info-item">
-                    <label>Tanggal Input PO</label>
-                    <span>{po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}</span>
-                </div>
-                <div className="info-item">
-                    <label>Target Kirim</label>
-                    <span>{currentRevision?.deadline ? new Date(currentRevision.deadline).toLocaleDateString('id-ID') : '-'}</span>
-                </div>
-                <div className="info-item">
-                    <label>Prioritas</label>
-                    <span className={getPriorityBadgeClass(currentRevision?.priority)}>{currentRevision?.priority || '-'}</span>
-                </div>
-                
-<div className="info-item">
-  <label>Total Kubikasi</label>
-  <span>{po.kubikasi_total ? po.kubikasi_total.toFixed(3) + ' m³' : '-'}</span>
-</div>
-
+          <div className="po-summary-grid">
+            <div className="info-item">
+              <label>Tanggal Input PO</label>
+              <span>{po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}</span>
             </div>
+            <div className="info-item">
+              <label>Target Kirim</label>
+              <span>{currentRevision?.deadline ? new Date(currentRevision.deadline).toLocaleDateString('id-ID') : '-'}</span>
+            </div>
+            <div className="info-item">
+              <label>Prioritas</label>
+              <span className={getPriorityBadgeClass(currentRevision?.priority)}>{currentRevision?.priority || '-'}</span>
+            </div>
+            <div className="info-item">
+              <label>Total Kubikasi</label>
+              <span>{po.kubikasi_total ? po.kubikasi_total.toFixed(3) + ' m³' : '-'}</span>
+            </div>
+          </div>
         </Card>
 
         {currentRevision?.notes && (
-          <Card className="notes-card"> {/* Kartu terpisah untuk catatan */}
+          <Card className="notes-card">
             <h4>Catatan Revisi #{currentRevision.revision_number}</h4>
             <p>{currentRevision.notes}</p>
           </Card>
@@ -185,11 +212,10 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
               <Input label="Qty" value={`${item.quantity} ${item.satuan}`} disabled />
               <Input label="Catatan Item" value={item.notes || '-'} disabled />
               <Input label="Sample" value={item.sample || '-'} disabled />
-<Input label="Marketing" value={item.marketing || '-'} disabled />
-<Input label="Length Type" value={item.length_type || '-'} disabled />
-<Input label="Lokasi" value={item.location || '-'} disabled />
-<Input label="Kubikasi (m³)" value={item.kubikasi?.toFixed(3) || '0'} disabled />
-
+              <Input label="Marketing" value={item.marketing || '-'} disabled />
+              <Input label="Length Type" value={item.length_type || '-'} disabled />
+              <Input label="Lokasi" value={item.location || '-'} disabled />
+              <Input label="Kubikasi (m³)" value={item.kubikasi?.toFixed(3) || '0'} disabled />
             </div>
           </Card>
         ))
