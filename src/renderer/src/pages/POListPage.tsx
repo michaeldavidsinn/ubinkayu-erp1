@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable prettier/prettier */
 // src/renderer/src/pages/POListPage.tsx
 
@@ -46,7 +47,7 @@ const POListPage: React.FC<POListPageProps> = ({
   const filteredAndSortedPOs = useMemo(() => {
     let processedPOs = [...poList]
 
-    // 1. Terapkan Filter Pencarian
+    // --- Filtering ---
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase()
       processedPOs = processedPOs.filter(
@@ -56,29 +57,25 @@ const POListPage: React.FC<POListPageProps> = ({
       )
     }
 
-    // 2. Terapkan Filter Status
     if (filters.status !== 'all') {
-      processedPOs = processedPOs.filter((po) => po.status === filters.status)
+      processedPOs = processedPOs.filter((po) => (po.status || '').toLowerCase() === filters.status.toLowerCase())
     }
 
-    // 3. Terapkan Filter Prioritas
     if (filters.priority !== 'all') {
-      processedPOs = processedPOs.filter((po) => po.priority === filters.priority)
+      processedPOs = processedPOs.filter((po) => (po.priority || '').toLowerCase() === filters.priority.toLowerCase())
     }
 
-    // 4. Terapkan Filter Tanggal Input
     if (filters.dateFrom) {
       processedPOs = processedPOs.filter(
-        (po) => new Date(po.created_at) >= new Date(filters.dateFrom)
+        (po) => po.created_at && new Date(po.created_at) >= new Date(filters.dateFrom)
       )
     }
     if (filters.dateTo) {
       processedPOs = processedPOs.filter(
-        (po) => new Date(po.created_at) <= new Date(filters.dateTo + 'T23:59:59')
+        (po) => po.created_at && new Date(po.created_at) <= new Date(filters.dateTo + 'T23:59:59')
       )
     }
 
-    // 5. Terapkan Filter Tanggal Kirim
     if (filters.deadlineFrom) {
       processedPOs = processedPOs.filter(
         (po) => po.deadline && new Date(po.deadline) >= new Date(filters.deadlineFrom)
@@ -90,28 +87,39 @@ const POListPage: React.FC<POListPageProps> = ({
       )
     }
 
-    // 6. Terapkan Logika Pengurutan (Sorting)
-    const priorityMap = { Urgent: 1, High: 2, Normal: 3 }
+    // --- Sorting ---
+    const priorityMap: Record<string, number> = { urgent: 1, high: 2, normal: 3 }
     switch (filters.sortBy) {
       case 'deadline-asc':
         processedPOs.sort(
-          (a, b) => new Date(a.deadline || 0).getTime() - new Date(b.deadline || 0).getTime()
+          (a, b) =>
+            new Date(a.deadline || 0).getTime() - new Date(b.deadline || 0).getTime()
         )
         break
       case 'deadline-desc':
         processedPOs.sort(
-          (a, b) => new Date(b.deadline || 0).getTime() - new Date(a.deadline || 0).getTime()
+          (a, b) =>
+            new Date(b.deadline || 0).getTime() - new Date(a.deadline || 0).getTime()
         )
         break
       case 'created-desc':
-        processedPOs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        processedPOs.sort(
+          (a, b) =>
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )
         break
       case 'created-asc':
-        processedPOs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        processedPOs.sort(
+          (a, b) =>
+            new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+        )
         break
       case 'priority':
-        // @ts-ignore
-        processedPOs.sort((a, b) => (priorityMap[a.priority] || 4) - (priorityMap[b.priority] || 4))
+        processedPOs.sort(
+          (a, b) =>
+            (priorityMap[(a.priority || 'normal').toLowerCase()] || 4) -
+            (priorityMap[(b.priority || 'normal').toLowerCase()] || 4)
+        )
         break
     }
     return processedPOs
