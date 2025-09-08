@@ -11,7 +11,8 @@ import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
 import InputPOPage from './pages/InputPOPage'
 import PODetailPage from './pages/PODetailPage'
-import ProgressTrackingPage from './pages/ProgressTrackingPage' // <-- BARU: Impor halaman baru
+import ProgressTrackingPage from './pages/ProgressTrackingPage'
+import DashboardPage from './pages/DashboardPage';
 
 // --- DUMMY DATA UNTUK HALAMAN TRACKING ---
 const dummyTrackingData = [
@@ -23,7 +24,7 @@ const dummyTrackingData = [
 
 function App() {
   // BARU: Tambahkan 'tracking' sebagai salah satu kemungkinan view
-  const [view, setView] = useState<'list' | 'input' | 'detail' | 'tracking'>('list')
+  const [view, setView] = useState<'dashboard' | 'list' | 'input' | 'detail' | 'tracking'>('dashboard');
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
   const [detailPO, setDetailPO] = useState<POHeader | null>(null)
@@ -46,6 +47,7 @@ function App() {
   useEffect(() => {
     fetchPOs()
   }, [])
+
   const handleDeletePO = async (poId: string) => {
     if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
       setIsLoading(true)
@@ -82,12 +84,7 @@ function App() {
   }
 
   // BARU: Fungsi untuk menangani navigasi dari Navbar
-  const handleNavigate = (targetView: 'list' | 'tracking') => {
-    if (targetView === 'list') {
-      fetchPOs() // Muat ulang data PO saat kembali ke list
-    }
-    setView(targetView)
-  }
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => { setView(targetView); };
 
   const handleBackToList = () => {
     setEditingPO(null)
@@ -97,27 +94,20 @@ function App() {
 
   const renderContent = () => {
     switch (view) {
+      // [BARU] Tambahkan case untuk dashboard
+      case 'dashboard':
+        return <DashboardPage poList={purchaseOrders} isLoading={isLoading} />;
       case 'input':
-        return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />
+        return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />;
       case 'detail':
-        return <PODetailPage po={detailPO} onBackToList={handleBackToList} />
-      // BARU: Tambahkan case untuk 'tracking'
+        return <PODetailPage po={detailPO} onBackToList={handleBackToList} />;
       case 'tracking':
-        return <ProgressTrackingPage poList={dummyTrackingData} />
+        return <ProgressTrackingPage poList={[]} />;
       case 'list':
       default:
-        return (
-          <POListPage
-            poList={purchaseOrders}
-            onAddPO={handleShowInputForm}
-            onDeletePO={handleDeletePO}
-            onEditPO={handleEditPO}
-            onShowDetail={handleShowDetail}
-            isLoading={isLoading}
-          />
-        )
+        return <POListPage poList={purchaseOrders} onAddPO={handleShowInputForm} onDeletePO={handleDeletePO} onEditPO={handleEditPO} onShowDetail={handleShowDetail} isLoading={isLoading}/>;
     }
-  }
+  };
 
   return (
     <div className="app-layout">

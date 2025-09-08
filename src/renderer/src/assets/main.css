@@ -759,3 +759,81 @@ label {
 .status-badge.status-in-progress { background-color: #D69E2E; }
 .status-badge.status-completed { background-color: #38A169; }
 .status-badge.status-cancelled { background-color: #C53030; }
+
+/* ================================== */
+/* STYLING UNTUK DASHBOARD PAGE       */
+/* ================================== */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card-icon {
+  font-size: 2.5rem;
+  margin-right: 1.5rem;
+  background-color: var(--secondary-color);
+  height: 64px;
+  width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.stat-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card-title {
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.stat-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.welcome-card {
+  background-color: #F8FAFC;
+  border-left: 4px solid var(--primary-color);
+}
+
+.welcome-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.welcome-card h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.welcome-card ul {
+    list-style-type: '✓  ';
+    padding-left: 1.25rem;
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
