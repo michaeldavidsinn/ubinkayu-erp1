@@ -106,6 +106,7 @@ async function getNextIdFromSheet(sheet) {
 }
 
 function scrubItemPayload(item) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, purchase_order_id, revision_id, revision_number, ...rest } = item || {}
   return rest
 }
@@ -473,26 +474,58 @@ export async function listPOItems(poId) {
 
 export async function listPORevisions(poId) {
   try {
-    const doc = await openDoc()
-    const poSheet = await getSheet(doc, 'purchase_orders')
-    const rows = await poSheet.getRows()
+    console.log("\n\n================ ULTIMATE DEBUG START ================");
+    console.log(`[1] Memulai 'listPORevisions' untuk poId: "${poId}" (Tipe data: ${typeof poId})`);
+
+    const doc = await openDoc();
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const rows = await poSheet.getRows();
+
+    console.log(`[2] Berhasil mendapatkan sheet 'purchase_orders'. Total baris yang dibaca dari sheet: ${rows.length}`);
+
+    if (rows.length === 0) {
+        console.log("[!] Peringatan: Tidak ada baris data yang terbaca dari sheet. Periksa permission service account.");
+        return [];
+    }
+
     const metas = rows
-      .filter((r) => String(r.get('id')).trim() === String(poId).trim())
-      .map((r) => ({
-        // [PERBAIKAN] Menghapus karakter ilegal
-        id: `${poId}:${toNum(r.get('revision_number'), 0)}`,
-        purchase_order_id: String(poId),
-        revision_number: toNum(r.get('revision_number'), 0),
-        deadline: r.get('deadline') || null,
-        status: r.get('status') || null,
-        priority: r.get('priority') || null,
-        notes: r.get('notes') || null,
-        created_at: r.get('created_at') || ''
-      }))
-      .sort((a, b) => a.revision_number - b.revision_number)
-    return metas
+      .filter((r, index) => {
+        const headerName = poSheet.headerValues[0]; // -> Seharusnya 'id'
+        const rowId = r.get(headerName);
+
+        // Log paling penting: Tampilkan apa yang sedang dibandingkan
+        console.log(`\n--- Memeriksa Baris ke-${index} ---`);
+        console.log(`  - Nilai mentah dari kolom '${headerName}': "${rowId}" (Tipe data: ${typeof rowId})`);
+        console.log(`  - Membandingkan dengan poId: "${poId}" (Tipe data: ${typeof poId})`);
+
+        const isMatch = String(rowId).trim() == String(poId).trim(); // Gunakan == untuk perbandingan yg lebih longgar
+
+        console.log(`  - HASIL PERBANDINGAN: ${isMatch ? "✅ COCOK" : "❌ TIDAK COCOK"}`);
+
+        return isMatch;
+      })
+      .map((r) => {
+        // ... (bagian map tetap sama)
+        return {
+          id: `${poId}:${toNum(r.get('revision_number'), 0)}`,
+          purchase_order_id: String(poId),
+          revision_number: toNum(r.get('revision_number'), 0),
+          deadline: r.get('deadline') || null,
+          status: r.get('status') || null,
+          priority: r.get('priority') || null,
+          notes: r.get('notes') || null,
+          created_at: r.get('created_at') || ''
+        }
+      })
+      .sort((a, b) => a.revision_number - b.revision_number);
+
+    console.log(`\n[3] Proses filter selesai. Total revisi yang cocok: ${metas.length}`);
+    console.log("================ ULTIMATE DEBUG END ==================\n\n");
+
+    return metas;
   } catch (err) {
-    console.error('❌ listPORevisions error:', err.message); return []
+    console.error('❌ FATAL ERROR di listPORevisions:', err.message);
+    return [];
   }
 }
 

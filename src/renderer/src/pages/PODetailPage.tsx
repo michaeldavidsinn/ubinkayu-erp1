@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable prettier/prettier */
-// src/renderer/src/pages/PODetailPage.tsx
 
 import React, { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
@@ -12,13 +11,16 @@ import { POHeader, POItem } from '../types'
 interface PODetailPageProps {
   po: POHeader | null
   onBackToList: () => void
+  onShowHistory: () => void; // <-- [BARU] Prop untuk navigasi
 }
 
-const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
+// [MODIFIKASI] Hapus semua kode yang berhubungan dengan 'revisionHistory' dari halaman ini
+const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHistory }) => {
   const [items, setItems] = useState<POItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Efek ini sekarang hanya mengambil item TERBARU saja
     if (po?.id) {
       const fetchLatestItems = async () => {
         setIsLoading(true)
@@ -38,48 +40,48 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
 
   if (!po) return (<div className="page-container"><p>Data PO tidak ditemukan.</p></div>);
 
-  // Helper functions
+  // Helper functions dan handlePreviewPO tetap sama...
   const formatDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
   const getPriorityBadgeClass = (p: string | undefined) => `status-badge ${(p || 'normal').toLowerCase()}`;
   const getStatusBadgeClass = (s: string | undefined) => `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`;
 
-  // ▼▼▼ FUNGSI UNTUK PREVIEW PDF DITEMPEL DI SINI ▼▼▼
   const handlePreviewPO = async () => {
     if (!po || items.length === 0) {
       alert('Data PO atau item belum siap untuk dipreview.');
       return;
     }
-
     try {
       const payload = {
-        // Kita perlu menyamakan format dengan apa yang diharapkan `previewPO` di backend
         nomorPo: po.po_number,
         namaCustomer: po.project_name,
-        created_at: po.created_at, // Kirim juga tanggal input agar konsisten
+        created_at: po.created_at,
         deadline: po.deadline,
         priority: po.priority,
         items: items,
         notes: po.notes,
       };
-
       // @ts-ignore
-      // Cukup panggil fungsinya, backend yang akan urus sisanya
       await window.api.previewPO(payload);
-
     } catch (err) {
       console.error('Error saat preview PDF:', err);
       alert(`Gagal membuat preview PDF: ${(err as Error).message}`);
     }
   };
 
+
   return (
     <div className="page-container">
       <div className="page-header">
-        <div><h1>Detail Purchase Order: {po.po_number}</h1><p>Informasi lengkap dan daftar item untuk PO ini.</p></div>
-        {/* [FIX] Tombol dihubungkan ke fungsi handlePreviewPO */}
-        <div className="header-actions"><Button onClick={onBackToList}>Kembali</Button><Button variant="secondary" onClick={handlePreviewPO}>◎ Preview PDF</Button></div>
+        <div><h1>Detail Purchase Order: {po.po_number}</h1><p>Menampilkan informasi dan item versi terbaru.</p></div>
+        <div className="header-actions">
+          <Button onClick={onBackToList}>Kembali ke Daftar</Button>
+          {/* [BARU] Tombol untuk ke halaman histori */}
+          <Button variant="secondary" onClick={onShowHistory}>📜 Lihat Riwayat Revisi</Button>
+          <Button variant="secondary" onClick={handlePreviewPO}>◎ Preview PDF</Button>
+        </div>
       </div>
 
+      {/* Tampilan Detail dan Item (TETAP SAMA SEPERTI KODE ASLI ANDA) */}
       <div className="detail-po-info">
         <Card className="po-summary-card">
           <div className="po-summary-header"><h3 className="po-summary-po-number">PO: {po.po_number}</h3><span className={getStatusBadgeClass(po.status)}>{po.status || 'Open'}</span></div>
@@ -93,11 +95,9 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList }) => {
         </Card>
         {po.notes && (<Card className="notes-card"><h4>Catatan PO</h4><p>{po.notes}</p></Card>)}
       </div>
-
       <div className="item-section-header">
         <h2>Daftar Item (Versi Terbaru)</h2>
       </div>
-
       {isLoading ? (<p>⏳ Loading data item...</p>) : items.length === 0 ? (<Card><p>Tidak ada item terdaftar untuk PO ini.</p></Card>) : (
         items.map((item, index) => (
           <Card key={item.id || index} className="item-card">

@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable prettier/prettier */
-// src/renderer/src/App.tsx
-
 import React, { useState, useEffect } from 'react'
 import { POHeader } from './types'
 
@@ -13,24 +11,18 @@ import InputPOPage from './pages/InputPOPage'
 import PODetailPage from './pages/PODetailPage'
 import ProgressTrackingPage from './pages/ProgressTrackingPage'
 import DashboardPage from './pages/DashboardPage';
-
-// --- DUMMY DATA UNTUK HALAMAN TRACKING ---
-const dummyTrackingData = [
-  { id: '1', po_number: '29938231223', project_name: 'UDjiptama', priority: 'Urgent', progress: 0, deadline: '2025-08-28', is_overdue: true },
-  { id: '2', po_number: 'ggv', project_name: 'jkhkx', priority: 'Normal', progress: 25, deadline: '2025-09-15', is_overdue: false },
-  { id: '3', po_number: 'albert', project_name: 'albert', priority: 'High', progress: 75, deadline: '2025-09-20', is_overdue: false },
-  { id: '4', po_number: 'PO-004', project_name: 'Proyek Delta', priority: 'Normal', progress: 100, deadline: '2025-09-01', is_overdue: false },
-]
+import RevisionHistoryPage from './pages/RevisionHistoryPage';
 
 function App() {
-  // BARU: Tambahkan 'tracking' sebagai salah satu kemungkinan view
-  const [view, setView] = useState<'dashboard' | 'list' | 'input' | 'detail' | 'tracking'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'list' | 'input' | 'detail' | 'tracking' | 'history'>('dashboard');
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
-  const [detailPO, setDetailPO] = useState<POHeader | null>(null)
+
+  // [PERUBAHAN KUNCI] Kita akan fokus pada ID-nya saja
+  const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(true)
 
-  // ... (fungsi fetchPOs, handleDeletePO, dll. tetap sama) ...
   const fetchPOs = async () => {
     setIsLoading(true)
     try {
@@ -79,31 +71,51 @@ function App() {
   }
 
   const handleShowDetail = (po: POHeader) => {
-    setDetailPO(po)
+    setSelectedPoId(po.id); // Simpan ID-nya
     setView('detail')
   }
 
-  // BARU: Fungsi untuk menangani navigasi dari Navbar
-  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => { setView(targetView); };
+  const handleShowHistory = () => {
+    // ID sudah tersimpan di state, jadi kita tinggal ganti view
+    if (selectedPoId) {
+        setView('history');
+    } else {
+        alert("Error: PO ID tidak ditemukan untuk melihat histori.");
+    }
+  };
+
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
+    setSelectedPoId(null); // Reset ID saat pindah ke menu utama
+    setView(targetView);
+  };
 
   const handleBackToList = () => {
     setEditingPO(null)
-    setDetailPO(null)
+    setSelectedPoId(null) // Reset ID
     fetchPOs()
     handleNavigate('list')
   }
 
+  // Helper untuk mendapatkan detail PO berdasarkan ID yang tersimpan
+  const getCurrentPO = () => {
+    if (!selectedPoId) return null;
+    return purchaseOrders.find(p => p.id === selectedPoId) || null;
+  }
+
   const renderContent = () => {
+    const currentPO = getCurrentPO();
+
     switch (view) {
-      // [BARU] Tambahkan case untuk dashboard
       case 'dashboard':
         return <DashboardPage poList={purchaseOrders} isLoading={isLoading} />;
       case 'input':
         return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />;
       case 'detail':
-        return <PODetailPage po={detailPO} onBackToList={handleBackToList} />;
+        return <PODetailPage po={currentPO} onBackToList={handleBackToList} onShowHistory={handleShowHistory} />;
       case 'tracking':
-        return <ProgressTrackingPage poList={[]} />;
+        return <ProgressTrackingPage />;
+      case 'history':
+        return <RevisionHistoryPage poId={currentPO?.id || null} poNumber={currentPO?.po_number || null} onBack={() => setView('detail')} />;
       case 'list':
       default:
         return <POListPage poList={purchaseOrders} onAddPO={handleShowInputForm} onDeletePO={handleDeletePO} onEditPO={handleEditPO} onShowDetail={handleShowDetail} isLoading={isLoading}/>;
@@ -112,7 +124,6 @@ function App() {
 
   return (
     <div className="app-layout">
-      {/* BARU: Kirim 'view' dan 'handleNavigate' sebagai props */}
       <Navbar currentView={view} onNavigate={handleNavigate} />
       <main className="main-content">{renderContent()}</main>
     </div>
