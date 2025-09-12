@@ -249,7 +249,7 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
     try {
       const docPdf = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' })
 
-      // [PERBAIKAN] Menghapus karakter ilegal dari semua string
+      // ... (Bagian atas untuk mengisi konten PDF tetap sama)
       docPdf.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true })
       docPdf.moveDown(1)
       docPdf.fontSize(11).font('Helvetica-Bold').text(`Nomor PO      : ${poData.po_number || '-'}`)
@@ -260,9 +260,8 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
       docPdf.text(`Revisi        : #${revisionNumber}`)
       docPdf.moveDown(1.5)
 
-      // [PERBAIKAN KECIL] Menambahkan catatan PO jika ada
       if (poData.notes) {
-        docPdf.font('Helvetica-Italic').fontSize(10).text(`Catatan: ${poData.notes}`, { width: 500 })
+        docPdf.font('Helvetica').fontSize(10).text(`Catatan: ${poData.notes}`, { width: 500, oblique: true })
         docPdf.moveDown(1)
       }
 
@@ -270,7 +269,7 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
         headers: ['No', 'Produk', 'Jenis Kayu', 'Profil', 'Warna', 'Finishing', 'Tebal', 'Lebar', 'Qty', 'Satuan', 'Catatan'],
         rows: (poData.items || []).map((item, i) => [
           i + 1, item.product_name || '-', item.wood_type || '-', item.profile || '-', item.color || '-', item.finishing || '-',
-          `${item.thickness_mm || 0} mm`, `${item.width_mm || 0} mm`, // Perbaikan karakter ilegal
+          `${item.thickness_mm || 0} mm`, `${item.width_mm || 0} mm`,
           item.quantity || 0, item.satuan || '-', item.notes || '-'
         ]),
         colWidths: [30, 100, 80, 80, 80, 80, 50, 50, 40, 50, 120]
@@ -292,21 +291,36 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
         cy += rowH
       })
 
+      // ---- AWAL PERUBAHAN ----
       if (revisionNumber === 'preview') {
         const tempDir = app.getPath('temp')
-        const fileName = `PO-PREVIEW-${Date.now()}.pdf` // Perbaikan karakter ilegal
+        const fileName = `PO-PREVIEW-${Date.now()}.pdf`
         const filePath = path.join(tempDir, fileName)
         const stream = fs.createWriteStream(filePath)
         docPdf.pipe(stream); stream.on('finish', () => { shell.openPath(filePath); resolve({ success: true, isPreview: true, path: filePath }) }); stream.on('error', reject); docPdf.end()
       } else {
-        const baseDir = path.join(app.getPath('documents'), 'UbinkayuERP_Generated') // [SARAN] Simpan di Documents
+        // [MODIFIKASI] Mengubah baseDir ke folder proyek
+        const baseDir = path.join(app.getAppPath(), 'generated_pdfs')
         ensureDirSync(baseDir)
-        const revText = `Rev${revisionNumber}` // Perbaikan karakter ilegal
-        const fileName = `PO-${String(poData.po_number || '').replace(/[/\\?%*:|"<>]/g, '-')}-${revText}.pdf` // Perbaikan karakter ilegal
+
+        // Format nama file sudah sesuai dengan yang Anda minta
+        const revText = `Rev${revisionNumber}`
+        const fileName = `PO-${String(poData.po_number || '').replace(/[/\\?%*:|"<>]/g, '-')}-${revText}.pdf`
+
         const filePath = path.join(baseDir, fileName)
         const stream = fs.createWriteStream(filePath)
-        docPdf.pipe(stream); stream.on('finish', () => { shell.openPath(filePath); resolve({ success: true, path: filePath }) }); stream.on('error', reject); docPdf.end()
+
+        // Logika di bawah ini diubah sedikit agar tidak otomatis membuka file, tapi tetap resolve path
+        docPdf.pipe(stream);
+        stream.on('finish', () => {
+          console.log(`✅ PDF berhasil disimpan di: ${filePath}`);
+          shell.openPath(filePath); // Baris ini diaktifkan kembali
+          resolve({ success: true, path: filePath });
+      });
+        stream.on('error', reject);
+        docPdf.end()
       }
+      // ---- AKHIR PERUBAHAN ----
     } catch (error) {
       console.error('❌ Gagal generate PDF:', error); reject(error)
     }
@@ -382,7 +396,7 @@ export async function saveNewPO(data) {
       nextItemId++ // Increment ID untuk item berikutnya
     }
 
-    await generatePOPdf({ ...data, po_number: data.nomorPo, project_name: data.namaCustomer, created_at: now }, 0)
+    await generatePOPdf({ po_number: data.nomorPo, project_name: data.namaCustomer, deadline: data.tanggalKirim, priority: data.prioritas, items: data.items, notes: data.catatan, created_at: now }, 0)
 
     return { success: true, poId }
   } catch (err) {
@@ -432,7 +446,7 @@ export async function updatePO(data) {
       nextItemId++ // Increment ID untuk item berikutnya
     }
 
-    await generatePOPdf({ ...data, po_number: data.nomorPo ?? prev.po_number, project_name: data.namaCustomer ?? prev.project_name, created_at: now }, newRev)
+    await generatePOPdf({ po_number: data.nomorPo ?? prev.po_number, project_name: data.namaCustomer ?? prev.project_name, deadline: data.tanggalKirim ?? prev.deadline, priority: data.prioritas ?? prev.priority, items: data.items, notes: data.catatan ?? prev.notes, created_at: now }, newRev)
 
     return { success: true, revision_number: newRev }
   } catch (err) {
