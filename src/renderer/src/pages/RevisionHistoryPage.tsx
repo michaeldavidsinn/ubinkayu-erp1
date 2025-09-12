@@ -72,6 +72,8 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
               <span>Dibuat pada: {formatDate(revItem.revision.created_at)}</span>
             </div>
             <div className="revision-details">
+                <p><strong>Customer:</strong> {revItem.revision.project_name || '-'}</p>
+                <p><strong>Prioritas:</strong> {revItem.revision.priority || 'Normal'}</p>
                 <p><strong>Status:</strong> {revItem.revision.status || '-'}</p>
                 <p><strong>Deadline:</strong> {formatDate(revItem.revision.deadline)}</p>
                 {revItem.revision.notes && <p><strong>Catatan:</strong> {revItem.revision.notes}</p>}
