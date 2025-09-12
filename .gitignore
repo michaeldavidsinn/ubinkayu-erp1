@@ -5,3 +5,4 @@ out
 .eslintcache
 *.log*
 electron/credentials.json
+electron/credentials-oauth.json

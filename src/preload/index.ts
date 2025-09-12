@@ -26,7 +26,22 @@ const api = {
 
   // --- Fungsi untuk Progress Tracking ---
   getActivePOWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'),
-  updateItemProgress: (data: any) => ipcRenderer.invoke('progress:updateItem', data)
+  updateItemProgress: (data: any) => ipcRenderer.invoke('progress:updateItem', data),
+
+  // Fungsi untuk memulai proses generate & upload
+  generateAndUploadPO: (poData: any, revNum: number) => ipcRenderer.invoke('po:generate-upload', poData, revNum),
+  
+  // Fungsi untuk mendengarkan event saat URL otorisasi perlu dibuka
+ onAuthStarted: (callback) => {
+    const subscription = () => callback();
+    ipcRenderer.on('gdrive:auth-started', subscription);
+    
+    // Kembalikan fungsi untuk menghapus listener
+    return () => ipcRenderer.removeListener('gdrive:auth-started', subscription);
+},
+  
+  // Fungsi untuk mengirim authorization code dari UI ke backend
+  sendAuthCode: (code: string) => ipcRenderer.send('gdrive:send-code', code),
 };
 
 // Proses 'expose' atau pendaftaran API ke window object di UI
