@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
 import React from 'react';
+import logo from '../assets/WhatsApp Image 2025-09-09 at 14.30.02 - Edited.png';
 
 interface NavbarProps {
   currentView: string;
@@ -24,7 +25,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">PT Ubinkayu ERP</div>
+    <div className="navbar-brand">
+      <img src={logo} alt="Ubinkayu Logo" className="navbar-logo" />  
+     </div>      
       <div className="navbar-links">
         {/* [FIX] Jadikan link ini fungsional */}
         <a href="#" onClick={() => onNavigate('dashboard')} className={getLinkClass('Dashboard')}>
@@ -35,12 +38,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
         </a>
         <a href="#" onClick={() => onNavigate('tracking')} className={getLinkClass('Progress Tracking')}>
           Progress Tracking
-        </a>
-        <a href="#" className={getLinkClass('Reports')}>
-          Reports
-        </a>
-        <a href="#" className={getLinkClass('Users')}>
-          Users
         </a>
       </div>
     </nav>
