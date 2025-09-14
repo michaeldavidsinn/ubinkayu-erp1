@@ -130,49 +130,79 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const handleSaveOrUpdatePO = async () => {
-    if (!poData.nomorPo || !poData.namaCustomer) {
-      return alert('Nomor PO dan Nama Customer harus diisi!')
-    }
-    if (items.length === 0) {
-      return alert('Tambahkan minimal satu item.')
-    }
-    setIsSaving(true)
-    try {
-      const itemsWithKubikasi = items.map((item) => ({
-        ...item,
-        kubikasi: calculateKubikasi(item),
-      }))
+// Ganti fungsi handleSaveOrUpdatePO Anda dengan versi ini
 
-      const kubikasiTotal = itemsWithKubikasi.reduce(
-        (acc, item) => acc + (item.kubikasi || 0),
-        0
-      )
-
-      const payload = {
-        ...poData,
-        items: itemsWithKubikasi,
-        kubikasi_total: kubikasiTotal,
-        poId: editingPO?.id
-      }
-
-      // @ts-ignore
-      const result = editingPO
-        ? await window.api.updatePO(payload)
-        : await window.api.saveNewPO(payload)
-
-      if (result.success) {
-        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
-        onSaveSuccess()
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      alert(`❌ Gagal ${editingPO ? 'memperbarui' : 'menyimpan'} PO: ${(error as Error).message}`)
-    } finally {
-      setIsSaving(false)
-    }
+const handleSaveOrUpdatePO = async () => {
+  if (!poData.nomorPo || !poData.namaCustomer) {
+    return alert('Nomor PO dan Nama Customer harus diisi!')
   }
+  if (items.length === 0) {
+    return alert('Tambahkan minimal satu item.')
+  }
+  
+  setIsSaving(true)
+  try {
+    const itemsWithKubikasi = items.map((item) => ({
+      ...item,
+      kubikasi: calculateKubikasi(item),
+    }))
+
+    const kubikasiTotal = itemsWithKubikasi.reduce(
+      (acc, item) => acc + (item.kubikasi || 0),
+      0
+    )
+
+    const payload = {
+      ...poData,
+      items: itemsWithKubikasi,
+      kubikasi_total: kubikasiTotal,
+      poId: editingPO?.id
+    }
+
+    // --- Langkah 1: Simpan data ke Google Sheets ---
+    // @ts-ignore
+    const result = editingPO
+      ? await window.api.updatePO(payload)
+      : await window.api.saveNewPO(payload)
+
+    if (!result.success) {
+      throw new Error(result.error || 'Gagal menyimpan data ke Google Sheets.')
+    }
+    
+    alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} di Google Sheets!`)
+
+    // --- LANGKAH 2 (BARU): Generate PDF dan Unggah ke Google Drive ---
+    console.log("Memulai proses pembuatan PDF dan unggah ke Google Drive...");
+    alert("Data berhasil disimpan di Sheets. Sekarang memulai proses unggah PDF ke Google Drive...");
+
+    const poHeaderForPdf = {
+        po_number: poData.nomorPo,
+        project_name: poData.namaCustomer,
+        created_at: poData.tanggalMasuk,
+        deadline: poData.tanggalKirim,
+        priority: poData.prioritas,
+        notes: poData.catatan
+    };
+
+    // @ts-ignore
+    const uploadResult = await window.api.generateAndUploadPO({ ...poHeaderForPdf, items: itemsWithKubikasi }, result.revision_number ?? 0);
+
+    if (uploadResult.success) {
+        alert(`PDF berhasil diunggah! Anda bisa melihatnya di folder Google Drive.`);
+        // @ts-ignore
+        window.open(uploadResult.link, '_blank');
+    } else {
+        throw new Error(uploadResult.error || 'Gagal mengunggah PDF ke Google Drive.');
+    }
+    
+    onSaveSuccess() // Kembali ke halaman daftar setelah semua selesai
+
+  } catch (error) {
+    alert(`❌ TERJADI KESALAHAN: ${(error as Error).message}`)
+  } finally {
+    setIsSaving(false)
+  }
+}
 
   const handlePreviewPO = async () => {
     if (items.length === 0) {

@@ -11,7 +11,7 @@ import PDFDocument from 'pdfkit'
 import { app, shell } from 'electron'
 import crypto from 'node:crypto'
 // Tambahkan ini di bagian atas file electron/sheet.js
-import { ipcMain } from 'electron'
+
 import { google } from 'googleapis'
 // ===============================
 // AUTH & DOC
@@ -29,14 +29,14 @@ function getAuth() {
     return new JWT({
       email: creds.client_email,
       key: creds.private_key,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+      scopes: ['https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/drive.file']
     })
   }
   const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
   return new JWT({
     email: creds.client_email,
     key: creds.private_key,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    scopes: ['https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/drive.file']
   })
 }
 
@@ -788,101 +788,47 @@ export async function getRevisionHistory(poId) {
     return []
   }
 }
-async function getDriveClient(onAuthUrl) {
-  const credsPath = path.join(process.cwd(), 'electron', 'credentials-oauth.json');
-  if (!fs.existsSync(credsPath)) throw new Error('File credentials-oauth.json tidak ditemukan.');
-  
-  const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
-  const { client_secret, client_id, redirect_uris } = creds.installed;
-  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
-  const tokenPath = path.join(app.getPath('userData'), 'gdrive-token.json');
-  // Coba baca token yang sudah ada untuk login otomatis
-  if (fs.existsSync(tokenPath)) {
-    const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-    oAuth2Client.setCredentials(token);
-    return oAuth2Client;
-  }
-
-  // Jika token tidak ada, mulai proses otorisasi baru
-  return new Promise((resolve, reject) => {
-    const authUrl = oAuth2Client.generateAuthUrl({
-      access_type: 'offline',
-      prompt: 'consent', // Minta izin setiap saat untuk testing
-      scope: ['https://www.googleapis.com/auth/drive.file'], // Izin hanya untuk membuat file
-    });
-    
-    // Kirim URL ke frontend untuk dibuka oleh pengguna
-    onAuthUrl(authUrl);
-
-    // Menunggu kode otorisasi dari frontend setelah pengguna login
-    ipcMain.once('gdrive:receive-code', async (event, code) => {
-      try {
-        if (!code) {
-            throw new Error('Kode otorisasi tidak diterima.');
-        }
-        const { tokens } = await oAuth2Client.getToken(code);
-        oAuth2Client.setCredentials(tokens);
-        // Simpan token untuk penggunaan selanjutnya agar tidak perlu login lagi
-        fs.writeFileSync(tokenPath, JSON.stringify(tokens));
-        console.log('Token berhasil didapatkan dan disimpan.');
-        resolve(oAuth2Client);
-      } catch (e) {
-        console.error("Gagal mendapatkan token:", e);
-        reject(e);
-      }
-    });
-  });
-}
-
-/**
- * Fungsi ini mengambil path file PDF dan mengunggahnya ke Google Drive.
- * @param {string} filePath - Path lengkap ke file PDF yang akan diunggah.
- * @param {Function} onAuthUrl - Callback untuk alur otorisasi.
- */
-async function uploadToDrive(filePath, onAuthUrl) {
+export async function generateAndUploadPO(poData, revisionNumber) {
   try {
-    const oAuth2Client = await getDriveClient(onAuthUrl);
-    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
-    const fileName = path.basename(filePath);
+    // Langkah 1: Buat PDF menggunakan fungsi Anda yang sudah ada
+    const pdfResult = await generatePOPdf(poData, revisionNumber);
+    if (!pdfResult || !pdfResult.success) {
+      throw new Error("Gagal membuat file PDF.");
+    }
+
+    console.log(`PDF dibuat di ${pdfResult.path}, memulai proses unggah...`);
+
+    // Langkah 2: Unggah ke Drive menggunakan Service Account
+    const auth = getAuth(); // Menggunakan otentikasi yang sama dengan Google Sheets
+    const drive = google.drive({ version: 'v3', auth });
+    const fileName = path.basename(pdfResult.path);
+    
+    // ▼▼▼ GANTI DENGAN ID FOLDER ANDA ▼▼▼
+    const FOLDER_ID = '1Hx_Jw6_0dWhCqA-ZZpDMrXEccxuQ1Esa';
 
     const response = await drive.files.create({
       requestBody: {
         name: fileName,
         mimeType: 'application/pdf',
+        parents: [FOLDER_ID] // Menentukan folder tujuan
       },
       media: {
         mimeType: 'application/pdf',
-        body: fs.createReadStream(filePath),
+        body: fs.createReadStream(pdfResult.path),
       },
+
+       supportsAllDrives: true,
     });
 
     console.log(`✅ File berhasil diunggah ke Drive! Link: ${response.data.webViewLink}`);
     // Opsi untuk menghapus file lokal setelah diunggah
-    // fs.unlinkSync(filePath); 
+    // fs.unlinkSync(pdfResult.path); 
+    
     return { success: true, link: response.data.webViewLink };
-  } catch (error) {
-    console.error("❌ Gagal mengunggah ke Google Drive:", error);
-    return { success: false, error: error.message };
-  }
-}
-// Fungsi utama yang akan dipanggil dari UI
-export async function generateAndUploadPO(poData, revisionNumber, onAuthUrl) {
-  try {
-    // Langkah 1: Buat PDF menggunakan fungsi Anda yang sudah ada
-    const pdfResult = await generatePOPdf(poData, revisionNumber);
-    
-    if (!pdfResult || !pdfResult.success) {
-      throw new Error("Gagal membuat file PDF.");
-    }
-    
-    // Langkah 2: Unggah PDF yang sudah dibuat ke Drive
-    console.log(`PDF dibuat di ${pdfResult.path}, memulai proses unggah...`);
-    const uploadResult = await uploadToDrive(pdfResult.path, onAuthUrl);
-    return uploadResult;
 
   } catch (error) {
     console.error('❌ Proses Generate & Upload Gagal:', error);
     return { success: false, error: error.message };
   }
+  
 }

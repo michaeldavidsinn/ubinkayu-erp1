@@ -32,16 +32,7 @@ const api = {
   generateAndUploadPO: (poData: any, revNum: number) => ipcRenderer.invoke('po:generate-upload', poData, revNum),
   
   // Fungsi untuk mendengarkan event saat URL otorisasi perlu dibuka
- onAuthStarted: (callback) => {
-    const subscription = () => callback();
-    ipcRenderer.on('gdrive:auth-started', subscription);
-    
-    // Kembalikan fungsi untuk menghapus listener
-    return () => ipcRenderer.removeListener('gdrive:auth-started', subscription);
-},
-  
-  // Fungsi untuk mengirim authorization code dari UI ke backend
-  sendAuthCode: (code: string) => ipcRenderer.send('gdrive:send-code', code),
+
 };
 
 // Proses 'expose' atau pendaftaran API ke window object di UI

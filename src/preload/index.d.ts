@@ -17,9 +17,7 @@ interface ICustomAPI {
 
   // ▼▼▼ TAMBAHKAN TIPE UNTUK FUNGSI BARU DI SINI ▼▼▼
   getRevisionHistory: (poId: string) => Promise<any[]>;
-  generateAndUploadPO: (poData: any, revNum: number) => Promise<{ success: boolean; link?: string; error?: string }>;
-  onAuthStarted: (callback: () => void) => void;
-  sendAuthCode: (code: string) => void;
+
 
 }
 

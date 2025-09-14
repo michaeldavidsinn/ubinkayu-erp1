@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   testSheetConnection, saveNewPO, listPOs, deletePO, updatePO,
   listPOItems, getProducts, listPORevisions, listPOItemsByRevision,
-  previewPO, getRevisionHistory, generateAndUploadPO  // <-- Tambahkan getRevisionHistory
+  previewPO, getRevisionHistory,generateAndUploadPO,
 } from '../../electron/sheet.js';
 
 // ... (sisa kode createWindow dan app.whenReady() bagian atas)
@@ -50,22 +50,17 @@ app.whenReady().then(() => {
   // [BARU] Daftarkan handler untuk fungsi super kita
   ipcMain.handle('po:getRevisionHistory', async (_event, poId) => getRevisionHistory(poId));
 
-   ipcMain.handle('po:generate-upload', async (event, poData, revNum) => {
-    // Fungsi 'onAuthUrl' ini akan dikirim sebagai callback ke backend
-    const onAuthUrl = (authUrl: string): void => {
-      // Buka URL otorisasi di browser default pengguna
-      shell.openExternal(authUrl);
-      console.log('--- [BACKEND]: Mengirim event "gdrive:auth-started" ke UI ---');
-      // Kirim event kembali ke UI untuk memberitahu pengguna
-      event.sender.send('gdrive:auth-started');
-    };
-     ipcMain.on('gdrive:send-code', (event, code) => {
-    // Teruskan kode ini ke proses otentikasi yang sedang menunggu di sheet.js
-    ipcMain.emit('gdrive:receive-code', event, code);
-  });
-    
-    return generateAndUploadPO(poData, revNum, onAuthUrl);
-  });
+  ipcMain.handle('po:generate-upload', async (_event, poData, revNum) => {
+  // Fungsi 'onAuthUrl' akan dikirim sebagai callback ke backend
+  // untuk menangani alur otentikasi jika diperlukan
+  const onAuthUrl = (authUrl: string): void => {
+    shell.openExternal(authUrl);
+    _event.sender.send('gdrive:auth-started');
+  };
+  
+  return generateAndUploadPO(poData, revNum, onAuthUrl);
+});
+   
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
