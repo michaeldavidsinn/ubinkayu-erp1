@@ -24,39 +24,48 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
 
   const [notes, setNotes] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false)
 
-  const handleUpdate = async (nextStage: string) => {
-    if (!notes && !photoFile) {
-      return alert('Harap isi catatan atau unggah foto.')
+   const handleSelectPhoto = async () => {
+    // @ts-ignore
+    const selectedPath = await window.api.openFileDialog();
+    if (selectedPath) {
+      setPhotoPath(selectedPath);
     }
-    setIsUpdating(true)
+  };
+
+  const handleUpdate = async (nextStage: string) => {
+    if (!notes && !photoPath) {
+      return alert('Harap isi catatan atau unggah foto.');
+    }
+    setIsUpdating(true);
     try {
       const payload = {
         poId: poId,
-        itemId: item.id, // ID item sekarang dijamin ada
+        itemId: item.id,
         poNumber: poNumber,
         stage: nextStage,
         notes: notes,
-        // @ts-ignore
-        photoPath: photoFile?.path
-      }
+        // [PERBAIKAN] Kirim path yang sudah kita simpan di state
+        photoPath: photoPath
+      };
       // @ts-ignore
-      const result = await window.api.updateItemProgress(payload)
+      const result = await window.api.updateItemProgress(payload);
       if (result.success) {
-        alert(`Progress item ${item.product_name} berhasil diupdate ke tahap '${nextStage}'!`)
-        onUpdate()
-        setNotes('')
-        setPhotoFile(null)
+        alert(`Progress item ${item.product_name} berhasil diupdate ke tahap '${nextStage}'!`);
+        onUpdate();
+        setNotes('');
+        setPhotoPath(null); // Reset path foto
       } else {
-        throw new Error(result.error)
+        throw new Error(result.error);
       }
     } catch (err) {
-      alert(`Gagal update progress: ${(err as Error).message}`)
+      alert(`Gagal update progress: ${(err as Error).message}`);
     } finally {
-      setIsUpdating(false)
+      setIsUpdating(false);
     }
-  }
+  };
 
   return (
     <Card className="item-card">
@@ -81,11 +90,12 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
             placeholder="Tambahkan catatan..."
             rows={3}
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])}
-          />
+          {/* [PERBAIKAN] Ganti input file dengan tombol */}
+          <div className="file-input-container">
+            <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
+            {photoPath && <span className="file-name">{photoPath.split('\\').pop()}</span>}
+          </div>
+          
           <Button
             onClick={() => handleUpdate(stages[currentStageIndex + 1])}
             disabled={isUpdating}
@@ -101,7 +111,8 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
                 <div key={log.id} className="log-entry">
                     <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
                     <p>{log.notes}</p>
-                    {log.photo_url && <a href={log.photo_url} target="_blank" rel="noopener noreferrer">Lihat Foto</a>}
+                                        <p>{log.notes}</p>
+
                 </div>
             ))}
          </div>

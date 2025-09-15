@@ -13,7 +13,15 @@
   --secondary-color: #F5F5F5;
   --secondary-hover: #E0E0E0;
 }
-
+.link-lihat-foto {
+  font-size: 0.9em;
+  color: #3182CE;
+  text-decoration: none;
+  font-weight: 500;
+}
+.link-lihat-foto:hover {
+  text-decoration: underline;
+}
 body {
   margin: 0;
   background-color: var(--bg-color);

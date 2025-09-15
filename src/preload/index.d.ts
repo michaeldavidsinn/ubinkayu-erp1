@@ -21,6 +21,7 @@ interface ICustomAPI {
   updateItemProgress: (data: any) => Promise<{ success: boolean; error?: string }>;
   // [BARU] Tambahkan definisi tipe baru di sini
   getRecentUpdates: () => Promise<any[]>;
+  openFileDialog: () => Promise<string | null>;
 }
 
 declare global {

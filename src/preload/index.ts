@@ -27,9 +27,10 @@ const api = {
   // --- Fungsi untuk Progress Tracking ---
   getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
   getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
-  updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
+ updateItemProgress: (data: any) => ipcRenderer.invoke('progress:updateItem', data),
   // [BARU] Tambahkan fungsi baru di sini
   getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
+  openFileDialog: () => ipcRenderer.invoke('dialog:open-file'),
 };
 
 try {

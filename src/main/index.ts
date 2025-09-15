@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell,dialog } from 'electron'
 import path from 'node:path'
 
 import {
@@ -19,7 +19,8 @@ import {
   getActivePOsWithProgress,
   getPOItemsWithDetails,
   updateItemProgress,
-  getRecentProgressUpdates
+  getRecentProgressUpdates,
+  
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -68,11 +69,23 @@ app.whenReady().then(() => {
     }
     return { success: false, error: 'Invalid URL' };
   });
+ipcMain.handle('dialog:open-file', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif'] }]
+    });
+    if (!canceled) {
+      return filePaths[0];
+    }
+    return null;
+  });
 
   // --- [BARU] IPC Handlers untuk Progress Tracking ---
   ipcMain.handle('progress:getActivePOs', () => getActivePOsWithProgress());
   ipcMain.handle('progress:getPOItems', (_event, poId) => getPOItemsWithDetails(poId));
-  ipcMain.handle('progress:updateItem', (_event, data) => updateItemProgress(data));
+   ipcMain.handle('progress:updateItem', async (_event, data) => {
+    return updateItemProgress(data);
+  });
   ipcMain.handle('progress:getRecentUpdates', () => getRecentProgressUpdates());
 
 

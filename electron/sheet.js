@@ -530,12 +530,32 @@ export async function updateItemProgress(data) {
     const { poId, itemId, poNumber, stage, notes, photoPath } = data;
     let photoLink = null;
     if (photoPath) {
-      const uploadResult = await uploadProgressPhoto(photoPath, poNumber, itemId);
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error);
-      }
-      photoLink = uploadResult.link;
+      if (!fs.existsSync(photoPath)) throw new Error(`File foto tidak ditemukan: ${photoPath}`);
+      
+      const auth = getAuth();
+      const drive = google.drive({ version: 'v3', auth });
+      const timestamp = new Date().toISOString().replace(/:/g, '-');
+      const fileName = `PO-${poNumber}_ITEM-${itemId}_${timestamp}.jpg`; // Nama file yang unik
+
+      console.log(`Mengunggah foto progress: ${fileName}`);
+      const response = await drive.files.create({
+        requestBody: {
+          name: fileName,
+          mimeType: 'image/jpeg',
+          parents: [PROGRESS_PHOTOS_FOLDER_ID] // ID Folder dari konstanta di atas
+        },
+        media: {
+          mimeType: 'image/jpeg',
+          body: fs.createReadStream(photoPath)
+        },
+        fields: 'id, webViewLink',
+        supportsAllDrives: true,
+      });
+
+      photoLink = response.data.webViewLink;
+      console.log(`✅ Foto progress berhasil diunggah. Link: ${photoLink}`);
     }
+
 
     const doc = await openDoc();
     const progressSheet = await getSheet(doc, 'progress_tracking');
@@ -543,13 +563,13 @@ export async function updateItemProgress(data) {
 
     await progressSheet.addRow({
       id: nextId,
-      purchase_order_id: poId,
       purchase_order_item_id: itemId,
       stage: stage,
       notes: notes,
-      photo_url: photoLink,
+      photo_url: photoLink, // Simpan link foto dari Drive
       created_at: new Date().toISOString(),
     });
+    console.log(`✅ Log progress untuk item ID ${itemId} berhasil disimpan.`);
 
     return { success: true };
   } catch (err) {
