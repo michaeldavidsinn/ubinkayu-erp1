@@ -24,10 +24,12 @@ const api = {
   previewPO: (data) => ipcRenderer.invoke('po:preview', data),
   openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
-  // --- [BARU] Fungsi untuk Progress Tracking ---
+  // --- Fungsi untuk Progress Tracking ---
   getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
   getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
+  // [BARU] Tambahkan fungsi baru di sini
+  getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
 };
 
 try {

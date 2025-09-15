@@ -19,6 +19,7 @@ import {
   getActivePOsWithProgress,
   getPOItemsWithDetails,
   updateItemProgress,
+  getRecentProgressUpdates
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -72,6 +73,7 @@ app.whenReady().then(() => {
   ipcMain.handle('progress:getActivePOs', () => getActivePOsWithProgress());
   ipcMain.handle('progress:getPOItems', (_event, poId) => getPOItemsWithDetails(poId));
   ipcMain.handle('progress:updateItem', (_event, data) => updateItemProgress(data));
+  ipcMain.handle('progress:getRecentUpdates', () => getRecentProgressUpdates());
 
 
   createWindow()

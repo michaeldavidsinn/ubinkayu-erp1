@@ -1,8 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-// File: electron/sheet.js
-
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 import path from 'node:path'
@@ -125,7 +123,6 @@ async function getLivePOItems(poId, doc) {
   return getItemsByRevision(poId, latest, doc);
 }
 
-
 // ===============================
 // PDF & UPLOAD LOGIC
 // ===============================
@@ -145,7 +142,7 @@ async function generatePOPdf(poData, revisionNumber = 0, isPreview = false) {
             docPdf.moveDown(1.5);
 
             if (poData.notes) {
-                docPdf.font('Helvetica-Italic').fontSize(10).text(`Catatan: ${poData.notes}`, { width: 500 });
+                docPdf.font('Helvetica-Oblique').fontSize(10).text(`Catatan: ${poData.notes}`, { width: 500 });
                 docPdf.moveDown(1);
             }
 
@@ -240,7 +237,6 @@ async function uploadProgressPhoto(photoPath, poNumber, itemId) {
 // ===============================
 // PUBLIC API
 // ===============================
-
 export async function testSheetConnection() {
   try {
     const doc = await openDoc();
@@ -455,7 +451,7 @@ export async function listPORevisions(poId) {
     const rows = await poSheet.getRows();
     return rows
       .filter(r => String(r.get('id')).trim() === String(poId).trim())
-      .map(r => ({ ...r.toObject() }))
+      .map(r => (r.toObject()))
       .sort((a, b) => a.revision_number - b.revision_number);
   } catch (err) {
     console.error('❌ listPORevisions error:', err.message);
@@ -516,7 +512,8 @@ export async function getRevisionHistory(poId) {
         .filter(
           r =>
             String(r.get('purchase_order_id')) === String(poId) &&
-            toNum(r.get('revision_number'), -1) === m.revision_number
+            // [MODIFIKASI] Pastikan kedua sisi perbandingan adalah ANGKA
+            toNum(r.get('revision_number'), -1) === toNum(m.revision_number, -1)
         )
         .map(r => r.toObject()),
     }));
@@ -530,7 +527,7 @@ export async function getRevisionHistory(poId) {
 
 export async function updateItemProgress(data) {
   try {
-    const { itemId, poNumber, stage, notes, photoPath } = data;
+    const { poId, itemId, poNumber, stage, notes, photoPath } = data;
     let photoLink = null;
     if (photoPath) {
       const uploadResult = await uploadProgressPhoto(photoPath, poNumber, itemId);
@@ -546,6 +543,7 @@ export async function updateItemProgress(data) {
 
     await progressSheet.addRow({
       id: nextId,
+      purchase_order_id: poId,
       purchase_order_item_id: itemId,
       stage: stage,
       notes: notes,
@@ -584,10 +582,12 @@ export async function getActivePOsWithProgress() {
 
     const activePOs = latestPoRows.filter(r => r.get('status') !== 'Completed' && r.get('status') !== 'Cancelled');
 
-    const progressByItemId = progressRows.reduce((acc, row) => {
+    const progressByCompositeKey = progressRows.reduce((acc, row) => {
+      const poId = row.get('purchase_order_id');
       const itemId = row.get('purchase_order_item_id');
-      if (!acc[itemId]) acc[itemId] = [];
-      acc[itemId].push({ stage: row.get('stage'), created_at: row.get('created_at') });
+      const key = `${poId}-${itemId}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') });
       return acc;
     }, {});
 
@@ -615,11 +615,16 @@ export async function getActivePOsWithProgress() {
         const itemId = item.get('id');
         const needsSample = item.get('sample') === 'Ada sample';
 
-        const stages = ['supply', 'produksi'];
-        if (needsSample) stages.push('sample');
-        stages.push('selesai');
+        const stages = ['Pembahanan'];
+        if (needsSample) {
+            stages.push('Kasih Sample');
+        }
+        stages.push('Start Produksi');
+        stages.push('Kirim');
 
-        const itemProgressHistory = progressByItemId[itemId] || [];
+        const compositeKey = `${poId}-${itemId}`;
+        const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
+
         let latestStageIndex = -1;
         if (itemProgressHistory.length > 0) {
           const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
@@ -655,7 +660,9 @@ export async function getPOItemsWithDetails(poId) {
 
         const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestRev);
 
-        const progressByItemId = progressRows.reduce((acc, row) => {
+        const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
+
+        const progressByItemId = poProgressRows.reduce((acc, row) => {
             const itemId = row.get('purchase_order_item_id');
             if (!acc[itemId]) acc[itemId] = [];
             acc[itemId].push(row.toObject());
@@ -663,10 +670,17 @@ export async function getPOItemsWithDetails(poId) {
         }, {});
 
         const result = poItems.map(item => {
-            const itemId = item.get('id');
+            const itemObject = {};
+            itemSheet.headerValues.forEach(header => {
+                itemObject[header] = item.get(header);
+            });
+
+            const itemId = String(itemObject.id);
+
             const history = (progressByItemId[itemId] || []).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+
             return {
-                ...item.toObject(),
+                ...itemObject,
                 progressHistory: history,
             };
         });
@@ -675,4 +689,60 @@ export async function getPOItemsWithDetails(poId) {
         console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
         return [];
     }
+}
+
+
+export async function getRecentProgressUpdates(limit = 10) {
+  try {
+    const doc = await openDoc();
+    const progressSheet = await getSheet(doc, 'progress_tracking');
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const poSheet = await getSheet(doc, 'purchase_orders');
+
+    const [progressRows, itemRows, poRows] = await Promise.all([
+      progressSheet.getRows(),
+      itemSheet.getRows(),
+      poSheet.getRows()
+    ]);
+
+    // Buat Peta (Map) untuk pencarian data yang cepat
+    const itemMap = new Map(itemRows.map(r => [r.get('id'), r.toObject()]));
+    const poMap = new Map();
+    poRows.forEach(r => {
+        // Simpan hanya revisi terakhir untuk setiap po id
+        const poId = r.get('id');
+        const rev = toNum(r.get('revision_number'));
+        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+            poMap.set(poId, r.toObject());
+        }
+    });
+
+    // 1. Urutkan semua progress dari yang paling baru
+    const sortedUpdates = progressRows
+      .map(r => r.toObject())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // 2. Ambil beberapa saja sesuai limit (misal: 10 terbaru)
+    const recentUpdates = sortedUpdates.slice(0, limit);
+
+    // 3. Lengkapi datanya dengan nama item dan nomor PO
+    const enrichedUpdates = recentUpdates.map(update => {
+      const item = itemMap.get(update.purchase_order_item_id);
+      if (!item) return null; // Jika item tidak ditemukan, lewati
+
+      const po = poMap.get(item.purchase_order_id);
+      if (!po) return null; // Jika PO tidak ditemukan, lewati
+
+      return {
+        ...update,
+        item_name: item.product_name,
+        po_number: po.po_number,
+      };
+    }).filter(Boolean); // Hapus entri yang null
+
+    return enrichedUpdates;
+  } catch (err) {
+    console.error('❌ Gagal get recent progress updates:', err.message);
+    return [];
+  }
 }

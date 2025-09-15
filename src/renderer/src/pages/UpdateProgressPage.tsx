@@ -1,5 +1,6 @@
-/* eslint-disable react/prop-types */
-// src/renderer/src/pages/UpdateProgressPage.tsx
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
 import { POHeader, POItem } from '../types'
@@ -7,15 +8,16 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 
 // Helper untuk menampilkan tanggal
-const formatDate = (d) => new Date(d).toLocaleString('id-ID')
+const formatDate = (d: string) => new Date(d).toLocaleString('id-ID')
 
 // Komponen untuk satu item PO
-const ProgressItem = ({ item, poNumber, onUpdate }) => {
-  const stages = ['supply', 'produksi']
+const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: string, poNumber: string, onUpdate: () => void }) => {
+  const stages = ['Pembahanan'];
   if (item.sample === 'Ada sample') {
-    stages.push('sample')
+    stages.push('Kasih Sample');
   }
-  stages.push('selesai')
+  stages.push('Start Produksi');
+  stages.push('Kirim');
 
   const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage
   const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1
@@ -24,24 +26,26 @@ const ProgressItem = ({ item, poNumber, onUpdate }) => {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  const handleUpdate = async (nextStage) => {
+  const handleUpdate = async (nextStage: string) => {
     if (!notes && !photoFile) {
       return alert('Harap isi catatan atau unggah foto.')
     }
     setIsUpdating(true)
     try {
       const payload = {
-        itemId: item.id,
+        poId: poId,
+        itemId: item.id, // ID item sekarang dijamin ada
         poNumber: poNumber,
         stage: nextStage,
         notes: notes,
-        photoPath: photoFile?.path // Electron bisa mengakses path file
+        // @ts-ignore
+        photoPath: photoFile?.path
       }
       // @ts-ignore
       const result = await window.api.updateItemProgress(payload)
       if (result.success) {
         alert(`Progress item ${item.product_name} berhasil diupdate ke tahap '${nextStage}'!`)
-        onUpdate() // Panggil fungsi untuk refresh data
+        onUpdate()
         setNotes('')
         setPhotoFile(null)
       } else {
@@ -157,7 +161,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       {isLoading ? (
         <p>Memuat item...</p>
       ) : (
-        items.map((item) => <ProgressItem key={item.id} item={item} poNumber={po.po_number} onUpdate={fetchItems} />)
+        items.map((item) => <ProgressItem key={item.id} item={item} poId={po.id} poNumber={po.po_number} onUpdate={fetchItems} />)
       )}
     </div>
   )

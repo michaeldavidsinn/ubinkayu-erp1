@@ -15,10 +15,12 @@ interface ICustomAPI {
   getRevisionHistory: (poId: string) => Promise<any[]>;
   openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
 
-  // [BARU] Definisi tipe untuk fungsi progress tracking
+  // Definisi tipe untuk fungsi progress tracking
   getActivePOs: () => Promise<any[]>;
   getPOItemsDetails: (poId: string) => Promise<any[]>;
   updateItemProgress: (data: any) => Promise<{ success: boolean; error?: string }>;
+  // [BARU] Tambahkan definisi tipe baru di sini
+  getRecentUpdates: () => Promise<any[]>;
 }
 
 declare global {
