@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable prettier/prettier */
+// File: src/renderer/src/pages/PODetailPage.tsx
 
 import React, { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
@@ -11,20 +9,14 @@ import { POHeader, POItem } from '../types'
 interface PODetailPageProps {
   po: POHeader | null
   onBackToList: () => void
-  onShowHistory: () => void; // <-- [BARU] Prop untuk navigasi
+  onShowHistory: () => void;
 }
 
-// [MODIFIKASI] Hapus semua kode yang berhubungan dengan 'revisionHistory' dari halaman ini
 const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHistory }) => {
   const [items, setItems] = useState<POItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  
-  // State untuk mengelola alur otorisasi di UI
-
-
   useEffect(() => {
-    // 1. Mengambil item untuk PO yang sedang dilihat
     if (po?.id) {
       const fetchLatestItems = async () => {
         setIsLoading(true)
@@ -40,37 +32,47 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
       }
       fetchLatestItems()
     }
-     }, [po])
-    
-  
+  }, [po])
 
   if (!po) return (<div className="page-container"><p>Data PO tidak ditemukan.</p></div>);
-  
-  // Helper functions dan handlePreviewPO tetap sama...
+
   const formatDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
   const getPriorityBadgeClass = (p: string | undefined) => `status-badge ${(p || 'normal').toLowerCase()}`;
   const getStatusBadgeClass = (s: string | undefined) => `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`;
 
-  const handlePreviewPO = async () => {
-    if (!po || items.length === 0) {
-      alert('Data PO atau item belum siap untuk dipreview.');
-      return;
-    }
-    try {
-      const payload = {
-        nomorPo: po.po_number,
-        namaCustomer: po.project_name,
-        created_at: po.created_at,
-        deadline: po.deadline,
-        priority: po.priority,
-        items: items,
-        notes: po.notes,
-      };
-      // @ts-ignore
-      await window.api.previewPO(payload);
-    } catch (err) {
-      console.error('Error saat preview PDF:', err);
-      alert(`Gagal membuat preview PDF: ${(err as Error).message}`);
+  // [MODIFIKASI] Fungsi untuk handle tombol "Buka PDF"
+  const handleOpenPdf = async () => {
+    if (!po) return;
+
+    // Prioritaskan membuka link dari Google Drive
+    // @ts-ignore
+    if (po.pdf_link && po.pdf_link.startsWith('http')) {
+      alert('Membuka PDF dari Google Drive...');
+      try {
+        // @ts-ignore
+        await window.api.openExternalLink(po.pdf_link);
+      } catch (err) {
+        alert(`Gagal membuka link: ${(err as Error).message}`);
+      }
+    } else {
+      // Fallback untuk data lama atau jika upload gagal: generate preview lokal
+      alert('Link PDF tidak ditemukan di database. Membuat preview lokal sementara...');
+      try {
+        const payload = {
+          nomorPo: po.po_number,
+          namaCustomer: po.project_name,
+          created_at: po.created_at,
+          deadline: po.deadline,
+          priority: po.priority,
+          items: items,
+          notes: po.notes,
+        };
+        // @ts-ignore
+        await window.api.previewPO(payload);
+      } catch (err) {
+        console.error('Error saat preview PDF lokal:', err);
+        alert(`Gagal membuat preview PDF lokal: ${(err as Error).message}`);
+      }
     }
   };
 
@@ -81,21 +83,15 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
         <div><h1>Detail Purchase Order: {po.po_number}</h1><p>Menampilkan informasi dan item versi terbaru.</p></div>
         <div className="header-actions">
           <Button onClick={onBackToList}>Kembali ke Daftar</Button>
-          {/* [BARU] Tombol untuk ke halaman histori */}
           <Button variant="secondary" onClick={onShowHistory}>📜 Lihat Riwayat Revisi</Button>
-          
-          <Button variant="secondary" onClick={handlePreviewPO}>◎ Preview PDF</Button>
-{/* --- TOMBOL BARU --- */}
-          
+
+          {/* [MODIFIKASI] Tombol Preview diubah menjadi Buka PDF */}
+          <Button onClick={handleOpenPdf}>📄 Buka PDF</Button>
         </div>
       </div>
-      {/* --- BARU: Tampilan Kondisional untuk Input Kode Otorisasi --- */}
-     
-      
-      
 
-      {/* Tampilan Detail dan Item (TETAP SAMA SEPERTI KODE ASLI ANDA) */}
       <div className="detail-po-info">
+        {/* ... (sisa JSX Anda untuk menampilkan detail, tidak perlu diubah) ... */}
         <Card className="po-summary-card">
           <div className="po-summary-header"><h3 className="po-summary-po-number">PO: {po.po_number}</h3><span className={getStatusBadgeClass(po.status)}>{po.status || 'Open'}</span></div>
           <p className="po-summary-customer"><strong>Customer:</strong> {po.project_name}</p>

@@ -74,7 +74,8 @@ const HEADERS = {
     'priority',
     'notes',
     'kubikasi_total',
-    'created_at'
+    'created_at',
+    'pdf_link'
   ],
   purchase_order_items: [
     'id',
@@ -282,12 +283,12 @@ async function hashLive(poId, doc) {
 // ===============================
 // PDF GENERATOR (support 'preview')
 // ===============================
-export async function generatePOPdf(poData, revisionNumber = 0) {
+async function generatePOPdf(poData, revisionNumber = 0, isPreview = false) {
   return new Promise((resolve, reject) => {
     try {
       const docPdf = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' })
 
-      // ... (Bagian atas untuk mengisi konten PDF tetap sama)
+      // ... (Isi konten PDF tetap sama)
       docPdf.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true })
       docPdf.moveDown(1)
       docPdf
@@ -343,7 +344,7 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
           item.notes || '-'
         ]),
         colWidths: [30, 100, 80, 80, 80, 80, 50, 50, 40, 50, 120]
-      }
+      };
 
       const startY = docPdf.y
       const startX = docPdf.page.margins.left
@@ -374,42 +375,31 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
         cy += rowH
       })
 
-      // ---- AWAL PERUBAHAN ----
-      if (revisionNumber === 'preview') {
-        const tempDir = app.getPath('temp')
-        const fileName = `PO-PREVIEW-${Date.now()}.pdf`
-        const filePath = path.join(tempDir, fileName)
-        const stream = fs.createWriteStream(filePath)
-        docPdf.pipe(stream)
-        stream.on('finish', () => {
+      // Tentukan path penyimpanan berdasarkan isPreview
+      const tempDir = app.getPath(isPreview ? 'temp' : 'documents')
+      const subDir = isPreview ? '' : path.join('UbinkayuERP', 'PO-Archive')
+      const baseDir = path.join(tempDir, subDir)
+      ensureDirSync(baseDir)
+
+      const revText = isPreview ? `PREVIEW-${Date.now()}` : `Rev${revisionNumber}`
+      const fileName = `PO-${String(poData.po_number || '').replace(/[/\\?%*:|"<>]/g, '-')}-${revText}.pdf`
+      const filePath = path.join(baseDir, fileName)
+
+      const stream = fs.createWriteStream(filePath)
+      docPdf.pipe(stream)
+      docPdf.end()
+
+      stream.on('finish', () => {
+        if (isPreview) {
           shell.openPath(filePath)
-          resolve({ success: true, isPreview: true, path: filePath })
-        })
-        stream.on('error', reject)
-        docPdf.end()
-      } else {
-        // [MODIFIKASI] Mengubah baseDir ke folder proyek
-        const baseDir = path.join(app.getAppPath(), 'generated_pdfs')
-        ensureDirSync(baseDir)
+        }
+        resolve({ success: true, path: filePath })
+      })
+      stream.on('error', (err) => {
+        console.error('❌ Gagal tulis stream PDF:', err)
+        reject({ success: false, error: err.message })
+      })
 
-        // Format nama file sudah sesuai dengan yang Anda minta
-        const revText = `Rev${revisionNumber}`
-        const fileName = `PO-${String(poData.po_number || '').replace(/[/\\?%*:|"<>]/g, '-')}-${revText}.pdf`
-
-        const filePath = path.join(baseDir, fileName)
-        const stream = fs.createWriteStream(filePath)
-
-        // Logika di bawah ini diubah sedikit agar tidak otomatis membuka file, tapi tetap resolve path
-        docPdf.pipe(stream)
-        stream.on('finish', () => {
-          console.log(`✅ PDF berhasil disimpan di: ${filePath}`)
-          shell.openPath(filePath) // Baris ini diaktifkan kembali
-          resolve({ success: true, path: filePath })
-        })
-        stream.on('error', reject)
-        docPdf.end()
-      }
-      // ---- AKHIR PERUBAHAN ----
     } catch (error) {
       console.error('❌ Gagal generate PDF:', error)
       reject(error)
@@ -423,7 +413,6 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
 export async function testSheetConnection() {
   try {
     const doc = await openDoc()
-    // [PERBAIKAN] Menghapus karakter ilegal
     console.log(`✅ Tes koneksi OK: "${doc.title}"`)
   } catch (err) {
     console.error('❌ Gagal tes koneksi ke Google Sheets:', err.message)
@@ -442,12 +431,21 @@ export async function listPOs() {
       const keep = byId.get(id)
       if (!keep || rev > keep.rev) byId.set(id, { rev, row: r })
     }
-    return Array.from(byId.values()).map(({ row }) => row.toObject())
+    // [MODIFIKASI] Pastikan `pdf_link` juga ikut terkirim ke frontend
+    return Array.from(byId.values()).map(({ row }) => {
+        const poObject = row.toObject();
+        // Memastikan kolom pdf_link ada, meskipun kosong
+        return {
+            ...poObject,
+            pdf_link: row.get('pdf_link') || null
+        };
+    });
   } catch (err) {
     console.error('❌ listPOs error:', err.message)
     return []
   }
 }
+
 
 export async function saveNewPO(data) {
   try {
@@ -458,7 +456,8 @@ export async function saveNewPO(data) {
 
     const poId = await getNextIdFromSheet(poSheet)
 
-    await poSheet.addRow({
+    // Langkah 1: Tambahkan baris PO dan dapatkan objek barisnya
+    const newPoRow = await poSheet.addRow({
       id: poId,
       revision_number: 0,
       po_number: data.nomorPo,
@@ -468,39 +467,51 @@ export async function saveNewPO(data) {
       priority: data.prioritas || '',
       notes: data.catatan || '',
       kubikasi_total: data.kubikasi_total || 0,
-      created_at: now
+      created_at: now,
+      pdf_link: 'generating...' // Placeholder
     })
 
-    // [PERBAIKAN PERFORMA] Ambil ID Awal SATU KALI sebelum loop
-    let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10)
-
-    for (const raw of data.items || []) {
+    // Tambahkan item-item PO (versi batch)
+    const itemsToAdd = (data.items || []).map(raw => {
       const clean = scrubItemPayload(raw)
-      await itemSheet.addRow({
-        id: nextItemId, // Gunakan ID dari variabel
+      return {
         purchase_order_id: poId,
         ...clean,
         revision_id: 0,
         revision_number: 0,
         kubikasi: raw.kubikasi || 0
-      })
-      nextItemId++ // Increment ID untuk item berikutnya
+      }
+    })
+    if (itemsToAdd.length > 0) {
+      await itemSheet.addRows(itemsToAdd)
     }
 
-    await generatePOPdf(
-      {
-        po_number: data.nomorPo,
-        project_name: data.namaCustomer,
-        deadline: data.tanggalKirim,
-        priority: data.prioritas,
-        items: data.items,
-        notes: data.catatan,
-        created_at: now
-      },
-      0
-    )
+    // Langkah 2: Siapkan data untuk PDF
+    const poDataForPdf = {
+      po_number: data.nomorPo,
+      project_name: data.namaCustomer,
+      deadline: data.tanggalKirim,
+      priority: data.prioritas,
+      items: data.items,
+      notes: data.catatan,
+      created_at: now
+    }
 
-    return { success: true, poId }
+    // Langkah 3 (HANYA SATU PANGGILAN INI): Generate, upload, dan dapatkan linknya
+    const uploadResult = await generateAndUploadPO(poDataForPdf, 0)
+
+    // Langkah 4: Simpan link kembali ke baris yang tadi dibuat
+    if (uploadResult.success) {
+      newPoRow.set('pdf_link', uploadResult.link)
+      await newPoRow.save()
+      console.log(`✅ Link PDF untuk PO ${poId} berhasil disimpan.`)
+    } else {
+      newPoRow.set('pdf_link', `ERROR: ${uploadResult.error}`)
+      await newPoRow.save()
+      console.error(`❌ Gagal mengunggah PDF untuk PO ${poId}.`)
+    }
+
+    return { success: true, poId, revision_number: 0 }
   } catch (err) {
     console.error('❌ saveNewPO error:', err.message)
     return { success: false, error: err.message }
@@ -519,7 +530,8 @@ export async function updatePO(data) {
     const prev = prevRow ? prevRow.toObject() : {}
     const newRev = latest >= 0 ? latest + 1 : 0
 
-    await poSheet.addRow({
+    // Langkah 1: Tambahkan baris revisi baru
+    const newRevisionRow = await poSheet.addRow({
       id: String(data.poId),
       revision_number: newRev,
       po_number: data.nomorPo ?? prev.po_number ?? '',
@@ -529,27 +541,27 @@ export async function updatePO(data) {
       priority: data.prioritas ?? prev.priority ?? '',
       notes: data.catatan ?? prev.notes ?? '',
       kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
-      created_at: now
+      created_at: now,
+      pdf_link: 'generating...'
     })
 
-    // [PERBAIKAN PERFORMA] Ambil ID Awal SATU KALI sebelum loop
-    let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10)
-
-    for (const raw of data.items || []) {
-      const clean = scrubItemPayload(raw)
-      await itemSheet.addRow({
-        id: nextItemId, // Gunakan ID dari variabel
-        purchase_order_id: String(data.poId),
-        ...clean,
-        revision_id: newRev,
-        revision_number: newRev,
-        kubikasi: raw.kubikasi || 0
-      })
-      nextItemId++ // Increment ID untuk item berikutnya
+    // Tambahkan item untuk revisi baru (versi batch)
+    const itemsToAdd = (data.items || []).map(raw => {
+        const clean = scrubItemPayload(raw)
+        return {
+            purchase_order_id: String(data.poId),
+            ...clean,
+            revision_id: newRev,
+            revision_number: newRev,
+            kubikasi: raw.kubikasi || 0
+        }
+    });
+    if (itemsToAdd.length > 0) {
+        await itemSheet.addRows(itemsToAdd);
     }
 
-    await generatePOPdf(
-      {
+    // Langkah 2: Siapkan data untuk PDF
+    const poDataForPdf = {
         po_number: data.nomorPo ?? prev.po_number,
         project_name: data.namaCustomer ?? prev.project_name,
         deadline: data.tanggalKirim ?? prev.deadline,
@@ -557,9 +569,21 @@ export async function updatePO(data) {
         items: data.items,
         notes: data.catatan ?? prev.notes,
         created_at: now
-      },
-      newRev
-    )
+    }
+
+    // Langkah 3 (HANYA SATU PANGGILAN INI): Generate, upload, dan dapatkan linknya
+    const uploadResult = await generateAndUploadPO(poDataForPdf, newRev);
+
+    // Langkah 4: Simpan link ke baris revisi yang baru
+    if (uploadResult.success) {
+      newRevisionRow.set('pdf_link', uploadResult.link)
+      await newRevisionRow.save()
+      console.log(`✅ Link PDF untuk revisi ${newRev} PO ${data.poId} berhasil disimpan.`)
+    } else {
+      newRevisionRow.set('pdf_link', `ERROR: ${uploadResult.error}`)
+      await newRevisionRow.save()
+      console.error(`❌ Gagal mengunggah PDF untuk revisi ${newRev}.`)
+    }
 
     return { success: true, revision_number: newRev }
   } catch (err) {
@@ -692,6 +716,7 @@ export async function getProducts() {
 
 export async function previewPO(data) {
   try {
+    // Fungsi ini sekarang hanya untuk preview lokal dari form input
     const pdfResult = await generatePOPdf(
       {
         po_number: data.nomorPo,
@@ -700,9 +725,10 @@ export async function previewPO(data) {
         deadline: data.tanggalKirim || '',
         priority: data.prioritas || '',
         items: data.items || [],
-        notes: data.catatan || '' // [PERBAIKAN] Mengirim 'catatan' dari data PO utama
+        notes: data.catatan || ''
       },
-      'preview' // Menggunakan 'preview' secara eksplisit
+      'preview', // Revisi diganti jadi 'preview'
+      true // Menandakan ini adalah preview
     )
     return { success: true, ...pdfResult }
   } catch (err) {
@@ -790,45 +816,44 @@ export async function getRevisionHistory(poId) {
 }
 export async function generateAndUploadPO(poData, revisionNumber) {
   try {
-    // Langkah 1: Buat PDF menggunakan fungsi Anda yang sudah ada
-    const pdfResult = await generatePOPdf(poData, revisionNumber);
-    if (!pdfResult || !pdfResult.success) {
-      throw new Error("Gagal membuat file PDF.");
+    const pdfResult = await generatePOPdf(poData, revisionNumber, false)
+    if (!pdfResult.success) {
+      throw new Error("Gagal membuat file PDF lokal.")
     }
 
-    console.log(`PDF dibuat di ${pdfResult.path}, memulai proses unggah...`);
+    console.log(`PDF dibuat di ${pdfResult.path}, memulai proses unggah...`)
 
-    // Langkah 2: Unggah ke Drive menggunakan Service Account
-    const auth = getAuth(); // Menggunakan otentikasi yang sama dengan Google Sheets
-    const drive = google.drive({ version: 'v3', auth });
-    const fileName = path.basename(pdfResult.path);
-    
-    // ▼▼▼ GANTI DENGAN ID FOLDER ANDA ▼▼▼
-    const FOLDER_ID = '1Hx_Jw6_0dWhCqA-ZZpDMrXEccxuQ1Esa';
+    const auth = getAuth()
+    const drive = google.drive({ version: 'v3', auth })
+    const fileName = path.basename(pdfResult.path)
+
+    // GANTI DENGAN ID FOLDER ANDA
+    const FOLDER_ID = '1-1Gw1ay4iQoFNFe2KcKDgCwOIi353QEC'
 
     const response = await drive.files.create({
       requestBody: {
         name: fileName,
         mimeType: 'application/pdf',
-        parents: [FOLDER_ID] // Menentukan folder tujuan
+        parents: [FOLDER_ID]
       },
       media: {
         mimeType: 'application/pdf',
         body: fs.createReadStream(pdfResult.path),
       },
-
-       supportsAllDrives: true,
+      fields: 'id, webViewLink',
+      supportsAllDrives: true, // <-- TAMBAHKAN BARIS INI
     });
 
-    console.log(`✅ File berhasil diunggah ke Drive! Link: ${response.data.webViewLink}`);
-    // Opsi untuk menghapus file lokal setelah diunggah
-    // fs.unlinkSync(pdfResult.path); 
-    
-    return { success: true, link: response.data.webViewLink };
+    console.log(`✅ File berhasil diunggah ke Drive! Link: ${response.data.webViewLink}`)
+
+    // Hapus file lokal setelah diunggah untuk menghemat ruang
+    fs.unlinkSync(pdfResult.path);
+
+    // [MODIFIKASI] Mengembalikan link
+    return { success: true, link: response.data.webViewLink }
 
   } catch (error) {
-    console.error('❌ Proses Generate & Upload Gagal:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Proses Generate & Upload Gagal:', error)
+    return { success: false, error: error.message }
   }
-  
 }

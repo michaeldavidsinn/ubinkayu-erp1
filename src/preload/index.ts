@@ -29,11 +29,12 @@ const api = {
   updateItemProgress: (data: any) => ipcRenderer.invoke('progress:updateItem', data),
 
   // Fungsi untuk memulai proses generate & upload
-  generateAndUploadPO: (poData: any, revNum: number) => ipcRenderer.invoke('po:generate-upload', poData, revNum),
-  
-  // Fungsi untuk mendengarkan event saat URL otorisasi perlu dibuka
+  generateAndUploadPO: (poData: any, revNum: number) =>
+    ipcRenderer.invoke('po:generate-upload', poData, revNum),
 
-};
+  // Fungsi untuk mendengarkan event saat URL otorisasi perlu dibuka
+  openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
+}
 
 // Proses 'expose' atau pendaftaran API ke window object di UI
 try {

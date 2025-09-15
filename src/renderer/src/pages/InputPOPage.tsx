@@ -133,15 +133,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
 // Ganti fungsi handleSaveOrUpdatePO Anda dengan versi ini
 
 const handleSaveOrUpdatePO = async () => {
+  // Validasi input (tetap sama)
   if (!poData.nomorPo || !poData.namaCustomer) {
     return alert('Nomor PO dan Nama Customer harus diisi!')
   }
   if (items.length === 0) {
     return alert('Tambahkan minimal satu item.')
   }
-  
+
   setIsSaving(true)
   try {
+    // Siapkan payload (tetap sama)
     const itemsWithKubikasi = items.map((item) => ({
       ...item,
       kubikasi: calculateKubikasi(item),
@@ -159,46 +161,22 @@ const handleSaveOrUpdatePO = async () => {
       poId: editingPO?.id
     }
 
-    // --- Langkah 1: Simpan data ke Google Sheets ---
+    // --- PERUBAHAN UTAMA DI SINI ---
+    // Cukup panggil satu fungsi. Backend akan mengurus sisanya (save + upload).
     // @ts-ignore
     const result = editingPO
       ? await window.api.updatePO(payload)
       : await window.api.saveNewPO(payload)
 
-    if (!result.success) {
-      throw new Error(result.error || 'Gagal menyimpan data ke Google Sheets.')
-    }
-    
-    alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} di Google Sheets!`)
-
-    // --- LANGKAH 2 (BARU): Generate PDF dan Unggah ke Google Drive ---
-    console.log("Memulai proses pembuatan PDF dan unggah ke Google Drive...");
-    alert("Data berhasil disimpan di Sheets. Sekarang memulai proses unggah PDF ke Google Drive...");
-
-    const poHeaderForPdf = {
-        po_number: poData.nomorPo,
-        project_name: poData.namaCustomer,
-        created_at: poData.tanggalMasuk,
-        deadline: poData.tanggalKirim,
-        priority: poData.prioritas,
-        notes: poData.catatan
-    };
-
-    // @ts-ignore
-    const uploadResult = await window.api.generateAndUploadPO({ ...poHeaderForPdf, items: itemsWithKubikasi }, result.revision_number ?? 0);
-
-    if (uploadResult.success) {
-        alert(`PDF berhasil diunggah! Anda bisa melihatnya di folder Google Drive.`);
-        // @ts-ignore
-        window.open(uploadResult.link, '_blank');
+    if (result.success) {
+      alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan PDF telah diunggah!`)
+      onSaveSuccess() // Kembali ke halaman daftar
     } else {
-        throw new Error(uploadResult.error || 'Gagal mengunggah PDF ke Google Drive.');
+      throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
     }
-    
-    onSaveSuccess() // Kembali ke halaman daftar setelah semua selesai
 
   } catch (error) {
-    alert(`❌ TERJADI KESALAHAN: ${(error as Error).message}`)
+    alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
   } finally {
     setIsSaving(false)
   }

@@ -17,6 +17,7 @@ interface ICustomAPI {
 
   // ▼▼▼ TAMBAHKAN TIPE UNTUK FUNGSI BARU DI SINI ▼▼▼
   getRevisionHistory: (poId: string) => Promise<any[]>;
+  openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
 
 
 }
