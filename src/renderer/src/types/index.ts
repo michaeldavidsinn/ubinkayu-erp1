@@ -20,7 +20,7 @@ export interface POItem {
   satuan: string
   location: string
   notes: string
-  kubikasi?: number   
+  kubikasi?: number
 }
 
 export interface POHeader {
@@ -38,10 +38,16 @@ export interface POHeader {
 export interface PORevision {
   id: string
   purchase_order_id: string
-  revision_number: string
-  deadline: string
-  status: string
-  priority: string
-  notes: string
+  revision_number: number // Sebaiknya number
+  project_name: string // Ditambahkan karena Anda menggunakannya
+  deadline: string | null // Memperbolehkan null
+  status: string | null
+  priority: string | null
+  notes: string | null
   created_at: string
+}
+
+export interface RevisionHistoryItem {
+  revision: PORevision // Menggunakan tipe PORevision yang sudah ada
+  items: POItem[]
 }

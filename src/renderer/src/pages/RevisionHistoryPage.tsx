@@ -1,20 +1,12 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable prettier/prettier */
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { POItem } from '../types';
+// [MODIFIKASI] Impor tipe RevisionHistoryItem dari file terpusat
+import { POItem, RevisionHistoryItem } from '../types';
 
-// Tipe data yang sama seperti sebelumnya
-interface RevisionHistoryItem {
-  revision: {
-    revision_number: number;
-    created_at: string;
-    status: string;
-    deadline: string;
-    notes: string;
-  };
-  items: POItem[];
-}
+// Interface RevisionHistoryItem dihapus dari sini
 
 interface RevisionHistoryPageProps {
   poId: string | null;
@@ -23,9 +15,6 @@ interface RevisionHistoryPageProps {
 }
 
 const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumber, onBack }) => {
-
-  console.log('RevisionHistoryPage Menerima poId:', poId);
-
   const [history, setHistory] = useState<RevisionHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,9 +24,9 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
       const fetchHistoryData = async () => {
         setIsLoading(true);
         try {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           const data = await window.api.getRevisionHistory(poId);
-          console.log('DATA HISTORY DITERIMA:', data); // Debugging
           setHistory(data);
         } catch (error) {
           console.error(`Gagal memuat histori untuk PO ID ${poId}:`, error);
@@ -49,7 +38,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
     }
   }, [poId]);
 
-  const formatDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-';
+  const formatDate = (d: string | undefined | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-';
 
   return (
     <div className="page-container">
@@ -79,7 +68,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
                 {revItem.revision.notes && <p><strong>Catatan:</strong> {revItem.revision.notes}</p>}
             </div>
             <h4>Item pada revisi ini:</h4>
-            <div className="po-table-container"> {/* Tambahkan wrapper agar bisa scroll horizontal jika perlu */}
+            <div className="po-table-container">
                 <table className="simple-table">
                     <thead>
                         <tr>
