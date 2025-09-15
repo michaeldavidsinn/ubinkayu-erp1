@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'node:path'
 
@@ -15,10 +15,12 @@ import {
   listPOItemsByRevision,
   previewPO,
   getRevisionHistory,
-  generateAndUploadPO
+  // [BARU] Impor fungsi-fungsi progress tracking
+  getActivePOsWithProgress,
+  getPOItemsWithDetails,
+  updateItemProgress,
 } from '../../electron/sheet.js'
 
-// ... (sisa kode createWindow dan app.whenReady() bagian atas)
 if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disk-cache-dir', 'C:/temp/electron-cache')
   app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
@@ -46,7 +48,7 @@ async function createWindow() {
 app.whenReady().then(() => {
   testSheetConnection()
 
-  // IPC Handlers
+  // --- IPC Handlers LAMA ---
   ipcMain.handle('ping', () => 'pong')
   ipcMain.handle('po:list', () => listPOs())
   ipcMain.handle('po:save', async (_event, data) => saveNewPO(data))
@@ -55,19 +57,9 @@ app.whenReady().then(() => {
   ipcMain.handle('po:preview', async (_event, data) => previewPO(data))
   ipcMain.handle('po:listItems', async (_event, poId) => listPOItems(poId))
   ipcMain.handle('po:listRevisions', async (_event, poId) => listPORevisions(poId))
-  ipcMain.handle('po:listItemsByRevision', async (_event, poId, revisionNumber) =>
-    listPOItemsByRevision(poId, revisionNumber)
-  )
-  ipcMain.handle('product:get', () => getProducts())
-
-  // [BARU] Daftarkan handler untuk fungsi super kita
+  ipcMain.handle('po:listItemsByRevision', async (_event, poId, revisionNumber) => listPOItemsByRevision(poId, revisionNumber))
   ipcMain.handle('po:getRevisionHistory', async (_event, poId) => getRevisionHistory(poId))
-
-  ipcMain.handle('po:generate-upload', async (_event, poData, revNum) => {
-    // Langsung panggil fungsinya
-    return generateAndUploadPO(poData, revNum)
-  })
-
+  ipcMain.handle('product:get', () => getProducts())
   ipcMain.handle('app:open-external-link', (_event, url) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       shell.openExternal(url);
@@ -75,6 +67,12 @@ app.whenReady().then(() => {
     }
     return { success: false, error: 'Invalid URL' };
   });
+
+  // --- [BARU] IPC Handlers untuk Progress Tracking ---
+  ipcMain.handle('progress:getActivePOs', () => getActivePOsWithProgress());
+  ipcMain.handle('progress:getPOItems', (_event, poId) => getPOItemsWithDetails(poId));
+  ipcMain.handle('progress:updateItem', (_event, data) => updateItemProgress(data));
+
 
   createWindow()
   app.on('activate', () => {

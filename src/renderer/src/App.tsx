@@ -1,27 +1,26 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable prettier/prettier */
+// src/renderer/src/App.tsx
+
 import React, { useState, useEffect } from 'react'
 import { POHeader } from './types'
-
-// Impor Komponen dan Halaman
 import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
 import InputPOPage from './pages/InputPOPage'
 import PODetailPage from './pages/PODetailPage'
 import ProgressTrackingPage from './pages/ProgressTrackingPage'
-import DashboardPage from './pages/DashboardPage';
-import RevisionHistoryPage from './pages/RevisionHistoryPage';
+import DashboardPage from './pages/DashboardPage'
+import RevisionHistoryPage from './pages/RevisionHistoryPage'
+import UpdateProgressPage from './pages/UpdateProgressPage' // [BARU]
 
 function App() {
-  const [view, setView] = useState<'dashboard' | 'list' | 'input' | 'detail' | 'tracking' | 'history'>('dashboard');
+  const [view, setView] = useState<string>('dashboard')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
-
-  // [PERUBAHAN KUNCI] Kita akan fokus pada ID-nya saja
-  const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
-
+  const [selectedPoId, setSelectedPoId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // [BARU] State untuk PO yang dipilih di halaman tracking
+  const [trackingPO, setTrackingPO] = useState<POHeader | null>(null)
 
   const fetchPOs = async () => {
     setIsLoading(true)
@@ -37,8 +36,10 @@ function App() {
   }
 
   useEffect(() => {
-    fetchPOs()
-  }, [])
+    if (['dashboard', 'list', 'detail', 'history', 'input'].includes(view)) {
+      fetchPOs()
+    }
+  }, [view])
 
   const handleDeletePO = async (poId: string) => {
     if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
@@ -71,56 +72,83 @@ function App() {
   }
 
   const handleShowDetail = (po: POHeader) => {
-    setSelectedPoId(po.id); // Simpan ID-nya
+    setSelectedPoId(po.id)
     setView('detail')
   }
 
   const handleShowHistory = () => {
-    // ID sudah tersimpan di state, jadi kita tinggal ganti view
     if (selectedPoId) {
-        setView('history');
-    } else {
-        alert("Error: PO ID tidak ditemukan untuk melihat histori.");
+      setView('history')
     }
-  };
+  }
 
   const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
-    setSelectedPoId(null); // Reset ID saat pindah ke menu utama
-    setView(targetView);
-  };
+    setSelectedPoId(null)
+    setTrackingPO(null) // Reset tracking PO juga
+    setView(targetView)
+  }
 
   const handleBackToList = () => {
     setEditingPO(null)
-    setSelectedPoId(null) // Reset ID
+    setSelectedPoId(null)
     fetchPOs()
     handleNavigate('list')
   }
 
-  // Helper untuk mendapatkan detail PO berdasarkan ID yang tersimpan
+  // [BARU] Handler untuk memilih PO di halaman tracking
+  const handleSelectPOForTracking = (po: POHeader) => {
+    setTrackingPO(po)
+    setView('updateProgress')
+  }
+
   const getCurrentPO = () => {
-    if (!selectedPoId) return null;
-    return purchaseOrders.find(p => p.id === selectedPoId) || null;
+    if (!selectedPoId) return null
+    return purchaseOrders.find((p) => p.id === selectedPoId) || null
   }
 
   const renderContent = () => {
-    const currentPO = getCurrentPO();
+    const currentPO = getCurrentPO()
 
     switch (view) {
       case 'dashboard':
-        return <DashboardPage poList={purchaseOrders} isLoading={isLoading} />;
+        return <DashboardPage poList={purchaseOrders} isLoading={isLoading} />
       case 'input':
-        return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />;
+        return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />
       case 'detail':
-        return <PODetailPage po={currentPO} onBackToList={handleBackToList} onShowHistory={handleShowHistory} />;
+        return (
+          <PODetailPage
+            po={currentPO}
+            onBackToList={handleBackToList}
+            onShowHistory={handleShowHistory}
+          />
+        )
       case 'tracking':
-        return <ProgressTrackingPage />;
+        return <ProgressTrackingPage onSelectPO={handleSelectPOForTracking} />
       case 'history':
-        return <RevisionHistoryPage poId={currentPO?.id || null} poNumber={currentPO?.po_number || null} onBack={() => setView('detail')} />;
+        return (
+          <RevisionHistoryPage
+            poId={currentPO?.id || null}
+            poNumber={currentPO?.po_number || null}
+            onBack={() => setView('detail')}
+          />
+        )
+      // [BARU] View untuk update progress
+      case 'updateProgress':
+        return <UpdateProgressPage po={trackingPO} onBack={() => setView('tracking')} />
       case 'list':
       default:
-        return <POListPage poList={purchaseOrders} onAddPO={handleShowInputForm} onDeletePO={handleDeletePO} onEditPO={handleEditPO} onShowDetail={handleShowDetail} isLoading={isLoading}/>;
+        return (
+          <POListPage
+            poList={purchaseOrders}
+            onAddPO={handleShowInputForm}
+            onDeletePO={handleDeletePO}
+            onEditPO={handleEditPO}
+            onShowDetail={handleShowDetail}
+            isLoading={isLoading}
+          />
+        )
     }
-  };
+  }
 
   return (
     <div className="app-layout">

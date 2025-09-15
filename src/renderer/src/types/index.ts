@@ -1,5 +1,17 @@
+/* eslint-disable prettier/prettier */
 // src/renderer/src/types/index.ts
 
+// [BARU] Tipe untuk satu entri progress
+export interface ProgressUpdate {
+  id: string;
+  purchase_order_item_id: string;
+  stage: 'supply' | 'produksi' | 'sample' | 'selesai';
+  notes: string;
+  photo_url: string | null;
+  created_at: string;
+}
+
+// [MODIFIKASI] POItem ditambahkan progressHistory
 export interface POItem {
   id: number
   purchase_order_id?: string
@@ -21,8 +33,10 @@ export interface POItem {
   location: string
   notes: string
   kubikasi?: number
+  progressHistory?: ProgressUpdate[]; // Riwayat progress untuk item ini
 }
 
+// [MODIFIKASI] POHeader ditambahkan progress
 export interface POHeader {
   id: string
   po_number: string
@@ -33,21 +47,25 @@ export interface POHeader {
   deadline?: string
   notes?: string
   kubikasi_total?: number
+  pdf_link?: string | null
+  progress?: number; // Progress keseluruhan PO
 }
 
+// Tipe ini tidak diubah
 export interface PORevision {
   id: string
   purchase_order_id: string
-  revision_number: number // Sebaiknya number
-  project_name: string // Ditambahkan karena Anda menggunakannya
-  deadline: string | null // Memperbolehkan null
+  revision_number: number
+  project_name: string
+  deadline: string | null
   status: string | null
   priority: string | null
   notes: string | null
   created_at: string
 }
 
+// Tipe ini tidak diubah
 export interface RevisionHistoryItem {
-  revision: PORevision // Menggunakan tipe PORevision yang sudah ada
-  items: POItem[]
+  revision: PORevision;
+  items: POItem[];
 }
