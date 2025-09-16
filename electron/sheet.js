@@ -563,6 +563,7 @@ export async function updateItemProgress(data) {
 
     await progressSheet.addRow({
       id: nextId,
+       purchase_order_id: poId,
       purchase_order_item_id: itemId,
       stage: stage,
       notes: notes,

@@ -23,9 +23,13 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
   const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1
 
   const [notes, setNotes] = useState('')
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false)
+  const handleViewPhoto = (url: string) => {
+    // @ts-ignore
+    window.api.openExternalLink(url);
+  };
 
    const handleSelectPhoto = async () => {
     // @ts-ignore
@@ -105,22 +109,31 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         </div>
       )}
       {item.progressHistory && item.progressHistory.length > 0 && (
-         <div className="history-log">
-            <h6>Riwayat Progress</h6>
-            {item.progressHistory.map(log => (
-                <div key={log.id} className="log-entry">
-                    <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
-                    <p>{log.notes}</p>
-                                        <p>{log.notes}</p>
-
-                </div>
-            ))}
-         </div>
+        <div className="history-log">
+          <h6>Riwayat Progress</h6>
+          {item.progressHistory.map(log => (
+            <div key={log.id} className="log-entry">
+              <div className="log-details">
+                <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
+                {log.notes && <p>{log.notes}</p>}
+              </div>
+              
+              {log.photo_url && (
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleViewPhoto(log.photo_url)}
+                  className="view-photo-btn"
+                >
+                  Lihat Foto
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </Card>
   )
 }
-
 
 interface UpdateProgressPageProps {
   po: POHeader | null

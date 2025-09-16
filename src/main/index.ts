@@ -62,13 +62,11 @@ app.whenReady().then(() => {
   ipcMain.handle('po:listItemsByRevision', async (_event, poId, revisionNumber) => listPOItemsByRevision(poId, revisionNumber))
   ipcMain.handle('po:getRevisionHistory', async (_event, poId) => getRevisionHistory(poId))
   ipcMain.handle('product:get', () => getProducts())
-  ipcMain.handle('app:open-external-link', (_event, url) => {
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-      shell.openExternal(url);
-      return { success: true };
-    }
-    return { success: false, error: 'Invalid URL' };
-  });
+ ipcMain.handle('open-external-link', (_event, url) => {
+  if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
+    shell.openExternal(url);
+  }
+})
 ipcMain.handle('dialog:open-file', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openFile'],

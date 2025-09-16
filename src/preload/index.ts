@@ -22,7 +22,7 @@ const api = {
 
   // --- Fungsi untuk PDF & Link ---
   previewPO: (data) => ipcRenderer.invoke('po:preview', data),
-  openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
+ openExternalLink: (url: string) => ipcRenderer.invoke('open-external-link', url),
 
   // --- Fungsi untuk Progress Tracking ---
   getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
@@ -31,6 +31,8 @@ const api = {
   // [BARU] Tambahkan fungsi baru di sini
   getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   openFileDialog: () => ipcRenderer.invoke('dialog:open-file'),
+
+  
 };
 
 try {

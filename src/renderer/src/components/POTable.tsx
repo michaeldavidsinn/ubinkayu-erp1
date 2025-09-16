@@ -9,9 +9,10 @@ interface POTableProps {
   onDeletePO: (poId: string) => Promise<void>
   onEditPO: (po: POHeader) => void
   onShowDetail: (po: POHeader) => void
+  onShowProgress: (po: POHeader) => void // [BARU] Tambahkan prop ini
 }
 
-const POTable: React.FC<POTableProps> = ({ poList, onDeletePO, onEditPO, onShowDetail }) => {
+const POTable: React.FC<POTableProps> = ({ poList, onDeletePO, onEditPO, onShowDetail ,onShowProgress}) => {
   return (
     <div className="po-table-container">
       <table className="po-table">
@@ -46,9 +47,12 @@ const POTable: React.FC<POTableProps> = ({ poList, onDeletePO, onEditPO, onShowD
                 </span>
               </td>
               <td className="po-table-actions">
-                <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
-                <Button onClick={() => onEditPO(po)}>Revisi</Button>
-                <Button variant="secondary" onClick={() => onDeletePO(po.id)}>Hapus</Button>
+              
+              {/* [BARU] Tambahkan tombol Progress di sini */}
+              <Button variant="primary" onClick={() => onShowProgress(po)}>Progress</Button>
+              <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
+              <Button onClick={() => onEditPO(po)}>Revisi</Button>
+              <Button className="btn-danger" onClick={() => onDeletePO(po.id)}>Hapus</Button>
               </td>
             </tr>
           ))}

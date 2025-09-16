@@ -1013,3 +1013,49 @@ label {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
+.po-card-footer-stacked {
+  display: flex;
+  flex-direction: column; /* Menyusun baris tombol secara vertikal */
+  gap: 8px; /* Memberi jarak antar baris tombol */
+  margin-top: 1rem;
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-between; /* Menyebar tombol di baris kedua secara merata */
+  gap: 8px; /* Memberi jarak antar tombol */
+}
+
+/* Membuat tombol di baris kedua memiliki lebar yang sama */
+.button-row > button {
+  flex: 1;
+}
+.btn-danger {
+  background-color: #dc3545; /* Warna merah yang umum untuk bahaya */
+  color: white !important; /* !important untuk memastikan warna font putih */
+  border-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333; /* Warna merah lebih gelap saat disentuh */
+  border-color: #bd2130;
+}
+/* Tambahkan ini ke file CSS Anda */
+.log-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.view-photo-btn {
+  /* Atur agar tombol tidak terlalu besar */
+  padding: 4px 12px;
+  font-size: 12px;
+  white-space: nowrap; /* Mencegah teks tombol turun baris */
+}

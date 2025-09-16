@@ -10,7 +10,7 @@ import PODetailPage from './pages/PODetailPage'
 import ProgressTrackingPage from './pages/ProgressTrackingPage'
 import DashboardPage from './pages/DashboardPage'
 import RevisionHistoryPage from './pages/RevisionHistoryPage'
-import UpdateProgressPage from './pages/UpdateProgressPage' // [BARU]
+import UpdateProgressPage from './pages/UpdateProgressPage'
 
 function App() {
   const [view, setView] = useState<string>('dashboard')
@@ -19,7 +19,6 @@ function App() {
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // [BARU] State untuk PO yang dipilih di halaman tracking
   const [trackingPO, setTrackingPO] = useState<POHeader | null>(null)
 
   const fetchPOs = async () => {
@@ -84,7 +83,7 @@ function App() {
 
   const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
     setSelectedPoId(null)
-    setTrackingPO(null) // Reset tracking PO juga
+    setTrackingPO(null)
     setView(targetView)
   }
 
@@ -95,10 +94,15 @@ function App() {
     handleNavigate('list')
   }
 
-  // [BARU] Handler untuk memilih PO di halaman tracking
   const handleSelectPOForTracking = (po: POHeader) => {
     setTrackingPO(po)
     setView('updateProgress')
+  }
+
+  // [MODIFIKASI 1] Buat fungsi handler untuk tombol "Progress" dari POListPage
+  const handleShowProgress = (po: POHeader) => {
+    setTrackingPO(po) // Simpan data PO yang dipilih
+    setView('updateProgress') // Ganti tampilan ke halaman update progress
   }
 
   const getCurrentPO = () => {
@@ -132,7 +136,6 @@ function App() {
             onBack={() => setView('detail')}
           />
         )
-      // [BARU] View untuk update progress
       case 'updateProgress':
         return <UpdateProgressPage po={trackingPO} onBack={() => setView('tracking')} />
       case 'list':
@@ -144,6 +147,7 @@ function App() {
             onDeletePO={handleDeletePO}
             onEditPO={handleEditPO}
             onShowDetail={handleShowDetail}
+            onShowProgress={handleShowProgress} // [MODIFIKASI 2] Teruskan handler sebagai prop
             isLoading={isLoading}
           />
         )

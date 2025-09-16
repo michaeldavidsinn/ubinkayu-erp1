@@ -16,6 +16,7 @@ interface POListPageProps {
   onDeletePO: (poId: string) => Promise<void>
   onEditPO: (po: POHeader) => void
   onShowDetail: (po: POHeader) => void
+  onShowProgress: (po: POHeader) => void // 1. Tambahkan prop baru di sini
   isLoading: boolean
 }
 
@@ -25,7 +26,8 @@ const POListPage: React.FC<POListPageProps> = ({
   isLoading,
   onDeletePO,
   onEditPO,
-  onShowDetail
+  onShowDetail,
+  onShowProgress // 2. Ambil prop baru di sini
 }) => {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
 
@@ -139,6 +141,7 @@ const POListPage: React.FC<POListPageProps> = ({
           onShowDetail={onShowDetail}
           onEditPO={onEditPO}
           onDeletePO={onDeletePO}
+          onShowProgress={onShowProgress} // 4. Teruskan prop ke komponen Tabel
         />
       )
     }
@@ -163,10 +166,23 @@ const POListPage: React.FC<POListPageProps> = ({
             <div className="po-card-info">
               <span><b>Target Kirim:</b> {po.deadline ? new Date(po.deadline).toLocaleDateString('id-ID') : '-'}</span>
             </div>
-            <div className="po-card-footer">
-              <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
-              <Button onClick={() => onEditPO(po)}>Revisi</Button>
-              <Button variant="secondary" onClick={() => onDeletePO(po.id)}>Hapus</Button>
+         <div className="po-card-footer-stacked">
+              <div className="button-row">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => onShowDetail(po)} 
+                  style={{ width: '100%' }} // Tombol Detail jadi satu baris penuh
+                >
+                  Detail
+                </Button>
+              </div>
+              <div className="button-row">
+                <Button onClick={() => onEditPO(po)}>Revisi</Button>
+                <Button variant="primary" onClick={() => onShowProgress(po)}>Progress</Button>
+                <Button className="btn-danger" onClick={() => onDeletePO(po.id)}>
+    Hapus
+  </Button>
+              </div>
             </div>
           </Card>
         ))}
