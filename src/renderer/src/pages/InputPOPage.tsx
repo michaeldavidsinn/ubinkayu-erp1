@@ -31,6 +31,33 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
+   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
+
+  useEffect(() => {
+    // ... (useEffect Anda yang lain tidak perlu diubah)
+    if (editingPO) {
+        // ... (logika untuk mode edit)
+        // [BARU] Jika mode edit, set juga path foto jika ada
+        setPoPhotoPath(editingPO.photo_url || null);
+    } else {
+        // ... (logika untuk mode baru)
+        setPoPhotoPath(null); // Pastikan path foto di-reset saat membuat PO baru
+    }
+  }, [editingPO])
+
+  // [BARU] Fungsi untuk memilih foto PO
+  const handleSelectPoPhoto = async () => {
+    // @ts-ignore
+    const selectedPath = await window.api.openFileDialog();
+    if (selectedPath) {
+      setPoPhotoPath(selectedPath);
+    }
+  };
+
+  // [BARU] Fungsi untuk membatalkan pilihan foto PO
+  const handleCancelPoPhoto = () => {
+    setPoPhotoPath(null);
+  };
 
   const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
     return productList
@@ -158,9 +185,10 @@ const handleSaveOrUpdatePO = async () => {
       ...poData,
       items: itemsWithKubikasi,
       kubikasi_total: kubikasiTotal,
-      poId: editingPO?.id
+      poId: editingPO?.id,
+       poPhotoPath: poPhotoPath
     }
-
+console.log('TITIK A (Frontend): Mengirim payload:', payload);
     // --- PERUBAHAN UTAMA DI SINI ---
     // Cukup panggil satu fungsi. Backend akan mengurus sisanya (save + upload).
     // @ts-ignore
@@ -310,6 +338,24 @@ const handleSaveOrUpdatePO = async () => {
           placeholder="Catatan khusus untuk PO ini..."
           rows={3}
         />
+        {/* [BARU] Tambahkan bagian untuk pilih foto di sini */}
+        <div className="form-group" style={{ marginTop: '1rem' }}>
+          <label>Foto Referensi PO (Opsional)</label>
+          <div className="file-input-container">
+            {poPhotoPath ? (
+              <div className="file-preview">
+                <span className="file-name" title={poPhotoPath}>
+                  {poPhotoPath.split(/[/\\]/).pop()}
+                </span>
+                <Button variant="secondary" onClick={handleCancelPoPhoto} className="cancel-photo-btn">
+                  Batal
+                </Button>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={handleSelectPoPhoto}>Pilih Foto</Button>
+            )}
+          </div>
+        </div>
       </Card>
 
       {/* Daftar Item */}

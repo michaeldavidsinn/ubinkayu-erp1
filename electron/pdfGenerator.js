@@ -17,53 +17,46 @@ function ensureDirSync(dirPath) {
  * @param {number} revisionNumber - Nomor revisi
  */
 export async function generatePOPdf(poData, revisionNumber = 0) {
+  console.log('\n--- TITIK D (PDF Generator) ---');
+  console.log('Path foto yang diterima:', poData.poPhotoPath);
   try {
-    // Pastikan app Electron sudah siap
     if (!app.isReady()) {
       await app.whenReady()
     }
 
-    // Ambil folder Documents user
     const baseDir = path.resolve(app.getPath('documents'), 'UbinkayuERP', 'PO')
-
-    // Buat folder per PO
-    const poFolderName = `${poData.po_number}-${poData.project_name}`
+    const poFolderName = `${poData.po_number}-${poData.project_name}`.replace(/[/\\?%*:|"<>]/g, '-')
     const poDir = path.join(baseDir, poFolderName)
     ensureDirSync(poDir)
 
-    // Path PDF
-    const fileName = `PO-${poData.po_number}-Rev${revisionNumber}.pdf`
+    const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-Rev${revisionNumber}.pdf`
     const filePath = path.join(poDir, fileName)
 
-    // Setup PDF
     const doc = new PDFDocument({ margin: 40, size: 'A4' })
     const stream = fs.createWriteStream(filePath)
     doc.pipe(stream)
 
-    // Set font default
     doc.font('Helvetica')
 
     // --- HEADER ---
     doc.fontSize(18).font('Helvetica-Bold').text(`PURCHASE ORDER`, { align: 'center' })
     doc.moveDown(1)
-
     doc.fontSize(12).font('Helvetica')
-    doc.text(`Nomor PO    : ${poData.po_number}`)
-    doc.text(`Customer     : ${poData.project_name}`)
-    doc.text(`Tanggal Input: ${new Date(poData.created_at).toLocaleDateString('id-ID')}`)
-    doc.text(`Deadline     : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`)
-    doc.text(`Prioritas    : ${poData.priority}`)
-    doc.text(`Revisi       : ${revisionNumber}`)
+    doc.text(`Nomor PO         : ${poData.po_number}`)
+    doc.text(`Customer         : ${poData.project_name}`)
+    doc.text(`Tanggal Input    : ${new Date(poData.created_at || Date.now()).toLocaleDateString('id-ID')}`)
+    doc.text(`Deadline         : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`)
+    doc.text(`Prioritas        : ${poData.priority}`)
+    doc.text(`Revisi           : ${revisionNumber}`)
     doc.moveDown(1.5)
-
+    
     // --- TABEL ITEM ---
     const colWidths = [40, 100, 80, 80, 60, 60, 60]
     const headers = ['No', 'Produk', 'Profil', 'Warna', 'Tebal', 'Lebar', 'Qty']
+    let tableTop = doc.y
 
-    let tableTop = doc.y + 10
-
-    // Header tabel
-    let x = doc.x
+    // Gambar Header tabel
+    let x = 40
     headers.forEach((h, i) => {
       doc.font('Helvetica-Bold').fontSize(10).text(h, x, tableTop, {
         width: colWidths[i],
@@ -72,13 +65,24 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
       x += colWidths[i]
     })
 
-    // Garis pemisah header
     doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke()
-    doc.moveDown(1.5)
+    doc.y = tableTop + 20;
 
     // Isi tabel
-    poData.items.forEach((item, idx) => {
-      let x = doc.x
+    (poData.items || []).forEach((item, idx) => {
+      if (doc.y > doc.page.height - doc.page.margins.bottom - 40) {
+        doc.addPage();
+        tableTop = doc.y;
+        let headerX = 40;
+        headers.forEach((h, i) => {
+            doc.font('Helvetica-Bold').fontSize(10).text(h, headerX, tableTop, { width: colWidths[i], align: 'center' });
+            headerX += colWidths[i];
+        });
+        doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+        doc.y = tableTop + 20;
+      }
+
+      let rowX = 40
       const rowTop = doc.y
       const row = [
         idx + 1,
@@ -91,13 +95,13 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
       ]
 
       row.forEach((val, i) => {
-        doc.font('Helvetica').fontSize(9).text(val, x, rowTop, {
+        doc.font('Helvetica').fontSize(9).text(val, rowX, rowTop, {
           width: colWidths[i],
           align: 'center'
         })
-        x += colWidths[i]
+        rowX += colWidths[i]
       })
-      doc.moveDown(1.2)
+      doc.moveDown(1.5)
     })
 
     doc.moveDown(3)
@@ -110,9 +114,25 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
     doc.moveDown(2)
     doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, { align: 'right' })
 
+    // --- [MODIFIKASI] BAGIAN FOTO REFERENSI DIPINDAHKAN KE AKHIR ---
+    // Cek apakah path foto ada dan file-nya benar-benar ada di komputer
+    if (poData.poPhotoPath && fs.existsSync(poData.poPhotoPath)) {
+      // Selalu buat halaman baru untuk foto agar menjadi lampiran
+      doc.addPage();
+      
+      doc.font('Helvetica-Bold').fontSize(14).text('Lampiran: Foto Referensi', { align: 'center', underline: true })
+      doc.moveDown(2)
+      
+      // Sisipkan gambar dan atur ukurannya
+      doc.image(poData.poPhotoPath, {
+        fit: [520, 600], // Beri ruang lebih besar karena satu halaman penuh
+        align: 'center',
+        valign: 'center'
+      });
+    }
+
     doc.end()
 
-    // Auto-open setelah selesai
     return new Promise((resolve, reject) => {
       stream.on('finish', () => {
         shell.openPath(filePath)

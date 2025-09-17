@@ -8,7 +8,7 @@ import fs from 'node:fs'
 import PDFDocument from 'pdfkit'
 import { app, shell } from 'electron'
 import { google } from 'googleapis'
-
+import { generatePOPdf } from './pdfGenerator.js' //
 // ===============================
 // KONFIGURASI
 // ===============================
@@ -126,72 +126,7 @@ async function getLivePOItems(poId, doc) {
 // ===============================
 // PDF & UPLOAD LOGIC
 // ===============================
-async function generatePOPdf(poData, revisionNumber = 0, isPreview = false) {
-    return new Promise((resolve, reject) => {
-        try {
-            const docPdf = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
 
-            docPdf.fontSize(18).text('PURCHASE ORDER', { align: 'center', underline: true });
-            docPdf.moveDown(1);
-            docPdf.fontSize(11).font('Helvetica-Bold').text(`Nomor PO      : ${poData.po_number || '-'}`);
-            docPdf.font('Helvetica-Bold').text(`Customer      : ${poData.project_name || '-'}`);
-            docPdf.font('Helvetica').text(`Tanggal Input : ${poData.created_at ? new Date(poData.created_at).toLocaleDateString('id-ID') : '-'}`);
-            docPdf.text(`Target Kirim  : ${poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : '-'}`);
-            docPdf.text(`Prioritas     : ${poData.priority || '-'}`);
-            docPdf.text(`Revisi        : #${revisionNumber}`);
-            docPdf.moveDown(1.5);
-
-            if (poData.notes) {
-                docPdf.font('Helvetica-Oblique').fontSize(10).text(`Catatan: ${poData.notes}`, { width: 500 });
-                docPdf.moveDown(1);
-            }
-
-            const table = {
-                headers: ['No', 'Produk', 'Jenis Kayu', 'Profil', 'Warna', 'Finishing', 'Tebal', 'Lebar', 'Qty', 'Satuan', 'Catatan'],
-                rows: (poData.items || []).map((item, i) => [
-                  i + 1, item.product_name || '-', item.wood_type || '-', item.profile || '-', item.color || '-', item.finishing || '-',
-                  `${item.thickness_mm || 0} mm`, `${item.width_mm || 0} mm`,
-                  item.quantity || 0, item.satuan || '-', item.notes || '-'
-                ]),
-                colWidths: [30, 100, 80, 80, 80, 80, 50, 50, 40, 50, 120]
-            };
-
-            const startY = docPdf.y; const startX = docPdf.page.margins.left; const rowH = 25;
-            docPdf.font('Helvetica-Bold').fontSize(9);
-            let cx = startX;
-            table.headers.forEach((h, i) => {
-                docPdf.rect(cx, startY, table.colWidths[i], rowH).stroke(); docPdf.text(h, cx + 3, startY + 8, { width: table.colWidths[i] - 6, align: 'center' }); cx += table.colWidths[i];
-            });
-            docPdf.font('Helvetica').fontSize(8); let cy = startY + rowH;
-            table.rows.forEach((row) => {
-                cx = startX;
-                if (cy + rowH > docPdf.page.height - docPdf.page.margins.bottom) { docPdf.addPage(); cy = docPdf.page.margins.top; }
-                row.forEach((cell, i) => {
-                    docPdf.rect(cx, cy, table.colWidths[i], rowH).stroke(); docPdf.text(String(cell), cx + 3, cy + 8, { width: table.colWidths[i] - 6, align: 'center' }); cx += table.colWidths[i];
-                });
-                cy += rowH;
-            });
-
-            const tempDir = app.getPath(isPreview ? 'temp' : 'documents');
-            const subDir = isPreview ? '' : path.join('UbinkayuERP', 'PO-Archive');
-            const baseDir = path.join(tempDir, subDir);
-            ensureDirSync(baseDir);
-            const revText = isPreview ? `PREVIEW-${Date.now()}` : `Rev${revisionNumber}`;
-            const fileName = `PO-${String(poData.po_number || '').replace(/[/\\?%*:|"<>]/g, '-')}-${revText}.pdf`;
-            const filePath = path.join(baseDir, fileName);
-            const stream = fs.createWriteStream(filePath);
-            docPdf.pipe(stream);
-            docPdf.end();
-            stream.on('finish', () => {
-                if (isPreview) shell.openPath(filePath);
-                resolve({ success: true, path: filePath });
-            });
-            stream.on('error', (err) => reject({ success: false, error: err.message }));
-        } catch (error) {
-            reject(error);
-        }
-    });
-}
 
 async function generateAndUploadPO(poData, revisionNumber) {
   try {
@@ -269,6 +204,7 @@ export async function listPOs() {
 }
 
 export async function saveNewPO(data) {
+  console.log('TITIK B (Backend): Menerima data:', data);
     try {
         const doc = await openDoc();
         const now = new Date().toISOString();
@@ -319,9 +255,10 @@ export async function saveNewPO(data) {
             priority: data.prioritas,
             items: itemsWithIds,
             notes: data.catatan,
-            created_at: now
+            created_at: now,
+            poPhotoPath: data.poPhotoPath // Teruskan path foto
         };
-
+ console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForPdf);
         const uploadResult = await generateAndUploadPO(poDataForPdf, 0);
 
         if (uploadResult.success) {
@@ -340,6 +277,7 @@ export async function saveNewPO(data) {
 }
 
 export async function updatePO(data) {
+  console.log('TITIK B (Backend): Menerima data:', data);
     try {
         const doc = await openDoc();
         const now = new Date().toISOString();
@@ -393,7 +331,8 @@ export async function updatePO(data) {
             priority: data.prioritas ?? prev.priority,
             items: itemsWithIds,
             notes: data.catatan ?? prev.notes,
-            created_at: now
+            created_at: now,
+             poPhotoPath: data.poPhotoPath // [MODIFIKASI KUNCI] Teruskan path foto
         };
 
         const uploadResult = await generateAndUploadPO(poDataForPdf, newRev);
