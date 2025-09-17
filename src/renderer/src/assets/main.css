@@ -1059,3 +1059,46 @@ label {
   font-size: 12px;
   white-space: nowrap; /* Mencegah teks tombol turun baris */
 }
+
+.file-preview {
+  display: flex;
+  align-items: center; /* Kunci untuk membuat item sejajar di tengah secara vertikal */
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 6px 6px 12px; /* Atur padding: atas/bawah 6px, kanan 6px, kiri 12px */
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-sizing: border-box; /* Pastikan padding tidak menambah lebar total */
+}
+
+/* 2. Teks nama file */
+.file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 12px;
+  font-size: 14px;
+  color: #475569;
+}
+
+/* 3. Tombol "Batal" yang sudah dirapikan */
+.cancel-photo-btn {
+  height: 28px; /* Kunci tinggi tombol */
+  line-height: 28px; /* Samakan dengan tinggi agar teks di tengah */
+  padding: 0 10px; /* Padding horizontal saja */
+  font-size: 12px;
+  font-weight: 600; /* Dibuat sedikit tebal */
+  
+  border: none; /* Hilangkan border awal */
+  background-color: #fee2e2; /* Latar belakang merah muda */
+  color: #b91c1c; /* Teks merah tua */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.cancel-photo-btn:hover {
+  background-color: #fecaca !important; /* Warna sedikit lebih gelap saat hover */
+  color: #991b1b !important;
+}

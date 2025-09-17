@@ -26,6 +26,11 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
 
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false)
+
+const handleCancelPhoto = () => {
+    setPhotoPath(null);
+  };
+
   const handleViewPhoto = (url: string) => {
     // @ts-ignore
     window.api.openExternalLink(url);
@@ -94,15 +99,28 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
             placeholder="Tambahkan catatan..."
             rows={3}
           />
-          {/* [PERBAIKAN] Ganti input file dengan tombol */}
+          {/* [MODIFIKASI] Tampilan input file diubah menjadi kondisional */}
           <div className="file-input-container">
-            <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
-            {photoPath && <span className="file-name">{photoPath.split('\\').pop()}</span>}
+            {photoPath ? (
+              <div className="file-preview">
+                <span className="file-name" title={photoPath}>
+                  {photoPath.split(/[/\\]/).pop()}
+                </span>
+                <Button variant="secondary" onClick={handleCancelPhoto} className="cancel-photo-btn">
+                  Batal
+                </Button>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
+            )}
           </div>
+          {/* [PERBAIKAN] Ganti input file dengan tombol */}
+         
           
           <Button
             onClick={() => handleUpdate(stages[currentStageIndex + 1])}
             disabled={isUpdating}
+             className="btn-primary" // Anda bisa menambahkan class ini jika perlu
           >
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
