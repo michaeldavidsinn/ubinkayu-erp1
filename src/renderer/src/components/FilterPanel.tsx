@@ -1,6 +1,4 @@
 /* eslint-disable prettier/prettier */
-// src/renderer/src/components/FilterPanel.tsx
-
 import React from 'react'
 import { Card } from './Card'
 import { Input } from './Input'
@@ -55,6 +53,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFilterChange, poCo
             <option value="Open">Open</option>
             <option value="In Progress">In Progress</option>
             <option value="Completed">Completed</option>
+            {/* [MODIFIKASI] Tambahkan opsi Cancelled */}
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>

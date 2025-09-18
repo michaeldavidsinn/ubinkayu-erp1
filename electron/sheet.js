@@ -181,10 +181,11 @@ export async function testSheetConnection() {
   }
 }
 
+// Di dalam file: electron/sheet.js
+
 export async function listPOs() {
   try {
     const doc = await openDoc();
-    // Ambil semua data yang dibutuhkan sekaligus
     const poSheet = await getSheet(doc, 'purchase_orders');
     const itemSheet = await getSheet(doc, 'purchase_order_items');
     const progressSheet = await getSheet(doc, 'progress_tracking');
@@ -195,7 +196,6 @@ export async function listPOs() {
       progressSheet.getRows()
     ]);
 
-    // 1. Dapatkan PO versi terakhir (logika tidak berubah)
     const byId = new Map();
     for (const r of poRows) {
       const id = String(r.get('id')).trim();
@@ -205,7 +205,6 @@ export async function listPOs() {
     }
     const latestPoRows = Array.from(byId.values()).map(({ row }) => row);
 
-    // 2. [BARU] Logika perhitungan progress (diambil dari getActivePOsWithProgress)
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
       const poId = row.get('purchase_order_id');
       const itemId = row.get('purchase_order_item_id');
@@ -225,48 +224,60 @@ export async function listPOs() {
         }
     });
 
-    // 3. [BARU] Gabungkan data PO dengan progress-nya
     const result = latestPoRows.map(po => {
       const poObject = po.toObject();
       const poId = poObject.id;
 
-      // Jika PO sudah selesai, progressnya 100%
-      if (poObject.status === 'Completed') {
-          return { ...poObject, progress: 100, pdf_link: po.get('pdf_link') || null };
-      }
-
       const latestRev = latestItemRevisions.get(poId) ?? -1;
       const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestRev);
 
-      if (poItems.length === 0) {
-        return { ...poObject, progress: 0, pdf_link: po.get('pdf_link') || null };
+      let poProgress = 0;
+      if (poItems.length > 0) {
+        let totalPercentage = 0;
+        poItems.forEach(item => {
+          const itemId = item.get('id');
+          const needsSample = item.get('sample') === 'Ada sample';
+
+          const stages = ['Pembahanan'];
+          if (needsSample) stages.push('Kasih Sample');
+          stages.push('Start Produksi');
+          stages.push('Kirim');
+
+          const compositeKey = `${poId}-${itemId}`;
+          const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
+
+          let latestStageIndex = -1;
+          if (itemProgressHistory.length > 0) {
+            const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            latestStageIndex = stages.indexOf(latestProgress.stage);
+          }
+
+          const itemPercentage = latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0;
+          totalPercentage += itemPercentage;
+        });
+        poProgress = totalPercentage / poItems.length;
       }
 
-      let totalPercentage = 0;
-      poItems.forEach(item => {
-        const itemId = item.get('id');
-        const needsSample = item.get('sample') === 'Ada sample';
+      // --- [LOGIKA BARU] Penentuan Status Otomatis ---
+      let finalStatus = poObject.status; // Ambil status dari sheet sebagai dasar
 
-        const stages = ['Pembahanan'];
-        if (needsSample) stages.push('Kasih Sample');
-        stages.push('Start Produksi');
-        stages.push('Kirim');
+      // Hanya ubah status jika bukan status manual seperti "Cancelled"
+      if (finalStatus !== 'Cancelled') {
+          if (poProgress >= 100) {
+              finalStatus = 'Completed';
+          } else if (poProgress > 0) {
+              finalStatus = 'In Progress';
+          } else {
+              finalStatus = 'Open';
+          }
+      }
 
-        const compositeKey = `${poId}-${itemId}`;
-        const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
-
-        let latestStageIndex = -1;
-        if (itemProgressHistory.length > 0) {
-          const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-          latestStageIndex = stages.indexOf(latestProgress.stage);
-        }
-
-        const itemPercentage = latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0;
-        totalPercentage += itemPercentage;
-      });
-
-      const poProgress = totalPercentage / poItems.length;
-      return { ...poObject, progress: Math.round(poProgress), pdf_link: po.get('pdf_link') || null };
+      return {
+        ...poObject,
+        progress: Math.round(poProgress),
+        status: finalStatus, // Gunakan status yang baru dihitung
+        pdf_link: po.get('pdf_link') || null
+      };
     });
 
     return result;
