@@ -1,6 +1,3 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 import path from 'node:path'
@@ -9,16 +6,11 @@ import PDFDocument from 'pdfkit'
 import { app, shell } from 'electron'
 import { google } from 'googleapis'
 import { generatePOPdf } from './pdfGenerator.js' //
-// ===============================
-// KONFIGURASI
-// ===============================
+
 const SPREADSHEET_ID = '1Bp5rETvaAe9nT4DrNpm-WsQqQlPNaau4gIzw1nA5Khk';
 const PO_ARCHIVE_FOLDER_ID = '1-1Gw1ay4iQoFNFe2KcKDgCwOIi353QEC';
 const PROGRESS_PHOTOS_FOLDER_ID = '1UfUQoqNBSsth9KzGRUmjenwegmsA6hbK';
 
-// ===============================
-// AUTH & DOC
-// ===============================
 function getAuth() {
   const credPath = path.join(app.getAppPath(), 'electron', 'credentials.json')
   if (!fs.existsSync(credPath)) {
@@ -46,9 +38,6 @@ async function openDoc() {
   return doc
 }
 
-// ===============================
-// UTILS & HELPERS
-// ===============================
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true })
 }
@@ -122,11 +111,6 @@ async function getLivePOItems(poId, doc) {
   if (latest < 0) return [];
   return getItemsByRevision(poId, latest, doc);
 }
-
-// ===============================
-// PDF & UPLOAD LOGIC
-// ===============================
-
 
 async function generateAndUploadPO(poData, revisionNumber) {
   try {
@@ -341,7 +325,8 @@ export async function saveNewPO(data) {
             items: itemsWithIds,
             notes: data.catatan,
             created_at: now,
-            poPhotoPath: data.poPhotoPath // Teruskan path foto
+            kubikasi_total: data.kubikasi_total || 0,
+            poPhotoPath: data.poPhotoPath
         };
  console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForPdf);
         const uploadResult = await generateAndUploadPO(poDataForPdf, 0);
