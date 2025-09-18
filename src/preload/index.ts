@@ -22,17 +22,15 @@ const api = {
 
   // --- Fungsi untuk PDF & Link ---
   previewPO: (data) => ipcRenderer.invoke('po:preview', data),
- openExternalLink: (url: string) => ipcRenderer.invoke('open-external-link', url),
+  openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
   // --- Fungsi untuk Progress Tracking ---
   getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
   getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
- updateItemProgress: (data: any) => ipcRenderer.invoke('progress:updateItem', data),
-  // [BARU] Tambahkan fungsi baru di sini
+  updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
   getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
-  openFileDialog: () => ipcRenderer.invoke('dialog:open-file'),
-
-  
+  // [BARU] Tambahkan fungsi baru di sini
+  getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
 };
 
 try {

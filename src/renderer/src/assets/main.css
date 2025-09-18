@@ -1175,3 +1175,41 @@ label {
   gap: 1rem;
   flex-shrink: 0; /* Mencegah grup ini mengecil */
 }
+
+.filter-panel-simple {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.search-input-full {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+}
+.attention-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.attention-section h5 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+.attention-item-small {
+  padding: 0.5rem 0;
+}
+.attention-item-small p {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+}
+.attention-item-small span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.no-attention-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}

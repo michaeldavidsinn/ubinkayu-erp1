@@ -1,12 +1,12 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
-import { ProgressBar } from '../components/ProgressBar';
+import { ProgressBar } from '../components/ProgressBar'
 import { POHeader } from '../types'
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns'
+import { id } from 'date-fns/locale'
 
 // Helper untuk format waktu "5 menit yang lalu"
 const formatTimeAgo = (dateString: string) => {
@@ -19,7 +19,6 @@ const formatTimeAgo = (dateString: string) => {
 
 const POTrackingItem = ({ po, onUpdateClick }: { po: POHeader; onUpdateClick: (po: POHeader) => void }) => {
   const getPriorityBadgeClass = (priority?: string) => `status-badge ${(priority || 'normal').toLowerCase()}`
-
   return (
     <Card className="po-tracking-item-card">
       <div className="po-tracking-header">
@@ -44,7 +43,22 @@ const POTrackingItem = ({ po, onUpdateClick }: { po: POHeader; onUpdateClick: (p
   )
 }
 
-// [BARU] Komponen untuk menampilkan satu entri update
+// Komponen untuk panel "Perlu Perhatian"
+const AttentionCard = ({ title, items, icon, reasonKey, reasonPrefix }) => (
+    <div className="attention-section">
+        <h5>{icon} {title} ({items.length})</h5>
+        {items.length > 0 ? (
+            items.map((item, index) => (
+                <div key={index} className="attention-item-small">
+                    <p><strong>{item.item_name}</strong> (PO: {item.po_number})</p>
+                    <span>{reasonPrefix}: {item[reasonKey]}</span>
+                </div>
+            ))
+        ) : <p className="no-attention-text">Tidak ada</p>}
+    </div>
+);
+
+// [DIKEMBALIKAN] Komponen untuk menampilkan satu entri update terbaru
 const UpdateEntry = ({ update }) => (
     <div className="update-entry">
         <div className="update-icon">⚙️</div>
@@ -57,28 +71,31 @@ const UpdateEntry = ({ update }) => (
     </div>
 );
 
-
 interface ProgressTrackingPageProps {
   onSelectPO: (po: POHeader) => void;
 }
 
 const ProgressTrackingPage: React.FC<ProgressTrackingPageProps> = ({ onSelectPO }) => {
   const [poList, setPoList] = useState<POHeader[]>([])
-  const [recentUpdates, setRecentUpdates] = useState<any[]>([]); // State untuk update terbaru
+  const [attentionData, setAttentionData] = useState({ nearingDeadline: [], stuckItems: [], urgentItems: [] });
+  const [recentUpdates, setRecentUpdates] = useState<any[]>([]); // [DIKEMBALIKAN] State untuk update terbaru
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchAllData = async () => {
       setIsLoading(true)
       try {
-        // Panggil kedua API secara bersamaan
+        // [DIKEMBALIKAN] Panggil ketiga API secara bersamaan
         // @ts-ignore
-        const [poData, updateData] = await Promise.all([
+        const [poData, attention, updates] = await Promise.all([
             window.api.getActivePOs(),
+            window.api.getAttentionData(),
             window.api.getRecentUpdates()
         ]);
         setPoList(poData)
-        setRecentUpdates(updateData)
+        setAttentionData(attention)
+        setRecentUpdates(updates)
       } catch (err) {
         console.error('Gagal memuat data tracking:', err)
       } finally {
@@ -87,6 +104,14 @@ const ProgressTrackingPage: React.FC<ProgressTrackingPageProps> = ({ onSelectPO 
     }
     fetchAllData()
   }, [])
+
+  const filteredPOs = useMemo(() => {
+    if (!searchTerm) return poList;
+    return poList.filter(po =>
+        po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.project_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [poList, searchTerm]);
 
   return (
     <div className="page-container">
@@ -97,19 +122,39 @@ const ProgressTrackingPage: React.FC<ProgressTrackingPageProps> = ({ onSelectPO 
         </div>
       </div>
 
+      <Card className="filter-panel-simple">
+        <input
+            type="text"
+            placeholder="Cari Nomor PO atau Nama Customer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input-full"
+        />
+      </Card>
+
       <div className="tracking-layout">
         <div className="active-po-list">
-          <h3>PO Aktif ({poList.length})</h3>
+          <h3>PO Aktif ({filteredPOs.length})</h3>
           {isLoading ? (
             <p>Memuat data PO...</p>
-          ) : poList.length > 0 ? (
-            poList.map((po) => <POTrackingItem key={po.id} po={po} onUpdateClick={onSelectPO} />)
+          ) : filteredPOs.length > 0 ? (
+            filteredPOs.map((po) => <POTrackingItem key={po.id} po={po} onUpdateClick={onSelectPO} />)
           ) : (
-            <p>Tidak ada PO yang sedang aktif.</p>
+            <p>Tidak ada PO yang cocok dengan pencarian.</p>
           )}
         </div>
         <div className="recent-updates">
           <Card className="recent-updates-card">
+            <h4>🚨 Perlu Perhatian</h4>
+            <div className="attention-wrapper">
+                <AttentionCard title="Prioritas Urgent" items={attentionData.urgentItems} icon="🔥" reasonKey="current_stage" reasonPrefix="Tahap" />
+                <AttentionCard title="Mendekati Deadline" items={attentionData.nearingDeadline} icon="📅" reasonKey="deadline" reasonPrefix="Target" />
+                <AttentionCard title="Item Macet (> 5 Hari)" items={attentionData.stuckItems} icon="⏳" reasonKey="current_stage" reasonPrefix="Tahap" />
+            </div>
+          </Card>
+
+          {/* [DIKEMBALIKAN] Kartu untuk Update Terbaru diletakkan di bawah */}
+          <Card className="recent-updates-card" style={{ marginTop: '1.5rem' }}>
             <h4>Update Terbaru</h4>
             {isLoading ? (
                 <p>Memuat aktivitas...</p>

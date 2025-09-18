@@ -19,9 +19,9 @@ interface ICustomAPI {
   getActivePOs: () => Promise<any[]>;
   getPOItemsDetails: (poId: string) => Promise<any[]>;
   updateItemProgress: (data: any) => Promise<{ success: boolean; error?: string }>;
-  // [BARU] Tambahkan definisi tipe baru di sini
   getRecentUpdates: () => Promise<any[]>;
-  openFileDialog: () => Promise<string | null>;
+  // [BARU] Tambahkan definisi tipe baru di sini
+  getAttentionData: () => Promise<any>;
 }
 
 declare global {

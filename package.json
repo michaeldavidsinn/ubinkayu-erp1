@@ -23,6 +23,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@types/react-beautiful-dnd": "^13.1.8",
     "date-fns": "^4.1.0",
     "fs-extra": "^11.3.1",
     "google-auth-library": "^10.2.1",

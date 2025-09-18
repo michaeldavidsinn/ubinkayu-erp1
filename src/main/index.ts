@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { app, BrowserWindow, ipcMain, shell,dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'node:path'
 
 import {
@@ -15,12 +15,12 @@ import {
   listPOItemsByRevision,
   previewPO,
   getRevisionHistory,
-  // [BARU] Impor fungsi-fungsi progress tracking
   getActivePOsWithProgress,
   getPOItemsWithDetails,
   updateItemProgress,
   getRecentProgressUpdates,
-  
+  // [BARU] Impor fungsi baru
+  getAttentionData,
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -50,7 +50,7 @@ async function createWindow() {
 app.whenReady().then(() => {
   testSheetConnection()
 
-  // --- IPC Handlers LAMA ---
+  // --- IPC Handlers ---
   ipcMain.handle('ping', () => 'pong')
   ipcMain.handle('po:list', () => listPOs())
   ipcMain.handle('po:save', async (_event, data) => saveNewPO(data))
@@ -62,29 +62,21 @@ app.whenReady().then(() => {
   ipcMain.handle('po:listItemsByRevision', async (_event, poId, revisionNumber) => listPOItemsByRevision(poId, revisionNumber))
   ipcMain.handle('po:getRevisionHistory', async (_event, poId) => getRevisionHistory(poId))
   ipcMain.handle('product:get', () => getProducts())
- ipcMain.handle('open-external-link', (_event, url) => {
-  if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
-    shell.openExternal(url);
-  }
-})
-ipcMain.handle('dialog:open-file', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      properties: ['openFile'],
-      filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif'] }]
-    });
-    if (!canceled) {
-      return filePaths[0];
+  ipcMain.handle('app:open-external-link', (_event, url) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      shell.openExternal(url);
+      return { success: true };
     }
-    return null;
+    return { success: false, error: 'Invalid URL' };
   });
 
-  // --- [BARU] IPC Handlers untuk Progress Tracking ---
+  // --- IPC Handlers untuk Progress Tracking ---
   ipcMain.handle('progress:getActivePOs', () => getActivePOsWithProgress());
   ipcMain.handle('progress:getPOItems', (_event, poId) => getPOItemsWithDetails(poId));
-   ipcMain.handle('progress:updateItem', async (_event, data) => {
-    return updateItemProgress(data);
-  });
+  ipcMain.handle('progress:updateItem', (_event, data) => updateItemProgress(data));
   ipcMain.handle('progress:getRecentUpdates', () => getRecentProgressUpdates());
+  // [BARU] Daftarkan handler untuk data atensi
+  ipcMain.handle('progress:getAttentionData', () => getAttentionData());
 
 
   createWindow()
