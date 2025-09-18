@@ -38,9 +38,6 @@ async function openDoc() {
   return doc
 }
 
-// ===============================
-// UTILS & HELPERS
-// ===============================
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true })
 }
@@ -114,11 +111,6 @@ async function getLivePOItems(poId, doc) {
   if (latest < 0) return [];
   return getItemsByRevision(poId, latest, doc);
 }
-
-// ===============================
-// PDF & UPLOAD LOGIC
-// ===============================
-
 
 async function generateAndUploadPO(poData, revisionNumber) {
   try {
