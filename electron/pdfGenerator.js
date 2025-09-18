@@ -146,7 +146,16 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
       doc.text(item.length_mm || '-', colStarts[4] + 80, rowTop + 8, { width: 40, align: 'center' });
       doc.text(`${item.quantity || 0} ${item.satuan || 'pcs'}`, colStarts[5], rowTop + 8, { width: colWidths[5], align: 'center' });
       doc.text(item.kubikasi ? item.kubikasi.toFixed(4) : '0.0000', colStarts[6], rowTop + 8, { width: colWidths[6], align: 'center' });
-      doc.text(item.keterangan || '-', colStarts[7] + 2, rowTop + 4, { width: colWidths[7] - 4 });
+
+      const lokasiKet = [
+        item.location ? `Lokasi: ${item.location}` : null,
+        item.keterangan ? `Catatan: ${item.keterangan}` : null
+      ].filter(Boolean).join('\n');
+
+      doc.text(lokasiKet || '-', colStarts[7] + 2, rowTop + 4, {
+        width: colWidths[7] - 4
+      });
+
       doc.y += rowHeight;
       if (idx < poData.items.length - 1) {
         doc.moveTo(margin, doc.y).lineTo(pageW - margin, doc.y).stroke();
