@@ -4,5 +4,5 @@ out
 .DS_Store
 .eslintcache
 *.log*
-electron/credentials.json
-electron/credentials-oauth.json
+credentials-oauth.json
+credentials.json
