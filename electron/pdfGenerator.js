@@ -43,17 +43,14 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
     const margin = 30;
 
     // --- HEADER ---
-    // [MODIFIKASI] Tata letak header diubah menjadi satu baris terpusat
     const headerY = margin;
 
-    // 1. Definisikan semua komponen teks
     const mainTitle = `${poData.po_number || ''} ${poData.project_name || ''}`;
     const sbyText = 'SBY';
     const revisionText = `R: ${revisionNumber}`;
     const createdAtDate = poData.created_at ? new Date(poData.created_at).toLocaleDateString('en-GB') : '-';
     const spacer = '   ';
 
-    // 2. Hitung total lebar semua komponen untuk membuatnya terpusat
     let totalWidth = 0;
     doc.font('Helvetica-Bold').fontSize(16);
     totalWidth += doc.widthOfString(mainTitle);
@@ -62,34 +59,26 @@ export async function generatePOPdf(poData, revisionNumber = 0) {
     totalWidth += doc.widthOfString(revisionText);
     doc.font('Helvetica').fontSize(12);
     totalWidth += doc.widthOfString(createdAtDate);
-    totalWidth += doc.widthOfString(spacer) * 3; // 3 spasi pemisah
+    totalWidth += doc.widthOfString(spacer) * 3;
 
-    // 3. Tentukan posisi X awal agar seluruh blok teks berada di tengah
     const startX = (pageW / 2) - (totalWidth / 2);
 
-    // 4. Gambar semua komponen secara berurutan
-    // Judul Utama (Merah, Bold, 16)
     doc.font('Helvetica-Bold').fontSize(16).fillColor('#D92121');
     doc.text(mainTitle, startX, headerY, { continued: true });
 
-    // Teks lainnya dengan font lebih kecil, butuh sedikit penyesuaian posisi Y agar lurus
     const yPosAdjust = headerY + 3;
 
-    // SBY (Merah, Bold, 12)
     doc.font('Helvetica-Bold').fontSize(12);
     doc.text(spacer, { continued: true, baseline: 'middle' });
     doc.text(sbyText, startX + doc.widthOfString(mainTitle) + doc.widthOfString(spacer), yPosAdjust, { continued: true });
 
-    // Revisi (Merah, Bold, 12)
     doc.text(spacer, { continued: true });
     doc.text(revisionText, { continued: true });
 
-    // Tanggal (Sian/Teal, Normal, 12)
-    doc.font('Helvetica').fontSize(12).fillColor('#2E8B8B'); // Warna Sian/Teal
+    doc.font('Helvetica').fontSize(12).fillColor('#2E8B8B');
     doc.text(spacer, { continued: true });
     doc.text(createdAtDate);
 
-    // Kembalikan warna ke hitam
     doc.fillColor('black');
     doc.moveTo(margin, headerY + 25).lineTo(pageW - margin, headerY + 25).stroke();
 
