@@ -184,19 +184,93 @@ export async function testSheetConnection() {
 export async function listPOs() {
   try {
     const doc = await openDoc();
+    // Ambil semua data yang dibutuhkan sekaligus
     const poSheet = await getSheet(doc, 'purchase_orders');
-    const rows = await poSheet.getRows();
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const progressSheet = await getSheet(doc, 'progress_tracking');
+
+    const [poRows, itemRows, progressRows] = await Promise.all([
+      poSheet.getRows(),
+      itemSheet.getRows(),
+      progressSheet.getRows()
+    ]);
+
+    // 1. Dapatkan PO versi terakhir (logika tidak berubah)
     const byId = new Map();
-    for (const r of rows) {
+    for (const r of poRows) {
       const id = String(r.get('id')).trim();
       const rev = toNum(r.get('revision_number'), -1);
       const keep = byId.get(id);
       if (!keep || rev > keep.rev) byId.set(id, { rev, row: r });
     }
-    return Array.from(byId.values()).map(({ row }) => ({
-      ...row.toObject(),
-      pdf_link: row.get('pdf_link') || null,
-    }));
+    const latestPoRows = Array.from(byId.values()).map(({ row }) => row);
+
+    // 2. [BARU] Logika perhitungan progress (diambil dari getActivePOsWithProgress)
+    const progressByCompositeKey = progressRows.reduce((acc, row) => {
+      const poId = row.get('purchase_order_id');
+      const itemId = row.get('purchase_order_item_id');
+      const key = `${poId}-${itemId}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') });
+      return acc;
+    }, {});
+
+    const latestItemRevisions = new Map();
+    itemRows.forEach(item => {
+        const poId = item.get('purchase_order_id');
+        const rev = toNum(item.get('revision_number'), -1);
+        const current = latestItemRevisions.get(poId);
+        if (!current || rev > current) {
+            latestItemRevisions.set(poId, rev);
+        }
+    });
+
+    // 3. [BARU] Gabungkan data PO dengan progress-nya
+    const result = latestPoRows.map(po => {
+      const poObject = po.toObject();
+      const poId = poObject.id;
+
+      // Jika PO sudah selesai, progressnya 100%
+      if (poObject.status === 'Completed') {
+          return { ...poObject, progress: 100, pdf_link: po.get('pdf_link') || null };
+      }
+
+      const latestRev = latestItemRevisions.get(poId) ?? -1;
+      const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestRev);
+
+      if (poItems.length === 0) {
+        return { ...poObject, progress: 0, pdf_link: po.get('pdf_link') || null };
+      }
+
+      let totalPercentage = 0;
+      poItems.forEach(item => {
+        const itemId = item.get('id');
+        const needsSample = item.get('sample') === 'Ada sample';
+
+        const stages = ['Pembahanan'];
+        if (needsSample) stages.push('Kasih Sample');
+        stages.push('Start Produksi');
+        stages.push('Kirim');
+
+        const compositeKey = `${poId}-${itemId}`;
+        const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
+
+        let latestStageIndex = -1;
+        if (itemProgressHistory.length > 0) {
+          const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          latestStageIndex = stages.indexOf(latestProgress.stage);
+        }
+
+        const itemPercentage = latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0;
+        totalPercentage += itemPercentage;
+      });
+
+      const poProgress = totalPercentage / poItems.length;
+      return { ...poObject, progress: Math.round(poProgress), pdf_link: po.get('pdf_link') || null };
+    });
+
+    return result;
+
   } catch (err) {
     console.error('❌ listPOs error:', err.message);
     return [];
@@ -470,7 +544,7 @@ export async function updateItemProgress(data) {
     let photoLink = null;
     if (photoPath) {
       if (!fs.existsSync(photoPath)) throw new Error(`File foto tidak ditemukan: ${photoPath}`);
-      
+
       const auth = getAuth();
       const drive = google.drive({ version: 'v3', auth });
       const timestamp = new Date().toISOString().replace(/:/g, '-');

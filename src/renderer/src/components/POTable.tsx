@@ -2,6 +2,7 @@
 import React from 'react'
 import { POHeader } from '../types'
 import { Button } from './Button'
+import { ProgressBar } from '../components/ProgressBar';
 
 // Props dikembalikan ke versi original tanpa seleksi
 interface POTableProps {
@@ -12,47 +13,41 @@ interface POTableProps {
   onShowProgress: (po: POHeader) => void // [BARU] Tambahkan prop ini
 }
 
-const POTable: React.FC<POTableProps> = ({ poList, onDeletePO, onEditPO, onShowDetail ,onShowProgress}) => {
+const POTable: React.FC<POTableProps> = ({ poList, /* ... props lain */ }) => {
   return (
     <div className="po-table-container">
       <table className="po-table">
         <thead>
           <tr>
-            {/* Kolom checkbox dihilangkan */}
             <th>Nomor PO</th>
-            <th>Nama Customer</th>
-            <th>Tanggal Input</th>
+            <th>Customer</th>
+            {/* [BARU] Tambah header kolom Progress */}
+            <th>Progress</th>
             <th>Target Kirim</th>
             <th>Status</th>
-            <th>Prioritas</th>
             <th>Aksi</th>
           </tr>
         </thead>
         <tbody>
           {poList.map((po) => (
-            // ClassName 'selected-row' dan checkbox dihilangkan
             <tr key={po.id}>
               <td>{po.po_number}</td>
               <td>{po.project_name}</td>
-              <td>{po.created_at ? new Date(po.created_at).toLocaleDateString('id-ID') : '-'}</td>
+              {/* [BARU] Tambah sel untuk Progress Bar */}
+              <td style={{ minWidth: '150px' }}>
+                <ProgressBar value={po.progress || 0} />
+              </td>
               <td>{po.deadline ? new Date(po.deadline).toLocaleDateString('id-ID') : '-'}</td>
               <td>
                 <span className={`status-badge status-${(po.status || 'open').toLowerCase().replace(' ', '-')}`}>
                   {po.status || 'Open'}
                 </span>
               </td>
-              <td>
-                <span className={`status-badge ${(po.priority || 'Normal').toLowerCase()}`}>
-                  {po.priority || 'Normal'}
-                </span>
-              </td>
               <td className="po-table-actions">
-              
-              {/* [BARU] Tambahkan tombol Progress di sini */}
-              <Button variant="primary" onClick={() => onShowProgress(po)}>Progress</Button>
-              <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
-              <Button onClick={() => onEditPO(po)}>Revisi</Button>
-              <Button className="btn-danger" onClick={() => onDeletePO(po.id)}>Hapus</Button>
+                <Button variant="primary" onClick={() => onShowProgress(po)}>Progress</Button>
+                <Button variant="secondary" onClick={() => onShowDetail(po)}>Detail</Button>
+                <Button onClick={() => onEditPO(po)}>Revisi</Button>
+                <Button variant="danger" onClick={() => onDeletePO(po.id)}>Hapus</Button>
               </td>
             </tr>
           ))}

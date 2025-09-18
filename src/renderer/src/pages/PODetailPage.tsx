@@ -1,10 +1,13 @@
-// File: src/renderer/src/pages/PODetailPage.tsx
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { Input } from '../components/Input'
 import { POHeader, POItem } from '../types'
+import { ProgressBar } from '../components/ProgressBar' // [BARU] Impor ProgressBar
 
 interface PODetailPageProps {
   po: POHeader | null
@@ -40,11 +43,8 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
   const getPriorityBadgeClass = (p: string | undefined) => `status-badge ${(p || 'normal').toLowerCase()}`;
   const getStatusBadgeClass = (s: string | undefined) => `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`;
 
-  // [MODIFIKASI] Fungsi untuk handle tombol "Buka PDF"
   const handleOpenPdf = async () => {
     if (!po) return;
-
-    // Prioritaskan membuka link dari Google Drive
     // @ts-ignore
     if (po.pdf_link && po.pdf_link.startsWith('http')) {
       alert('Membuka PDF dari Google Drive...');
@@ -55,7 +55,6 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
         alert(`Gagal membuka link: ${(err as Error).message}`);
       }
     } else {
-      // Fallback untuk data lama atau jika upload gagal: generate preview lokal
       alert('Link PDF tidak ditemukan di database. Membuat preview lokal sementara...');
       try {
         const payload = {
@@ -84,14 +83,11 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
         <div className="header-actions">
           <Button onClick={onBackToList}>Kembali ke Daftar</Button>
           <Button variant="secondary" onClick={onShowHistory}>📜 Lihat Riwayat Revisi</Button>
-
-          {/* [MODIFIKASI] Tombol Preview diubah menjadi Buka PDF */}
           <Button onClick={handleOpenPdf}>📄 Buka PDF</Button>
         </div>
       </div>
 
       <div className="detail-po-info">
-        {/* ... (sisa JSX Anda untuk menampilkan detail, tidak perlu diubah) ... */}
         <Card className="po-summary-card">
           <div className="po-summary-header"><h3 className="po-summary-po-number">PO: {po.po_number}</h3><span className={getStatusBadgeClass(po.status)}>{po.status || 'Open'}</span></div>
           <p className="po-summary-customer"><strong>Customer:</strong> {po.project_name}</p>
@@ -101,6 +97,17 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
             <div className="info-item"><label>Prioritas</label><span className={getPriorityBadgeClass(po.priority)}>{po.priority || '-'}</span></div>
             <div className="info-item"><label>Total Kubikasi</label><span>{po.kubikasi_total ? `${Number(po.kubikasi_total).toFixed(3)} m³` : '0.000 m³'}</span></div>
           </div>
+
+          {/* --- [BARU] Bagian Progress Bar --- */}
+          <div className="po-summary-progress">
+            <div className="progress-info">
+              <label>Progress Produksi</label>
+              <span>{po.progress?.toFixed(0) || 0}%</span>
+            </div>
+            <ProgressBar value={po.progress || 0} />
+          </div>
+          {/* --- Akhir Bagian Baru --- */}
+
         </Card>
         {po.notes && (<Card className="notes-card"><h4>Catatan PO</h4><p>{po.notes}</p></Card>)}
       </div>

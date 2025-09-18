@@ -1089,7 +1089,7 @@ label {
   padding: 0 10px; /* Padding horizontal saja */
   font-size: 12px;
   font-weight: 600; /* Dibuat sedikit tebal */
-  
+
   border: none; /* Hilangkan border awal */
   background-color: #fee2e2; /* Latar belakang merah muda */
   color: #b91c1c; /* Teks merah tua */
@@ -1101,4 +1101,55 @@ label {
 .cancel-photo-btn:hover {
   background-color: #fecaca !important; /* Warna sedikit lebih gelap saat hover */
   color: #991b1b !important;
+}
+
+
+.btn.btn-danger {
+  background-color: #E53E3E; /* Merah */
+  color: white;
+}
+.btn.btn-danger:hover {
+  background-color: #C53030; /* Merah lebih gelap */
+}
+
+.po-card-footer {
+  display: flex;
+  flex-direction: column; /* Membuat baris tombol tersusun vertikal */
+  gap: 0.5rem; /* Jarak antar baris tombol */
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem; /* Jarak antar tombol di dalam satu baris */
+}
+
+/* Membuat tombol-tombol memenuhi lebar barisnya secara merata */
+.button-row > .btn,
+.button-row > button {
+  flex: 1;
+}
+
+/* Styling untuk progress bar di halaman detail PO */
+.po-summary-progress {
+  margin-top: 1.5rem;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.progress-info label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.progress-info span {
+  font-weight: 600;
+  color: var(--text-primary);
 }

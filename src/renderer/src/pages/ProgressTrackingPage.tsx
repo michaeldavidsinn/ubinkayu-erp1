@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { ProgressBar } from '../components/ProgressBar';
 import { POHeader } from '../types'
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -15,12 +16,6 @@ const formatTimeAgo = (dateString: string) => {
         return dateString;
     }
 }
-
-const ProgressBar = ({ value }: { value: number }) => (
-  <div className="progress-bar-container">
-    <div className="progress-bar-fill" style={{ width: `${value}%` }} />
-  </div>
-)
 
 const POTrackingItem = ({ po, onUpdateClick }: { po: POHeader; onUpdateClick: (po: POHeader) => void }) => {
   const getPriorityBadgeClass = (priority?: string) => `status-badge ${(priority || 'normal').toLowerCase()}`
