@@ -2,16 +2,17 @@
 import React, { useMemo } from 'react';
 import { POHeader } from '../types';
 import { Card } from '../components/Card';
-// Impor komponen dari recharts
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+// [MODIFIKASI] Impor komponen LineChart, Line, dan CartesianGrid
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  LineChart, Line, CartesianGrid
+} from 'recharts';
 
-// Definisikan props yang diterima oleh halaman ini
 interface DashboardPageProps {
   poList: POHeader[];
   isLoading: boolean;
 }
 
-// Komponen kecil untuk menampilkan kartu statistik
 const StatCard = ({ title, value, icon, color }) => (
   <Card className="stat-card" style={{ borderTop: `4px solid ${color}` }}>
     <div className="stat-card-icon">{icon}</div>
@@ -23,39 +24,43 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
-  // Gunakan useMemo agar kalkulasi tidak diulang setiap render
   const dashboardData = useMemo(() => {
     if (!poList || poList.length === 0) {
         return {
             totalPOs: 0,
             activePOs: 0,
             completedPOs: 0,
-            monthlyPOData: [],
+            dailyPOData: [], // Diubah dari monthly
             statusPOData: [],
             nearingDeadlinePOs: []
         };
     }
 
-    // 1. Kalkulasi Statistik Dasar
     const totalPOs = poList.length;
-    const activePOs = poList.filter(
-      (po) => po.status !== 'Completed' && po.status !== 'Cancelled'
-    ).length;
-    const completedPOs = poList.filter((po) => po.status === 'Completed').length;
+    const activePOs = poList.filter(po => po.status !== 'Completed' && po.status !== 'Cancelled').length;
+    const completedPOs = poList.filter(po => po.status === 'Completed').length;
 
-    // 2. Data untuk Grafik PO per Bulan
-    const monthlyCounts = poList.reduce((acc, po) => {
-        const month = new Date(po.created_at).toLocaleString('id-ID', { month: 'short', year: 'numeric' });
-        acc[month] = (acc[month] || 0) + 1;
+    // [MODIFIKASI] Data dihitung per HARI, bukan per bulan
+    const dailyCounts = poList.reduce((acc, po) => {
+        const day = new Date(po.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+        acc[day] = (acc[day] || 0) + 1;
         return acc;
     }, {});
-    const monthlyPOData = Object.keys(monthlyCounts).map(month => ({
-        name: month,
-        "PO Baru": monthlyCounts[month]
-    })).sort((a,b) => new Date(a.name) - new Date(b.name));
+
+    // Mengurutkan data berdasarkan tanggal asli untuk memastikan urutan grafik benar
+    const sortedDays = Object.keys(dailyCounts).sort((a, b) => {
+        // Logika untuk mengubah "20 Sep" menjadi tanggal yang bisa diurutkan
+        const dateA = new Date(`${a} ${new Date().getFullYear()}`);
+        const dateB = new Date(`${b} ${new Date().getFullYear()}`);
+        return dateA.getTime() - dateB.getTime();
+    });
+
+    const dailyPOData = sortedDays.map(day => ({
+        name: day,
+        "PO Baru": dailyCounts[day]
+    }));
 
 
-    // 3. Data untuk Diagram Status PO
     const statusCounts = poList.reduce((acc, po) => {
         const status = po.status || 'Open';
         acc[status] = (acc[status] || 0) + 1;
@@ -66,7 +71,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
         value: statusCounts[status]
     }));
 
-    // 4. Data untuk Daftar PO Mendekati Deadline
     const today = new Date();
     const nextTwoWeeks = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
     const nearingDeadlinePOs = poList.filter(po => {
@@ -76,12 +80,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
     }).sort((a,b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
 
 
-    return { totalPOs, activePOs, completedPOs, monthlyPOData, statusPOData, nearingDeadlinePOs };
+    return { totalPOs, activePOs, completedPOs, dailyPOData, statusPOData, nearingDeadlinePOs };
   }, [poList]);
 
   const todayFormatted = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Warna untuk Pie Chart
   const PIE_COLORS = { 'Open': '#3182CE', 'In Progress': '#D69E2E', 'Completed': '#38A169', 'Cancelled': '#E53E3E' };
 
   return (
@@ -93,41 +96,26 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
         </div>
       </div>
 
-      {/* Grid untuk menampilkan kartu statistik */}
       <div className="dashboard-grid">
-        <StatCard
-          title="Total Purchase Order"
-          value={isLoading ? '...' : dashboardData.totalPOs}
-          icon="📦"
-          color="#3182CE"
-        />
-        <StatCard
-          title="PO Aktif (Produksi)"
-          value={isLoading ? '...' : dashboardData.activePOs}
-          icon="⏳"
-          color="#D69E2E"
-        />
-        <StatCard
-          title="PO Selesai"
-          value={isLoading ? '...' : dashboardData.completedPOs}
-          icon="✅"
-          color="#38A169"
-        />
+        <StatCard title="Total Purchase Order" value={isLoading ? '...' : dashboardData.totalPOs} icon="📦" color="#3182CE" />
+        <StatCard title="PO Aktif (Produksi)" value={isLoading ? '...' : dashboardData.activePOs} icon="⏳" color="#D69E2E" />
+        <StatCard title="PO Selesai" value={isLoading ? '...' : dashboardData.completedPOs} icon="✅" color="#38A169" />
       </div>
 
-      {/* Grid untuk Chart dan Data Penting Lainnya */}
       <div className="dashboard-widgets-grid">
+        {/* [MODIFIKASI] Mengganti BarChart menjadi LineChart */}
         <Card>
-            <h4>Purchase Order Baru per Bulan</h4>
+            <h4>Purchase Order Baru per Hari</h4>
             {isLoading ? <p>Memuat data...</p> : (
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dashboardData.monthlyPOData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                <LineChart data={dashboardData.dailyPOData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis />
+                    <YAxis allowDecimals={false}/>
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="PO Baru" fill="#3182CE" />
-                </BarChart>
+                    <Line type="monotone" dataKey="PO Baru" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
+                </LineChart>
             </ResponsiveContainer>
             )}
         </Card>

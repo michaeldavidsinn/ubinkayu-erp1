@@ -62,6 +62,7 @@ export interface PORevision {
   priority: string | null
   notes: string | null
   created_at: string
+  pdf_link?: string | null // <-- [TAMBAHKAN BARIS INI]
 }
 
 // Tipe ini tidak diubah

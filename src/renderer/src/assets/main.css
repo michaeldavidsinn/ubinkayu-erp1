@@ -1153,3 +1153,25 @@ label {
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* CSS untuk merapikan header kartu revisi */
+.revision-header {
+  /* Diubah dari flex biasa menjadi space-between */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.revision-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.revision-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0; /* Mencegah grup ini mengecil */
+}

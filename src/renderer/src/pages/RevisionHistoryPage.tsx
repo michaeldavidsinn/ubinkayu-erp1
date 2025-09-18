@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-// [MODIFIKASI] Impor tipe RevisionHistoryItem dari file terpusat
 import { POItem, RevisionHistoryItem } from '../types';
-
-// Interface RevisionHistoryItem dihapus dari sini
 
 interface RevisionHistoryPageProps {
   poId: string | null;
@@ -19,12 +17,10 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Pastikan poId ada sebelum fetching
     if (poId) {
       const fetchHistoryData = async () => {
         setIsLoading(true);
         try {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           const data = await window.api.getRevisionHistory(poId);
           setHistory(data);
@@ -39,6 +35,12 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
   }, [poId]);
 
   const formatDate = (d: string | undefined | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-';
+
+  // [BARU] Fungsi untuk membuka link PDF
+  const handleOpenPdf = (url: string) => {
+    // @ts-ignore
+    window.api.openExternalLink(url);
+  };
 
   return (
     <div className="page-container">
@@ -55,10 +57,21 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
       ) : history.length > 0 ? (
         history.map((revItem, index) => (
           <Card key={revItem.revision.revision_number} className="revision-history-card">
+            {/* [MODIFIKASI] Tata letak header diubah agar lebih rapi */}
             <div className="revision-header">
-              <h3>Revisi #{revItem.revision.revision_number}</h3>
-              {index === 0 && <span className="status-badge status-completed">Versi Terbaru</span>}
-              <span>Dibuat pada: {formatDate(revItem.revision.created_at)}</span>
+              <div className="revision-title-group">
+                <h3>Revisi #{revItem.revision.revision_number}</h3>
+                {index === 0 && <span className="status-badge status-completed">Versi Terbaru</span>}
+              </div>
+              <div className="revision-actions-group">
+                <span>Dibuat pada: {formatDate(revItem.revision.created_at)}</span>
+                {/* [BARU] Tombol Buka PDF hanya muncul jika link ada */}
+                {revItem.revision.pdf_link && revItem.revision.pdf_link.startsWith('http') && (
+                  <Button onClick={() => handleOpenPdf(revItem.revision.pdf_link)}>
+                    📄 Buka PDF Revisi Ini
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="revision-details">
                 <p><strong>Customer:</strong> {revItem.revision.project_name || '-'}</p>
@@ -70,6 +83,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
             <h4>Item pada revisi ini:</h4>
             <div className="po-table-container">
                 <table className="simple-table">
+                    {/* ... (Isi tabel tidak berubah) ... */}
                     <thead>
                         <tr>
                             <th>Produk</th>
