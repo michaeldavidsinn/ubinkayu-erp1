@@ -1213,3 +1213,27 @@ label {
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
+.insight-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.insight-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.insight-list li:last-child {
+  border-bottom: none;
+}
+.trend-up {
+  color: #38A169; /* hijau */
+  font-weight: bold;
+}
+.recommendation-card {
+  margin-top: 1.5rem;
+  background-color: #EBF8FF; /* Biru muda */
+  border-left: 4px solid #3182CE; /* Biru tua */
+}

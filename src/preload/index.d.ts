@@ -22,6 +22,7 @@ interface ICustomAPI {
   getRecentUpdates: () => Promise<any[]>;
   // [BARU] Tambahkan definisi tipe baru di sini
   getAttentionData: () => Promise<any>;
+  getProductSalesAnalysis: () => Promise<any>;
 }
 
 declare global {

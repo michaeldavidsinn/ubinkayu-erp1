@@ -21,6 +21,7 @@ import {
   getRecentProgressUpdates,
   // [BARU] Impor fungsi baru
   getAttentionData,
+  getProductSalesAnalysis,
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -77,6 +78,7 @@ app.whenReady().then(() => {
   ipcMain.handle('progress:getRecentUpdates', () => getRecentProgressUpdates());
   // [BARU] Daftarkan handler untuk data atensi
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
+  ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
 
 
   createWindow()
