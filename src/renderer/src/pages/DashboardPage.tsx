@@ -95,6 +95,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
           <p>Ringkasan aktivitas produksi PT Ubinkayu — {todayFormatted}</p>
         </div>
       </div>
+        {/* [MODIFIKASI] Tambahkan Kartu Notifikasi di sini */}
+      {/* [MODIFIKASI] Ganti blok Kartu Notifikasi yang lama dengan yang ini */}
+      {!isLoading && dashboardData.nearingDeadlinePOs.length > 0 && (
+        <Card className="attention-card">
+          <h4>Perhatian!</h4>
+          <p>
+            Ada <strong>{dashboardData.nearingDeadlinePOs.length} Purchase Order</strong> yang akan jatuh tempo dalam 14 hari ke depan.
+          </p>
+
+          {/* [MODIFIKASI] Ganti bagian ini dengan struktur yang lebih rapi */}
+          <div className="attention-list">
+            {dashboardData.nearingDeadlinePOs.map(po => (
+              <div key={po.id} className="attention-item">
+                <div> {/* Wrapper untuk teks */}
+                  <p className="attention-line-1">
+                    <strong>{po.po_number}</strong>
+                    <span className="customer-name"> - {po.project_name}</span>
+                  </p>
+                  <p className="attention-line-2">
+                    Deadline: {new Date(po.deadline).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                {/* Di sini Anda bisa menambahkan tombol jika perlu */}
+              </div>
+            ))}
+          </div>
+
+        </Card>
+      )}
 
       <div className="dashboard-grid">
         <StatCard title="Total Purchase Order" value={isLoading ? '...' : dashboardData.totalPOs} icon="📦" color="#3182CE" />
