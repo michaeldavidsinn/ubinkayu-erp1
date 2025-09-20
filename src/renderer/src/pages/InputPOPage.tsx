@@ -247,25 +247,35 @@ console.log('TITIK A (Frontend): Mengirim payload:', payload);
   }
 
   const calculateKubikasi = (item: POItem) => {
-    if (item.satuan === 'pcs') {
-      return (
-        ((item.thickness_mm || 0) *
-          (item.width_mm || 0) *
-          (item.length_mm || 0) *
-          (item.quantity || 0)) /
-        1_000_000_000
-      )
-    }
-    if (item.satuan === 'm1') {
-      return (
-        ((item.thickness_mm || 0) *
-          (item.width_mm || 0) *
-          (item.quantity || 0)) /
-        1_000_000_000
-      )
-    }
-    return 0
+  // Ambil semua nilai dimensi dan kuantitas, default ke 0 jika tidak ada
+  const tebal = item.thickness_mm || 0;
+  const lebar = item.width_mm || 0;
+  const panjang = item.length_mm || 0;
+  const qty = item.quantity || 0;
+
+  // Rumus untuk satuan 'pcs' (Potongan)
+  // Volume = (Tebal(mm) * Lebar(mm) * Panjang(mm) * Jumlah Pcs) / 1 Miliar
+  if (item.satuan === 'pcs') {
+    return (tebal * lebar * panjang * qty) / 1_000_000_000;
   }
+
+  // Rumus untuk satuan 'm1' (Meter Lari)
+  // Volume = (Tebal(mm) * Lebar(mm) * Kuantitas(meter)) / 1 Juta
+  if (item.satuan === 'm1') {
+    // Di sini 'qty' adalah panjang dalam meter, jadi pembaginya berbeda
+    return (tebal * lebar * qty) / 1_000_000;
+  }
+
+  // [BARU] Rumus untuk satuan 'm2' (Meter Persegi)
+  // Volume = (Tebal(mm) * Kuantitas(meter persegi)) / 1000
+  if (item.satuan === 'm2') {
+    // Di sini 'qty' adalah luas dalam meter persegi
+    return (tebal * qty) / 1000;
+  }
+
+  // Jika satuan tidak dikenali, kembalikan 0
+  return 0;
+};
 
   const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
 
@@ -504,6 +514,7 @@ console.log('TITIK A (Frontend): Mengirim payload:', payload);
               >
                 <option value="pcs">pcs</option>
                 <option value="m1">m1</option>
+                <option value="m1">m2</option>
               </select>
             </div>
             <Input
