@@ -11,6 +11,7 @@ import ProgressTrackingPage from './pages/ProgressTrackingPage'
 import DashboardPage from './pages/DashboardPage'
 import RevisionHistoryPage from './pages/RevisionHistoryPage'
 import UpdateProgressPage from './pages/UpdateProgressPage'
+import AnalysisPage from './pages/AnalysisPage'
 
 function App() {
   const [view, setView] = useState<string>('dashboard')
@@ -138,6 +139,8 @@ function App() {
         )
       case 'updateProgress':
         return <UpdateProgressPage po={trackingPO} onBack={() => setView('tracking')} />
+      case 'analysis':
+        return <AnalysisPage />
       case 'list':
       default:
         return (

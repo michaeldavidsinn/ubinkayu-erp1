@@ -873,3 +873,91 @@ export async function getAttentionData() {
     return { nearingDeadline: [], stuckItems: [], urgentItems: [] };
   }
 }
+
+export async function getProductSalesAnalysis() {
+  try {
+    const doc = await openDoc();
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const productSheet = await getSheet(doc, 'product_master');
+
+    const [itemRows, poRows, productRows] = await Promise.all([
+      itemSheet.getRows(),
+      poSheet.getRows(),
+      productSheet.getRows(),
+    ]);
+
+    // Peta untuk mencari tanggal PO dengan cepat
+    const poDateMap = new Map(poRows.map(r => [r.get('id'), r.get('created_at')]));
+
+    const salesData = {};
+    const salesByDate = [];
+
+    itemRows.forEach(item => {
+      const productName = item.get('product_name');
+      const quantity = toNum(item.get('quantity'), 0);
+      const poId = item.get('purchase_order_id');
+      const createdAt = poDateMap.get(poId);
+
+      if (!productName || !createdAt) return;
+
+      // Kalkulasi total penjualan per produk
+      if (!salesData[productName]) {
+        salesData[productName] = { totalQuantity: 0, name: productName };
+      }
+      salesData[productName].totalQuantity += quantity;
+
+      salesByDate.push({
+        date: new Date(createdAt),
+        name: productName,
+        quantity: quantity
+      });
+    });
+
+    // 1. Dapatkan 10 produk terlaris sepanjang masa
+    const topSellingProducts = Object.values(salesData)
+      .sort((a, b) => b.totalQuantity - a.totalQuantity)
+      .slice(0, 10);
+
+    // 2. Analisis Tren: 30 hari terakhir vs 30 hari sebelumnya
+    const today = new Date();
+    const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30));
+    const sixtyDaysAgo = new Date(new Date().setDate(today.getDate() - 60));
+
+    const salesLast30 = {};
+    const salesPrev30 = {};
+
+    salesByDate.forEach(sale => {
+      if (sale.date >= thirtyDaysAgo) {
+        salesLast30[sale.name] = (salesLast30[sale.name] || 0) + sale.quantity;
+      } else if (sale.date >= sixtyDaysAgo) {
+        salesPrev30[sale.name] = (salesPrev30[sale.name] || 0) + sale.quantity;
+      }
+    });
+
+    const trendingProducts = Object.keys(salesLast30)
+      .map(name => {
+        const last30 = salesLast30[name];
+        const prev30 = salesPrev30[name] || 0;
+        const change = prev30 === 0 ? 100 : ((last30 - prev30) / prev30) * 100; // Persentase perubahan
+        return { name, last30, prev30, change };
+      })
+      .filter(p => p.change > 20) // Anggap tren naik jika > 20%
+      .sort((a, b) => b.change - a.change);
+
+    // 3. Cari produk yang lambat terjual (slow-moving)
+    const allProductNames = productRows.map(r => r.get('product_name'));
+    const soldProductNames = new Set(Object.keys(salesData));
+    const neverSoldProducts = allProductNames.filter(name => !soldProductNames.has(name));
+
+    return {
+        topSellingProducts,
+        trendingProducts,
+        slowMovingProducts: neverSoldProducts, // Untuk saat ini kita tampilkan yg belum pernah terjual
+    };
+
+  } catch (err) {
+    console.error('❌ Gagal melakukan analisis penjualan produk:', err.message);
+    return { topSellingProducts: [], trendingProducts: [], slowMovingProducts: [] };
+  }
+}

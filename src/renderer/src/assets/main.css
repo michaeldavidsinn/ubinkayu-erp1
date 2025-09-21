@@ -1213,3 +1213,79 @@ label {
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
+.insight-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.insight-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.insight-list li:last-child {
+  border-bottom: none;
+}
+.trend-up {
+  color: #38A169; /* hijau */
+  font-weight: bold;
+}
+.recommendation-card {
+  margin-top: 1.5rem;
+  background-color: #EBF8FF; /* Biru muda */
+  border-left: 4px solid #3182CE; /* Biru tua */
+}
+/* ======================================= */
+/* == PERBAIKAN TAMPILAN KARTU PERHATIAN == */
+/* ======================================= */
+
+.attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Jarak antar item diatur oleh border */
+}
+
+.attention-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attention-item:last-child {
+  border-bottom: none; /* Hilangkan border pada item terakhir */
+  padding-bottom: 0;
+}
+
+.attention-item:first-child {
+  padding-top: 8px;
+}
+
+/* Hilangkan margin default dari paragraf */
+.attention-item p {
+  margin: 0;
+}
+
+/* Baris pertama: Nomor PO & Customer */
+.attention-line-1 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px; /* Jarak ke baris deadline */
+}
+.attention-line-1 strong {
+  font-weight: 700; /* Membuat Nomor PO lebih tebal */
+}
+.attention-line-1 .customer-name {
+  color: var(--text-secondary);
+}
+
+/* Baris kedua: Deadline */
+.attention-line-2 {
+  font-size: 0.875rem;
+  color: #c2410c; /* Warna oranye-merah untuk deadline */
+  font-weight: 500;
+}

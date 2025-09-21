@@ -32,8 +32,8 @@ const api = {
   // [BARU] Tambahkan fungsi baru di sini
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
   
-  // --- Fungsi untuk File Dialog ---
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
+  getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales')
 };
 
 try {

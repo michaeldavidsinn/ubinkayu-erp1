@@ -4,8 +4,7 @@ import logo from '../assets/WhatsApp Image 2025-09-09 at 14.30.02 - Edited.png';
 
 interface NavbarProps {
   currentView: string;
-  // Tambahkan 'dashboard' ke tipe navigasi
-  onNavigate: (view: 'dashboard' | 'list' | 'tracking') => void;
+  onNavigate: (view: 'dashboard' | 'list' | 'tracking' | 'analysis') => void; // Tambahkan 'analysis'
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
@@ -26,8 +25,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   return (
     <nav className="navbar">
     <div className="navbar-brand">
-      <img src={logo} alt="Ubinkayu Logo" className="navbar-logo" />  
-     </div>      
+      <img src={logo} alt="Ubinkayu Logo" className="navbar-logo" />
+     </div>
       <div className="navbar-links">
         {/* [FIX] Jadikan link ini fungsional */}
         <a href="#" onClick={() => onNavigate('dashboard')} className={getLinkClass('Dashboard')}>
@@ -38,6 +37,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
         </a>
         <a href="#" onClick={() => onNavigate('tracking')} className={getLinkClass('Progress Tracking')}>
           Progress Tracking
+        </a>
+        <a href="#" onClick={() => onNavigate('analysis')} className={getLinkClass('Analisis')}>
+          Product Analysis
         </a>
       </div>
     </nav>
