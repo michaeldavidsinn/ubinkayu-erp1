@@ -133,6 +133,87 @@ async function generateAndUploadPO(poData, revisionNumber) {
   }
 }
 
+// ===============================
+// GOOGLE DRIVE FILE UTILITIES
+// ===============================
+
+/**
+ * Extract Google Drive file ID from various Drive URL formats
+ * @param {string} driveUrl - Google Drive URL
+ * @returns {string|null} - File ID or null if not found
+ */
+function extractGoogleDriveFileId(driveUrl) {
+  if (!driveUrl || typeof driveUrl !== 'string') return null;
+  
+  // Handle different Google Drive URL formats
+  const patterns = [
+    /\/d\/([a-zA-Z0-9-_]+)/,           // /d/FILE_ID format
+    /id=([a-zA-Z0-9-_]+)/,            // id=FILE_ID format
+    /file\/d\/([a-zA-Z0-9-_]+)/,       // file/d/FILE_ID format
+    /open\?id=([a-zA-Z0-9-_]+)/,      // open?id=FILE_ID format
+  ];
+  
+  for (const pattern of patterns) {
+    const match = driveUrl.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Process items in batches to prevent API rate limiting
+ * @param {Array} items - Items to process
+ * @param {Function} processor - Function to process each item
+ * @param {number} batchSize - Number of items to process simultaneously
+ * @returns {Promise<Array>} - Array of results
+ */
+async function processBatch(items, processor, batchSize = 5) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(batch.map(processor));
+    results.push(...batchResults.map(result => 
+      result.status === 'fulfilled' ? result.value : { success: false, error: result.reason?.message || 'Unknown error' }
+    ));
+    
+    // Small delay between batches to be gentle on API
+    if (i + batchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  return results;
+}
+
+/**
+ * Delete a file from Google Drive
+ * @param {string} fileId - Google Drive file ID
+ * @returns {Promise<{success: boolean, error?: string, fileId: string}>}
+ */
+async function deleteGoogleDriveFile(fileId) {
+  try {
+    if (!fileId) {
+      return { success: false, error: 'File ID tidak valid', fileId };
+    }
+    
+    const auth = getAuth();
+    const drive = google.drive({ version: 'v3', auth });
+    
+    await drive.files.delete({
+      fileId: fileId,
+      supportsAllDrives: true,
+    });
+    
+    console.log(`✅ File berhasil dihapus dari Google Drive: ${fileId}`);
+    return { success: true, fileId };
+  } catch (error) {
+    console.error(`❌ Gagal menghapus file dari Google Drive (${fileId}):`, error.message);
+    return { success: false, error: error.message, fileId };
+  }
+}
+
 async function uploadProgressPhoto(photoPath, poNumber, itemId) {
   try {
     if (!fs.existsSync(photoPath)) throw new Error(`File foto tidak ditemukan: ${photoPath}`);
@@ -423,23 +504,134 @@ export async function updatePO(data) {
 }
 
 export async function deletePO(poId) {
+  const startTime = Date.now();
+  console.log(`🗑️ Memulai penghapusan lengkap PO ID: ${poId}`);
+  
   try {
     const doc = await openDoc();
-    const poSheet = await getSheet(doc, 'purchase_orders');
-    const itemSheet = await getSheet(doc, 'purchase_order_items');
-
-    const poRows = await poSheet.getRows();
+    
+    // Step 1: Fetch all required data in parallel (OPTIMIZATION)
+    console.log(`📄 Mengambil data dari 3 sheet...`);
+    const [poSheet, itemSheet, progressSheet] = await Promise.all([
+      getSheet(doc, 'purchase_orders'),
+      getSheet(doc, 'purchase_order_items'), 
+      getSheet(doc, 'progress_tracking')
+    ]);
+    
+    // Step 2: Fetch all rows in parallel (OPTIMIZATION)
+    const [poRows, itemRows, progressRows] = await Promise.all([
+      poSheet.getRows(),
+      itemSheet.getRows(),
+      progressSheet.getRows()
+    ]);
+    
+    // Step 3: Filter relevant data
     const toDelHdr = poRows.filter(r => String(r.get('id')).trim() === String(poId).trim());
-    for (let i = toDelHdr.length - 1; i >= 0; i--) await toDelHdr[i].delete();
-
-    const itemRows = await itemSheet.getRows();
     const toDelItems = itemRows.filter(r => String(r.get('purchase_order_id')).trim() === String(poId).trim());
-    for (let i = toDelItems.length - 1; i >= 0; i--) await toDelItems[i].delete();
+    const poProgressRows = progressRows.filter(r => String(r.get('purchase_order_id')).trim() === String(poId).trim());
+    
+    // Step 4: Extract file IDs from all sources
+    const fileIds = new Set(); // Use Set to avoid duplicates
+    
+    // Extract PDF file IDs
+    toDelHdr.forEach(poRow => {
+      const pdfLink = poRow.get('pdf_link');
+      if (pdfLink && !pdfLink.startsWith('ERROR:') && !pdfLink.includes('generating')) {
+        const fileId = extractGoogleDriveFileId(pdfLink);
+        if (fileId) fileIds.add(fileId);
+      }
+    });
+    
+    // Extract progress photo file IDs  
+    poProgressRows.forEach(progressRow => {
+      const photoUrl = progressRow.get('photo_url');
+      if (photoUrl) {
+        const fileId = extractGoogleDriveFileId(photoUrl);
+        if (fileId) fileIds.add(fileId);
+      }
+    });
+    
+    const uniqueFileIds = Array.from(fileIds);
+    
+    // Step 5: Delete files from Google Drive in parallel batches (MAJOR OPTIMIZATION)
+    let deletedFilesCount = 0;
+    let failedFilesCount = 0;
+    let failedFiles = [];
+    
+    if (uniqueFileIds.length > 0) {
+      console.log(`🗂️ Menghapus ${uniqueFileIds.length} file dari Google Drive dalam batch...`);
+      
+      const deleteResults = await processBatch(
+        uniqueFileIds, 
+        deleteGoogleDriveFile, 
+        5 // Process 5 files simultaneously
+      );
+      
+      deleteResults.forEach(result => {
+        if (result.success) {
+          deletedFilesCount++;
+        } else {
+          failedFilesCount++;
+          failedFiles.push({ fileId: result.fileId, error: result.error });
+          console.warn(`⚠️ Gagal menghapus file ${result.fileId}: ${result.error}`);
+        }
+      });
+    }
+    
+    console.log(`📄 Menghapus data dari spreadsheet...`);
+    
+    // Step 6: Delete spreadsheet data in parallel where possible (OPTIMIZATION)
+    const sheetDeletions = [];
+    
+    // Add progress row deletions
+    poProgressRows.reverse().forEach(row => {
+      sheetDeletions.push(row.delete());
+    });
+    
+    // Add PO header deletions  
+    toDelHdr.reverse().forEach(row => {
+      sheetDeletions.push(row.delete());
+    });
+    
+    // Add item deletions
+    toDelItems.reverse().forEach(row => {
+      sheetDeletions.push(row.delete());
+    });
+    
+    // Execute all sheet deletions in parallel (MAJOR OPTIMIZATION)
+    await Promise.allSettled(sheetDeletions);
+    
+    const endTime = Date.now();
+    const duration = ((endTime - startTime) / 1000).toFixed(1);
+    
+    // Step 7: Prepare summary report
+    const summary = {
+      deletedRevisions: toDelHdr.length,
+      deletedItems: toDelItems.length,
+      deletedProgressRecords: poProgressRows.length,
+      deletedFiles: deletedFilesCount,
+      failedFileDeletes: failedFilesCount,
+      duration: `${duration}s`,
+      failedFiles: failedFiles.length > 0 ? failedFiles : undefined
+    };
 
-    return { success: true };
+    console.log(`✅ PO ${poId} berhasil dihapus lengkap dalam ${duration}s:`, summary);
+    
+    const message = failedFilesCount > 0 
+      ? `PO berhasil dihapus: ${summary.deletedRevisions} revisi, ${summary.deletedItems} item, ${summary.deletedProgressRecords} progress record, ${summary.deletedFiles} file dari Drive (${failedFilesCount} file gagal dihapus)`
+      : `PO berhasil dihapus: ${summary.deletedRevisions} revisi, ${summary.deletedItems} item, ${summary.deletedProgressRecords} progress record, ${summary.deletedFiles} file dari Drive`;
+    
+    return { 
+      success: true, 
+      message,
+      summary 
+    };
+    
   } catch (err) {
-    console.error(`❌ Gagal menghapus PO ID ${poId}:`, err.message);
-    return { success: false, error: err.message };
+    const endTime = Date.now();
+    const duration = ((endTime - startTime) / 1000).toFixed(1);
+    console.error(`❌ Gagal menghapus PO ID ${poId} setelah ${duration}s:`, err.message);
+    return { success: false, error: err.message, duration: `${duration}s` };
   }
 }
 
