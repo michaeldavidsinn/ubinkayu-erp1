@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import path from 'node:path'
 
 import {
@@ -68,6 +68,23 @@ app.whenReady().then(() => {
       return { success: true };
     }
     return { success: false, error: 'Invalid URL' };
+  });
+
+  // --- IPC Handler untuk File Dialog ---
+  ipcMain.handle('app:open-file-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return null;
+    }
+    
+    return result.filePaths[0];
   });
 
   // --- IPC Handlers untuk Progress Tracking ---
