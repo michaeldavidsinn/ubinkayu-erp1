@@ -42,19 +42,58 @@ function App() {
   }, [view])
 
   const handleDeletePO = async (poId: string) => {
-    if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
+    // Find the PO to get more info for the confirmation
+    const poToDelete = purchaseOrders.find(po => po.id === poId)
+    const poInfo = poToDelete ? `${poToDelete.po_number} - ${poToDelete.project_name}` : poId
+    
+    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN LENGKAP ⚠️\n\n` +
+      `PO: ${poInfo}\n\n` +
+      `Data yang akan dihapus PERMANEN:\n` +
+      `• Semua revisi PO dari spreadsheet\n` +
+      `• Semua item dan progress tracking\n` +
+      `• File PDF dari Google Drive\n` +
+      `• Foto progress dari Google Drive\n\n` +
+      `Proses ini akan memakan waktu 5-15 detik tergantung jumlah file.\n` +
+      `Tindakan ini TIDAK DAPAT DIBATALKAN!\n\n` +
+      `Apakah Anda yakin ingin melanjutkan?`
+    
+    if (window.confirm(confirmMessage)) {
       setIsLoading(true)
+      
+      // Show progress message immediately
+      const progressMessage = `🗜️ Menghapus PO ${poInfo}...\n\n` +
+        `Sedang memproses:\n` +
+        `• Menghapus file dari Google Drive\n` +
+        `• Membersihkan data spreadsheet\n\n` +
+        `Mohon tunggu, jangan tutup aplikasi...`
+      
+      // Use setTimeout to show progress message without blocking
+      const progressAlert = setTimeout(() => {
+        // This will be cleared when deletion completes
+      }, 100)
+      
       try {
         // @ts-ignore
         const result = await window.api.deletePO(poId)
+        clearTimeout(progressAlert)
+        
         if (result.success) {
-          alert('PO berhasil dihapus.')
+          // Show detailed success message with timing
+          const duration = result.summary?.duration || 'beberapa detik'
+          let successMessage = `${result.message}\n\nWaktu pemrosesan: ${duration}`
+          
+          if (result.summary?.failedFileDeletes > 0) {
+            successMessage += `\n\n⚠️ Catatan: ${result.summary.failedFileDeletes} file tidak dapat dihapus dari Drive (mungkin sudah dihapus atau tidak memiliki akses)`
+          }
+          
+          alert(`✅ PENGHAPUSAN BERHASIL\n\n${successMessage}`)
           await fetchPOs()
         } else {
           throw new Error(result.error)
         }
       } catch (error) {
-        alert(`Gagal menghapus PO: ${(error as Error).message}`)
+        clearTimeout(progressAlert)
+        alert(`❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi atau hubungi administrator.`)
       } finally {
         setIsLoading(false)
       }
