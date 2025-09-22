@@ -1165,136 +1165,158 @@ export async function getAttentionData() {
   }
 }
 
+// Di dalam file: electron/sheet.js
+
 export async function getProductSalesAnalysis() {
   try {
-    const doc = await openDoc()
-    const itemSheet = await getSheet(doc, 'purchase_order_items')
-    const poSheet = await getSheet(doc, 'purchase_orders')
-    const productSheet = await getSheet(doc, 'product_master')
+    const doc = await openDoc();
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const productSheet = await getSheet(doc, 'product_master');
 
     const [itemRows, poRows, productRows] = await Promise.all([
       itemSheet.getRows(),
       poSheet.getRows(),
-      productSheet.getRows()
-    ])
+      productSheet.getRows(),
+    ]);
 
-    // Peta untuk mencari detail PO dengan cepat
-    const poMap = new Map()
-    poRows.forEach((r) => {
-      const poId = r.get('id')
-      const rev = toNum(r.get('revision_number'))
-      if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-        poMap.set(poId, r.toObject())
-      }
-    })
+    const poMap = new Map();
+    poRows.forEach(r => {
+        const poId = r.get('id');
+        const rev = toNum(r.get('revision_number'));
+        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+            poMap.set(poId, r.toObject());
+        }
+    });
 
-    const salesData = {}
-    const salesByDate = []
-    const woodTypeData = {}
-    const customerData = {}
+    const salesData = {};
+    const salesByDate = [];
+    const woodTypeData = {};
+    const customerData = {};
 
-    itemRows.forEach((item) => {
-      const productName = item.get('product_name')
-      const quantity = toNum(item.get('quantity'), 0)
-      const woodType = item.get('wood_type') // Variabel ini hanya ada di dalam loop ini
-      const kubikasi = toNum(item.get('kubikasi'), 0)
-      const poId = item.get('purchase_order_id')
-      const po = poMap.get(poId)
+    itemRows.forEach(item => {
+      const productName = item.get('product_name');
+      const quantity = toNum(item.get('quantity'), 0);
+      const woodType = item.get('wood_type');
+      const kubikasi = toNum(item.get('kubikasi'), 0);
+      const poId = item.get('purchase_order_id');
+      const po = poMap.get(poId);
 
-      if (!productName || !po) return
+      if (!productName || !po) return;
 
-      // Kalkulasi total penjualan per produk
       if (!salesData[productName]) {
-        salesData[productName] = { totalQuantity: 0, name: productName }
+        salesData[productName] = { totalQuantity: 0, name: productName };
       }
-      salesData[productName].totalQuantity += quantity
+      salesData[productName].totalQuantity += quantity;
 
       salesByDate.push({
         date: new Date(po.created_at),
         name: productName,
         quantity: quantity
-      })
+      });
 
-      // Kalkulasi total kuantitas per jenis kayu
       if (woodType) {
-        woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity
+          woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity;
       }
 
-      // Kalkulasi total kubikasi per customer
-      const customerName = po.project_name
+      const customerName = po.project_name;
       if (customerName) {
-        customerData[customerName] = (customerData[customerName] || 0) + kubikasi
+          customerData[customerName] = (customerData[customerName] || 0) + kubikasi;
       }
-    })
+    });
 
-    // 1. Dapatkan 10 produk terlaris sepanjang masa
     const topSellingProducts = Object.values(salesData)
       .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, 10)
+      .slice(0, 10);
 
-    // 2. Olah data jenis kayu untuk Pie Chart
-    const woodTypeDistribution = Object.keys(woodTypeData)
-      .map((name) => ({
+    const woodTypeDistribution = Object.keys(woodTypeData).map(name => ({
         name,
         value: woodTypeData[name]
-      }))
-      .sort((a, b) => b.value - a.value)
+    })).sort((a,b) => b.value - a.value);
 
-    // 3. Olah data customer untuk daftar peringkat
-    const topCustomers = Object.keys(customerData)
-      .map((name) => ({
+    const topCustomers = Object.keys(customerData).map(name => ({
         name,
         totalKubikasi: customerData[name]
-      }))
-      .sort((a, b) => b.totalKubikasi - a.totalKubikasi)
-      .slice(0, 5)
+    })).sort((a,b) => b.totalKubikasi - a.totalKubikasi).slice(0, 5);
 
-    // 4. Analisis Tren: 30 hari terakhir vs 30 hari sebelumnya
-    const today = new Date()
-    const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30))
-    const sixtyDaysAgo = new Date(new Date().setDate(today.getDate() - 60))
-
-    const salesLast30 = {}
-    const salesPrev30 = {}
-
-    salesByDate.forEach((sale) => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30));
+    const sixtyDaysAgo = new Date(new Date().setDate(today.getDate() - 60));
+    const salesLast30 = {};
+    const salesPrev30 = {};
+    salesByDate.forEach(sale => {
       if (sale.date >= thirtyDaysAgo) {
-        salesLast30[sale.name] = (salesLast30[sale.name] || 0) + sale.quantity
+        salesLast30[sale.name] = (salesLast30[sale.name] || 0) + sale.quantity;
       } else if (sale.date >= sixtyDaysAgo) {
-        salesPrev30[sale.name] = (salesPrev30[sale.name] || 0) + sale.quantity
+        salesPrev30[sale.name] = (salesPrev30[sale.name] || 0) + sale.quantity;
       }
-    })
+    });
 
     const trendingProducts = Object.keys(salesLast30)
-      .map((name) => {
-        const last30 = salesLast30[name]
-        const prev30 = salesPrev30[name] || 0
-        const change = prev30 === 0 && last30 > 0 ? 100 : ((last30 - prev30) / (prev30 || 1)) * 100
-        return { name, last30, prev30, change }
+      .map(name => {
+        const last30 = salesLast30[name];
+        const prev30 = salesPrev30[name] || 0;
+        const change = prev30 === 0 && last30 > 0 ? 100 : ((last30 - prev30) / (prev30 || 1)) * 100;
+        return { name, last30, prev30, change };
       })
-      .filter((p) => p.change > 20 && p.last30 > p.prev30)
-      .sort((a, b) => b.change - a.change)
+      .filter(p => p.change > 20 && p.last30 > p.prev30)
+      .sort((a, b) => b.change - a.change);
 
-    // 5. Cari produk yang lambat terjual (slow-moving)
-    const allProductNames = productRows.map((r) => r.get('product_name'))
-    const soldProductNames = new Set(Object.keys(salesData))
-    const neverSoldProducts = allProductNames.filter((name) => !soldProductNames.has(name))
+    const allProductNames = productRows.map(r => r.get('product_name'));
+    const soldProductNames = new Set(Object.keys(salesData));
+    const neverSoldProducts = allProductNames.filter(name => !soldProductNames.has(name));
 
+    // [PERBAIKAN] Kembalikan semua data analisis, bukan array kosong
     return {
-      topSellingProducts,
-      woodTypeDistribution,
-      topCustomers,
-      trendingProducts,
-      slowMovingProducts: neverSoldProducts
-    }
+        topSellingProducts,
+        woodTypeDistribution,
+        topCustomers,
+        trendingProducts,
+        slowMovingProducts: neverSoldProducts,
+    };
+
   } catch (err) {
-    console.error('❌ Gagal melakukan analisis penjualan produk:', err.message)
-    return {
-      topSellingProducts: [],
-      woodTypeDistribution: [],
-      topCustomers: [],
-      trendingProducts: [],
-      slowMovingProducts: []
-    }
+    console.error('❌ Gagal melakukan analisis penjualan produk:', err.message);
+    return { topSellingProducts: [], woodTypeDistribution: [], topCustomers: [], trendingProducts: [], slowMovingProducts: [] };
+  }
+}
+
+export async function getSalesItemData() {
+  try {
+    const doc = await openDoc();
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const poSheet = await getSheet(doc, 'purchase_orders');
+
+    const [itemRows, poRows] = await Promise.all([
+      itemSheet.getRows(),
+      poSheet.getRows()
+    ]);
+
+    const poMap = new Map();
+    poRows.forEach(r => {
+        const poId = r.get('id');
+        const rev = toNum(r.get('revision_number'));
+        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+            poMap.set(poId, r.toObject());
+        }
+    });
+
+    const combinedData = itemRows.map(item => {
+      const itemObject = item.toObject();
+      const po = poMap.get(itemObject.purchase_order_id);
+
+      if (!po) return null;
+
+      return {
+        ...itemObject,
+        customer_name: po.project_name,
+        po_date: po.created_at,
+      };
+    }).filter(Boolean);
+
+    return combinedData;
+  } catch (err) {
+    console.error('❌ Gagal mengambil data item penjualan:', err.message);
+    return [];
   }
 }

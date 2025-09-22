@@ -31,9 +31,10 @@ const api = {
   getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   // [BARU] Tambahkan fungsi baru di sini
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
-  
+
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
-  getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales')
+  getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
+  getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData')
 };
 
 try {

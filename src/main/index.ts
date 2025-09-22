@@ -22,6 +22,7 @@ import {
   // [BARU] Impor fungsi baru
   getAttentionData,
   getProductSalesAnalysis,
+  getSalesItemData
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -80,11 +81,11 @@ app.whenReady().then(() => {
         { name: 'All Files', extensions: ['*'] }
       ]
     });
-    
+
     if (result.canceled) {
       return null;
     }
-    
+
     return result.filePaths[0];
   });
 
@@ -96,6 +97,7 @@ app.whenReady().then(() => {
   // [BARU] Daftarkan handler untuk data atensi
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
+  ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
 
 
   createWindow()
