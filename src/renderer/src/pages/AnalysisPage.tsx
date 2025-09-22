@@ -3,14 +3,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/Card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AnalysisData } from '../types';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
-// Tipe data untuk hasil analisis
-interface AnalysisData {
-  topSellingProducts: { name: string; totalQuantity: number }[];
-  trendingProducts: { name: string; change: number }[];
-  slowMovingProducts: string[];
-}
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
 const AnalysisPage: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -33,7 +29,7 @@ const AnalysisPage: React.FC = () => {
   }, []);
 
   const recommendationText = useMemo(() => {
-    if (!analysisData || analysisData.trendingProducts.length === 0) {
+    if (!analysisData || !analysisData.trendingProducts || analysisData.trendingProducts.length === 0) {
       return "Saat ini belum ada tren penjualan produk yang signifikan.";
     }
     const topTrending = analysisData.trendingProducts.slice(0, 2).map(p => p.name).join(' dan ');
@@ -57,10 +53,51 @@ const AnalysisPage: React.FC = () => {
         </div>
       </div>
 
-      <Card>
+      {/* --- Bagian Analisis Material & Customer --- */}
+      <div className="dashboard-widgets-grid">
+        <Card>
+          <h4>{'📊 Distribusi Jenis Kayu Terlaris'}</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={analysisData.woodTypeDistribution}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                nameKey="name"
+                label={(props) => `${props.name} (${props.percent.toFixed(0)}%)`}
+              >
+                {analysisData.woodTypeDistribution.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value} unit`} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card>
+          <h4>{'⭐ Top 5 Customer (Berdasarkan Volume m³)'}</h4>
+          {analysisData.topCustomers.length > 0 ? (
+            <ol className="top-customer-list">
+              {analysisData.topCustomers.map(c => (
+                <li key={c.name}>
+                  <span>{c.name}</span>
+                  <strong>{c.totalKubikasi.toFixed(3)} m³</strong>
+                </li>
+              ))}
+            </ol>
+          ) : <p>Belum ada data kubikasi customer.</p>}
+        </Card>
+      </div>
+
+      {/* --- Bagian Top 10 Produk --- */}
+      <Card style={{ marginTop: '1.5rem' }}>
         <h4>{'🏆 Top 10 Produk Terlaris (Berdasarkan Kuantitas)'}</h4>
-        {analysisData.topSellingProducts.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={400}>
             <BarChart
               layout="vertical"
               data={analysisData.topSellingProducts.slice().reverse()}
@@ -74,12 +111,11 @@ const AnalysisPage: React.FC = () => {
               <Bar dataKey="totalQuantity" name="Total Kuantitas Terjual" fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
-        ) : <p>Tidak ada data penjualan untuk ditampilkan.</p>}
       </Card>
 
+      {/* --- Bagian Tren, Slow Moving, dan Rekomendasi --- */}
       <div className="dashboard-widgets-grid" style={{ marginTop: '1.5rem' }}>
         <Card>
-            {/* [PERBAIKAN] Teks dibungkus dengan {'...'} */}
             <h4>{'🔥 Produk Tren Naik (>20% dalam sebulan)'}</h4>
             {analysisData.trendingProducts.length > 0 ? (
                 <ul className="insight-list">

@@ -70,3 +70,11 @@ export interface RevisionHistoryItem {
   revision: PORevision;
   items: POItem[];
 }
+
+export interface AnalysisData {
+  topSellingProducts: { name: string; totalQuantity: number }[];
+  trendingProducts: { name: string; change: number }[];
+  slowMovingProducts: string[];
+  woodTypeDistribution: { name: string; value: number }[]; // Tambahkan ini
+  topCustomers: { name: string; totalKubikasi: number }[]; // Tambahkan ini
+}

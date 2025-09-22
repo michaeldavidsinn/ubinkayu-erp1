@@ -144,7 +144,7 @@ async function generateAndUploadPO(poData, revisionNumber) {
  */
 function extractGoogleDriveFileId(driveUrl) {
   if (!driveUrl || typeof driveUrl !== 'string') return null;
-  
+
   // Handle different Google Drive URL formats
   const patterns = [
     /\/d\/([a-zA-Z0-9-_]+)/,           // /d/FILE_ID format
@@ -152,14 +152,14 @@ function extractGoogleDriveFileId(driveUrl) {
     /file\/d\/([a-zA-Z0-9-_]+)/,       // file/d/FILE_ID format
     /open\?id=([a-zA-Z0-9-_]+)/,      // open?id=FILE_ID format
   ];
-  
+
   for (const pattern of patterns) {
     const match = driveUrl.match(pattern);
     if (match && match[1]) {
       return match[1];
     }
   }
-  
+
   return null;
 }
 
@@ -175,10 +175,10 @@ async function processBatch(items, processor, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(batch.map(processor));
-    results.push(...batchResults.map(result => 
+    results.push(...batchResults.map(result =>
       result.status === 'fulfilled' ? result.value : { success: false, error: result.reason?.message || 'Unknown error' }
     ));
-    
+
     // Small delay between batches to be gentle on API
     if (i + batchSize < items.length) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -197,15 +197,15 @@ async function deleteGoogleDriveFile(fileId) {
     if (!fileId) {
       return { success: false, error: 'File ID tidak valid', fileId };
     }
-    
+
     const auth = getAuth();
     const drive = google.drive({ version: 'v3', auth });
-    
+
     await drive.files.delete({
       fileId: fileId,
       supportsAllDrives: true,
     });
-    
+
     console.log(`✅ File berhasil dihapus dari Google Drive: ${fileId}`);
     return { success: true, fileId };
   } catch (error) {
@@ -281,12 +281,12 @@ export async function listPOs() {
 
     const latestItemRevisions = new Map();
     itemRows.forEach(item => {
-        const poId = item.get('purchase_order_id');
-        const rev = toNum(item.get('revision_number'), -1);
-        const current = latestItemRevisions.get(poId);
-        if (!current || rev > current) {
-            latestItemRevisions.set(poId, rev);
-        }
+      const poId = item.get('purchase_order_id');
+      const rev = toNum(item.get('revision_number'), -1);
+      const current = latestItemRevisions.get(poId);
+      if (!current || rev > current) {
+        latestItemRevisions.set(poId, rev);
+      }
     });
 
     const result = latestPoRows.map(po => {
@@ -313,7 +313,7 @@ export async function listPOs() {
 
           let latestStageIndex = -1;
           if (itemProgressHistory.length > 0) {
-            const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            const latestProgress = itemProgressHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
             latestStageIndex = stages.indexOf(latestProgress.stage);
           }
 
@@ -328,13 +328,13 @@ export async function listPOs() {
 
       // Hanya ubah status jika bukan status manual seperti "Cancelled"
       if (finalStatus !== 'Cancelled') {
-          if (poProgress >= 100) {
-              finalStatus = 'Completed';
-          } else if (poProgress > 0) {
-              finalStatus = 'In Progress';
-          } else {
-              finalStatus = 'Open';
-          }
+        if (poProgress >= 100) {
+          finalStatus = 'Completed';
+        } else if (poProgress > 0) {
+          finalStatus = 'In Progress';
+        } else {
+          finalStatus = 'Open';
+        }
       }
 
       return {
@@ -355,184 +355,184 @@ export async function listPOs() {
 
 export async function saveNewPO(data) {
   console.log('TITIK B (Backend): Menerima data:', data);
-    try {
-        const doc = await openDoc();
-        const now = new Date().toISOString();
-        const poSheet = await getSheet(doc, 'purchase_orders');
-        const itemSheet = await getSheet(doc, 'purchase_order_items');
+  try {
+    const doc = await openDoc();
+    const now = new Date().toISOString();
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
 
-        const poId = await getNextIdFromSheet(poSheet);
+    const poId = await getNextIdFromSheet(poSheet);
 
-        const newPoRow = await poSheet.addRow({
-            id: poId,
-            revision_number: 0,
-            po_number: data.nomorPo,
-            project_name: data.namaCustomer,
-            deadline: data.tanggalKirim || '',
-            status: 'Open',
-            priority: data.prioritas || '',
-            notes: data.catatan || '',
-            kubikasi_total: data.kubikasi_total || 0,
-            created_at: now,
-            pdf_link: 'generating...'
-        });
+    const newPoRow = await poSheet.addRow({
+      id: poId,
+      revision_number: 0,
+      po_number: data.nomorPo,
+      project_name: data.namaCustomer,
+      deadline: data.tanggalKirim || '',
+      status: 'Open',
+      priority: data.prioritas || '',
+      notes: data.catatan || '',
+      kubikasi_total: data.kubikasi_total || 0,
+      created_at: now,
+      pdf_link: 'generating...'
+    });
 
-        const itemsWithIds = [];
-        let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10);
-        const itemsToAdd = (data.items || []).map(raw => {
-            const clean = scrubItemPayload(raw);
-            const newItem = {
-                id: nextItemId,
-                purchase_order_id: poId,
-                ...clean,
-                revision_id: 0,
-                revision_number: 0,
-                kubikasi: raw.kubikasi || 0
-            };
-            itemsWithIds.push({...raw, id: nextItemId });
-            nextItemId++;
-            return newItem;
-        });
+    const itemsWithIds = [];
+    let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10);
+    const itemsToAdd = (data.items || []).map(raw => {
+      const clean = scrubItemPayload(raw);
+      const newItem = {
+        id: nextItemId,
+        purchase_order_id: poId,
+        ...clean,
+        revision_id: 0,
+        revision_number: 0,
+        kubikasi: raw.kubikasi || 0
+      };
+      itemsWithIds.push({ ...raw, id: nextItemId });
+      nextItemId++;
+      return newItem;
+    });
 
-        if (itemsToAdd.length > 0) {
-            await itemSheet.addRows(itemsToAdd);
-        }
-
-        const poDataForPdf = {
-            po_number: data.nomorPo,
-            project_name: data.namaCustomer,
-            deadline: data.tanggalKirim,
-            priority: data.prioritas,
-            items: itemsWithIds,
-            notes: data.catatan,
-            created_at: now,
-            kubikasi_total: data.kubikasi_total || 0,
-            poPhotoPath: data.poPhotoPath
-        };
- console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForPdf);
-        const uploadResult = await generateAndUploadPO(poDataForPdf, 0);
-
-        if (uploadResult.success) {
-            newPoRow.set('pdf_link', uploadResult.link);
-            await newPoRow.save();
-        } else {
-            newPoRow.set('pdf_link', `ERROR: ${uploadResult.error}`);
-            await newPoRow.save();
-        }
-
-        return { success: true, poId, revision_number: 0 };
-    } catch (err) {
-        console.error('❌ saveNewPO error:', err.message);
-        return { success: false, error: err.message };
+    if (itemsToAdd.length > 0) {
+      await itemSheet.addRows(itemsToAdd);
     }
+
+    const poDataForPdf = {
+      po_number: data.nomorPo,
+      project_name: data.namaCustomer,
+      deadline: data.tanggalKirim,
+      priority: data.prioritas,
+      items: itemsWithIds,
+      notes: data.catatan,
+      created_at: now,
+      kubikasi_total: data.kubikasi_total || 0,
+      poPhotoPath: data.poPhotoPath
+    };
+    console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForPdf);
+    const uploadResult = await generateAndUploadPO(poDataForPdf, 0);
+
+    if (uploadResult.success) {
+      newPoRow.set('pdf_link', uploadResult.link);
+      await newPoRow.save();
+    } else {
+      newPoRow.set('pdf_link', `ERROR: ${uploadResult.error}`);
+      await newPoRow.save();
+    }
+
+    return { success: true, poId, revision_number: 0 };
+  } catch (err) {
+    console.error('❌ saveNewPO error:', err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 export async function updatePO(data) {
   console.log('TITIK B (Backend): Menerima data:', data);
-    try {
-        const doc = await openDoc();
-        const now = new Date().toISOString();
-        const poSheet = await getSheet(doc, 'purchase_orders');
-        const itemSheet = await getSheet(doc, 'purchase_order_items');
+  try {
+    const doc = await openDoc();
+    const now = new Date().toISOString();
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
 
-        const latest = await latestRevisionNumberForPO(String(data.poId), doc);
-        const prevRow = latest >= 0 ? await getHeaderForRevision(String(data.poId), latest, doc) : null;
-        const prev = prevRow ? prevRow.toObject() : {};
-        const newRev = latest >= 0 ? latest + 1 : 0;
+    const latest = await latestRevisionNumberForPO(String(data.poId), doc);
+    const prevRow = latest >= 0 ? await getHeaderForRevision(String(data.poId), latest, doc) : null;
+    const prev = prevRow ? prevRow.toObject() : {};
+    const newRev = latest >= 0 ? latest + 1 : 0;
 
-        const newRevisionRow = await poSheet.addRow({
-            id: String(data.poId),
-            revision_number: newRev,
-            po_number: data.nomorPo ?? prev.po_number ?? '',
-            project_name: data.namaCustomer ?? prev.project_name ?? '',
-            deadline: data.tanggalKirim ?? prev.deadline ?? '',
-            status: data.status ?? prev.status ?? 'Open',
-            priority: data.prioritas ?? prev.priority ?? '',
-            notes: data.catatan ?? prev.notes ?? '',
-            kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
-            created_at: now,
-            pdf_link: 'generating...'
-        });
+    const newRevisionRow = await poSheet.addRow({
+      id: String(data.poId),
+      revision_number: newRev,
+      po_number: data.nomorPo ?? prev.po_number ?? '',
+      project_name: data.namaCustomer ?? prev.project_name ?? '',
+      deadline: data.tanggalKirim ?? prev.deadline ?? '',
+      status: data.status ?? prev.status ?? 'Open',
+      priority: data.prioritas ?? prev.priority ?? '',
+      notes: data.catatan ?? prev.notes ?? '',
+      kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
+      created_at: now,
+      pdf_link: 'generating...'
+    });
 
-        const itemsWithIds = [];
-        let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10);
-        const itemsToAdd = (data.items || []).map(raw => {
-            const clean = scrubItemPayload(raw);
-             const newItem = {
-                id: nextItemId,
-                purchase_order_id: String(data.poId),
-                ...clean,
-                revision_id: newRev,
-                revision_number: newRev,
-                kubikasi: raw.kubikasi || 0
-            };
-            itemsWithIds.push({...raw, id: nextItemId });
-            nextItemId++;
-            return newItem;
-        });
+    const itemsWithIds = [];
+    let nextItemId = parseInt(await getNextIdFromSheet(itemSheet), 10);
+    const itemsToAdd = (data.items || []).map(raw => {
+      const clean = scrubItemPayload(raw);
+      const newItem = {
+        id: nextItemId,
+        purchase_order_id: String(data.poId),
+        ...clean,
+        revision_id: newRev,
+        revision_number: newRev,
+        kubikasi: raw.kubikasi || 0
+      };
+      itemsWithIds.push({ ...raw, id: nextItemId });
+      nextItemId++;
+      return newItem;
+    });
 
-        if (itemsToAdd.length > 0) {
-            await itemSheet.addRows(itemsToAdd);
-        }
-
-        const poDataForPdf = {
-            po_number: data.nomorPo ?? prev.po_number,
-            project_name: data.namaCustomer ?? prev.project_name,
-            deadline: data.tanggalKirim ?? prev.deadline,
-            priority: data.prioritas ?? prev.priority,
-            items: itemsWithIds,
-            notes: data.catatan ?? prev.notes,
-            created_at: now,
-             poPhotoPath: data.poPhotoPath // [MODIFIKASI KUNCI] Teruskan path foto
-        };
-
-        const uploadResult = await generateAndUploadPO(poDataForPdf, newRev);
-
-        if (uploadResult.success) {
-            newRevisionRow.set('pdf_link', uploadResult.link);
-            await newRevisionRow.save();
-        } else {
-            newRevisionRow.set('pdf_link', `ERROR: ${uploadResult.error}`);
-            await newRevisionRow.save();
-        }
-
-        return { success: true, revision_number: newRev };
-    } catch (err) {
-        console.error('❌ updatePO error:', err.message);
-        return { success: false, error: err.message };
+    if (itemsToAdd.length > 0) {
+      await itemSheet.addRows(itemsToAdd);
     }
+
+    const poDataForPdf = {
+      po_number: data.nomorPo ?? prev.po_number,
+      project_name: data.namaCustomer ?? prev.project_name,
+      deadline: data.tanggalKirim ?? prev.deadline,
+      priority: data.prioritas ?? prev.priority,
+      items: itemsWithIds,
+      notes: data.catatan ?? prev.notes,
+      created_at: now,
+      poPhotoPath: data.poPhotoPath // [MODIFIKASI KUNCI] Teruskan path foto
+    };
+
+    const uploadResult = await generateAndUploadPO(poDataForPdf, newRev);
+
+    if (uploadResult.success) {
+      newRevisionRow.set('pdf_link', uploadResult.link);
+      await newRevisionRow.save();
+    } else {
+      newRevisionRow.set('pdf_link', `ERROR: ${uploadResult.error}`);
+      await newRevisionRow.save();
+    }
+
+    return { success: true, revision_number: newRev };
+  } catch (err) {
+    console.error('❌ updatePO error:', err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 export async function deletePO(poId) {
   const startTime = Date.now();
   console.log(`🗑️ Memulai penghapusan lengkap PO ID: ${poId}`);
-  
+
   try {
     const doc = await openDoc();
-    
+
     // Step 1: Fetch all required data in parallel (OPTIMIZATION)
     console.log(`📄 Mengambil data dari 3 sheet...`);
     const [poSheet, itemSheet, progressSheet] = await Promise.all([
       getSheet(doc, 'purchase_orders'),
-      getSheet(doc, 'purchase_order_items'), 
+      getSheet(doc, 'purchase_order_items'),
       getSheet(doc, 'progress_tracking')
     ]);
-    
+
     // Step 2: Fetch all rows in parallel (OPTIMIZATION)
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
     ]);
-    
+
     // Step 3: Filter relevant data
     const toDelHdr = poRows.filter(r => String(r.get('id')).trim() === String(poId).trim());
     const toDelItems = itemRows.filter(r => String(r.get('purchase_order_id')).trim() === String(poId).trim());
     const poProgressRows = progressRows.filter(r => String(r.get('purchase_order_id')).trim() === String(poId).trim());
-    
+
     // Step 4: Extract file IDs from all sources
     const fileIds = new Set(); // Use Set to avoid duplicates
-    
+
     // Extract PDF file IDs
     toDelHdr.forEach(poRow => {
       const pdfLink = poRow.get('pdf_link');
@@ -541,8 +541,8 @@ export async function deletePO(poId) {
         if (fileId) fileIds.add(fileId);
       }
     });
-    
-    // Extract progress photo file IDs  
+
+    // Extract progress photo file IDs
     poProgressRows.forEach(progressRow => {
       const photoUrl = progressRow.get('photo_url');
       if (photoUrl) {
@@ -550,23 +550,23 @@ export async function deletePO(poId) {
         if (fileId) fileIds.add(fileId);
       }
     });
-    
+
     const uniqueFileIds = Array.from(fileIds);
-    
+
     // Step 5: Delete files from Google Drive in parallel batches (MAJOR OPTIMIZATION)
     let deletedFilesCount = 0;
     let failedFilesCount = 0;
     let failedFiles = [];
-    
+
     if (uniqueFileIds.length > 0) {
       console.log(`🗂️ Menghapus ${uniqueFileIds.length} file dari Google Drive dalam batch...`);
-      
+
       const deleteResults = await processBatch(
-        uniqueFileIds, 
-        deleteGoogleDriveFile, 
+        uniqueFileIds,
+        deleteGoogleDriveFile,
         5 // Process 5 files simultaneously
       );
-      
+
       deleteResults.forEach(result => {
         if (result.success) {
           deletedFilesCount++;
@@ -577,33 +577,33 @@ export async function deletePO(poId) {
         }
       });
     }
-    
+
     console.log(`📄 Menghapus data dari spreadsheet...`);
-    
+
     // Step 6: Delete spreadsheet data in parallel where possible (OPTIMIZATION)
     const sheetDeletions = [];
-    
+
     // Add progress row deletions
     poProgressRows.reverse().forEach(row => {
       sheetDeletions.push(row.delete());
     });
-    
-    // Add PO header deletions  
+
+    // Add PO header deletions
     toDelHdr.reverse().forEach(row => {
       sheetDeletions.push(row.delete());
     });
-    
+
     // Add item deletions
     toDelItems.reverse().forEach(row => {
       sheetDeletions.push(row.delete());
     });
-    
+
     // Execute all sheet deletions in parallel (MAJOR OPTIMIZATION)
     await Promise.allSettled(sheetDeletions);
-    
+
     const endTime = Date.now();
     const duration = ((endTime - startTime) / 1000).toFixed(1);
-    
+
     // Step 7: Prepare summary report
     const summary = {
       deletedRevisions: toDelHdr.length,
@@ -616,17 +616,17 @@ export async function deletePO(poId) {
     };
 
     console.log(`✅ PO ${poId} berhasil dihapus lengkap dalam ${duration}s:`, summary);
-    
-    const message = failedFilesCount > 0 
+
+    const message = failedFilesCount > 0
       ? `PO berhasil dihapus: ${summary.deletedRevisions} revisi, ${summary.deletedItems} item, ${summary.deletedProgressRecords} progress record, ${summary.deletedFiles} file dari Drive (${failedFilesCount} file gagal dihapus)`
       : `PO berhasil dihapus: ${summary.deletedRevisions} revisi, ${summary.deletedItems} item, ${summary.deletedProgressRecords} progress record, ${summary.deletedFiles} file dari Drive`;
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message,
-      summary 
+      summary
     };
-    
+
   } catch (err) {
     const endTime = Date.now();
     const duration = ((endTime - startTime) / 1000).toFixed(1);
@@ -764,7 +764,7 @@ export async function updateItemProgress(data) {
 
     await progressSheet.addRow({
       id: nextId,
-       purchase_order_id: poId,
+      purchase_order_id: poId,
       purchase_order_item_id: itemId,
       stage: stage,
       notes: notes,
@@ -815,12 +815,12 @@ export async function getActivePOsWithProgress() {
 
     const latestItemRevisions = new Map();
     itemRows.forEach(item => {
-        const poId = item.get('purchase_order_id');
-        const rev = toNum(item.get('revision_number'), -1);
-        const current = latestItemRevisions.get(poId);
-        if (!current || rev > current) {
-            latestItemRevisions.set(poId, rev);
-        }
+      const poId = item.get('purchase_order_id');
+      const rev = toNum(item.get('revision_number'), -1);
+      const current = latestItemRevisions.get(poId);
+      if (!current || rev > current) {
+        latestItemRevisions.set(poId, rev);
+      }
     });
 
     const result = activePOs.map(po => {
@@ -839,7 +839,7 @@ export async function getActivePOsWithProgress() {
 
         const stages = ['Pembahanan'];
         if (needsSample) {
-            stages.push('Kasih Sample');
+          stages.push('Kasih Sample');
         }
         stages.push('Start Produksi');
         stages.push('Kirim');
@@ -849,7 +849,7 @@ export async function getActivePOsWithProgress() {
 
         let latestStageIndex = -1;
         if (itemProgressHistory.length > 0) {
-          const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          const latestProgress = itemProgressHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
           latestStageIndex = stages.indexOf(latestProgress.stage);
         }
 
@@ -868,49 +868,49 @@ export async function getActivePOsWithProgress() {
 }
 
 export async function getPOItemsWithDetails(poId) {
-    try {
-        const doc = await openDoc();
-        const itemSheet = await getSheet(doc, 'purchase_order_items');
-        const progressSheet = await getSheet(doc, 'progress_tracking');
+  try {
+    const doc = await openDoc();
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const progressSheet = await getSheet(doc, 'progress_tracking');
 
-        const [itemRows, progressRows] = await Promise.all([
-            itemSheet.getRows(),
-            progressSheet.getRows()
-        ]);
+    const [itemRows, progressRows] = await Promise.all([
+      itemSheet.getRows(),
+      progressSheet.getRows()
+    ]);
 
-        const latestRev = Math.max(-1, ...itemRows.filter(i => i.get('purchase_order_id') === poId).map(i => toNum(i.get('revision_number'), -1)));
+    const latestRev = Math.max(-1, ...itemRows.filter(i => i.get('purchase_order_id') === poId).map(i => toNum(i.get('revision_number'), -1)));
 
-        const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestRev);
+    const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestRev);
 
-        const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
+    const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
 
-        const progressByItemId = poProgressRows.reduce((acc, row) => {
-            const itemId = row.get('purchase_order_item_id');
-            if (!acc[itemId]) acc[itemId] = [];
-            acc[itemId].push(row.toObject());
-            return acc;
-        }, {});
+    const progressByItemId = poProgressRows.reduce((acc, row) => {
+      const itemId = row.get('purchase_order_item_id');
+      if (!acc[itemId]) acc[itemId] = [];
+      acc[itemId].push(row.toObject());
+      return acc;
+    }, {});
 
-        const result = poItems.map(item => {
-            const itemObject = {};
-            itemSheet.headerValues.forEach(header => {
-                itemObject[header] = item.get(header);
-            });
+    const result = poItems.map(item => {
+      const itemObject = {};
+      itemSheet.headerValues.forEach(header => {
+        itemObject[header] = item.get(header);
+      });
 
-            const itemId = String(itemObject.id);
+      const itemId = String(itemObject.id);
 
-            const history = (progressByItemId[itemId] || []).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+      const history = (progressByItemId[itemId] || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-            return {
-                ...itemObject,
-                progressHistory: history,
-            };
-        });
-        return result;
-    } catch (err) {
-        console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
-        return [];
-    }
+      return {
+        ...itemObject,
+        progressHistory: history,
+      };
+    });
+    return result;
+  } catch (err) {
+    console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
+    return [];
+  }
 }
 
 
@@ -931,12 +931,12 @@ export async function getRecentProgressUpdates(limit = 10) {
     const itemMap = new Map(itemRows.map(r => [r.get('id'), r.toObject()]));
     const poMap = new Map();
     poRows.forEach(r => {
-        // Simpan hanya revisi terakhir untuk setiap po id
-        const poId = r.get('id');
-        const rev = toNum(r.get('revision_number'));
-        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-            poMap.set(poId, r.toObject());
-        }
+      // Simpan hanya revisi terakhir untuk setiap po id
+      const poId = r.get('id');
+      const rev = toNum(r.get('revision_number'));
+      if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+        poMap.set(poId, r.toObject());
+      }
     });
 
     // 1. Urutkan semua progress dari yang paling baru
@@ -995,19 +995,19 @@ export async function getAttentionData() {
 
     const latestItemRevisions = new Map();
     itemRows.forEach(item => {
-        const poId = item.get('purchase_order_id');
-        const rev = toNum(item.get('revision_number'), -1);
-        const current = latestItemRevisions.get(poId);
-        if (!current || rev > current) {
-            latestItemRevisions.set(poId, rev);
-        }
+      const poId = item.get('purchase_order_id');
+      const rev = toNum(item.get('revision_number'), -1);
+      const current = latestItemRevisions.get(poId);
+      if (!current || rev > current) {
+        latestItemRevisions.set(poId, rev);
+      }
     });
 
     const activeItems = itemRows.filter(item => {
-        const po = latestPoMap.get(item.get('purchase_order_id'));
-        if (!po) return false;
-        const latestRev = latestItemRevisions.get(item.get('purchase_order_id')) ?? -1;
-        return po.get('status') !== 'Completed' && po.get('status') !== 'Cancelled' && toNum(item.get('revision_number')) === latestRev;
+      const po = latestPoMap.get(item.get('purchase_order_id'));
+      if (!po) return false;
+      const latestRev = latestItemRevisions.get(item.get('purchase_order_id')) ?? -1;
+      return po.get('status') !== 'Completed' && po.get('status') !== 'Cancelled' && toNum(item.get('revision_number')) === latestRev;
     });
 
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
@@ -1027,35 +1027,35 @@ export async function getAttentionData() {
     const fiveDaysAgo = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000);
 
     activeItems.forEach(item => {
-        const po = latestPoMap.get(item.get('purchase_order_id'));
-        const poId = po.get('id');
-        const itemId = item.get('id');
-        const compositeKey = `${poId}-${itemId}`;
-        const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
-        const latestProgress = itemProgressHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-        const currentStage = latestProgress ? latestProgress.stage : 'Belum Mulai';
+      const po = latestPoMap.get(item.get('purchase_order_id'));
+      const poId = po.get('id');
+      const itemId = item.get('id');
+      const compositeKey = `${poId}-${itemId}`;
+      const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
+      const latestProgress = itemProgressHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      const currentStage = latestProgress ? latestProgress.stage : 'Belum Mulai';
 
-        const attentionItem = {
-            po_number: po.get('po_number'),
-            item_name: item.get('product_name'),
-            current_stage: currentStage,
-        };
+      const attentionItem = {
+        po_number: po.get('po_number'),
+        item_name: item.get('product_name'),
+        current_stage: currentStage,
+      };
 
-        // Cek item urgent
-        if (po.get('priority') === 'Urgent') {
-            urgentItems.push(attentionItem);
-        }
+      // Cek item urgent
+      if (po.get('priority') === 'Urgent') {
+        urgentItems.push(attentionItem);
+      }
 
-        // Cek item mendekati deadline
-        const deadline = new Date(po.get('deadline'));
-        if (deadline <= sevenDaysFromNow && deadline >= today && currentStage !== 'Kirim') {
-            nearingDeadline.push({ ...attentionItem, deadline: po.get('deadline') });
-        }
+      // Cek item mendekati deadline
+      const deadline = new Date(po.get('deadline'));
+      if (deadline <= sevenDaysFromNow && deadline >= today && currentStage !== 'Kirim') {
+        nearingDeadline.push({ ...attentionItem, deadline: po.get('deadline') });
+      }
 
-        // Cek item macet
-        if (latestProgress && new Date(latestProgress.created_at) < fiveDaysAgo && currentStage !== 'Kirim') {
-            stuckItems.push({ ...attentionItem, last_update: latestProgress.created_at });
-        }
+      // Cek item macet
+      if (latestProgress && new Date(latestProgress.created_at) < fiveDaysAgo && currentStage !== 'Kirim') {
+        stuckItems.push({ ...attentionItem, last_update: latestProgress.created_at });
+      }
     });
 
     return { nearingDeadline, stuckItems, urgentItems };
@@ -1079,19 +1079,30 @@ export async function getProductSalesAnalysis() {
       productSheet.getRows(),
     ]);
 
-    // Peta untuk mencari tanggal PO dengan cepat
-    const poDateMap = new Map(poRows.map(r => [r.get('id'), r.get('created_at')]));
+    // Peta untuk mencari detail PO dengan cepat
+    const poMap = new Map();
+    poRows.forEach(r => {
+        const poId = r.get('id');
+        const rev = toNum(r.get('revision_number'));
+        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+            poMap.set(poId, r.toObject());
+        }
+    });
 
     const salesData = {};
     const salesByDate = [];
+    const woodTypeData = {};
+    const customerData = {};
 
     itemRows.forEach(item => {
       const productName = item.get('product_name');
       const quantity = toNum(item.get('quantity'), 0);
+      const woodType = item.get('wood_type'); // Variabel ini hanya ada di dalam loop ini
+      const kubikasi = toNum(item.get('kubikasi'), 0);
       const poId = item.get('purchase_order_id');
-      const createdAt = poDateMap.get(poId);
+      const po = poMap.get(poId);
 
-      if (!productName || !createdAt) return;
+      if (!productName || !po) return;
 
       // Kalkulasi total penjualan per produk
       if (!salesData[productName]) {
@@ -1100,10 +1111,21 @@ export async function getProductSalesAnalysis() {
       salesData[productName].totalQuantity += quantity;
 
       salesByDate.push({
-        date: new Date(createdAt),
+        date: new Date(po.created_at),
         name: productName,
         quantity: quantity
       });
+
+      // Kalkulasi total kuantitas per jenis kayu
+      if (woodType) {
+          woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity;
+      }
+
+      // Kalkulasi total kubikasi per customer
+      const customerName = po.project_name;
+      if (customerName) {
+          customerData[customerName] = (customerData[customerName] || 0) + kubikasi;
+      }
     });
 
     // 1. Dapatkan 10 produk terlaris sepanjang masa
@@ -1111,7 +1133,19 @@ export async function getProductSalesAnalysis() {
       .sort((a, b) => b.totalQuantity - a.totalQuantity)
       .slice(0, 10);
 
-    // 2. Analisis Tren: 30 hari terakhir vs 30 hari sebelumnya
+    // 2. Olah data jenis kayu untuk Pie Chart
+    const woodTypeDistribution = Object.keys(woodTypeData).map(name => ({
+        name,
+        value: woodTypeData[name]
+    })).sort((a,b) => b.value - a.value);
+
+    // 3. Olah data customer untuk daftar peringkat
+    const topCustomers = Object.keys(customerData).map(name => ({
+        name,
+        totalKubikasi: customerData[name]
+    })).sort((a,b) => b.totalKubikasi - a.totalKubikasi).slice(0, 5);
+
+    // 4. Analisis Tren: 30 hari terakhir vs 30 hari sebelumnya
     const today = new Date();
     const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30));
     const sixtyDaysAgo = new Date(new Date().setDate(today.getDate() - 60));
@@ -1131,25 +1165,27 @@ export async function getProductSalesAnalysis() {
       .map(name => {
         const last30 = salesLast30[name];
         const prev30 = salesPrev30[name] || 0;
-        const change = prev30 === 0 ? 100 : ((last30 - prev30) / prev30) * 100; // Persentase perubahan
+        const change = prev30 === 0 && last30 > 0 ? 100 : ((last30 - prev30) / (prev30 || 1)) * 100;
         return { name, last30, prev30, change };
       })
-      .filter(p => p.change > 20) // Anggap tren naik jika > 20%
+      .filter(p => p.change > 20 && p.last30 > p.prev30)
       .sort((a, b) => b.change - a.change);
 
-    // 3. Cari produk yang lambat terjual (slow-moving)
+    // 5. Cari produk yang lambat terjual (slow-moving)
     const allProductNames = productRows.map(r => r.get('product_name'));
     const soldProductNames = new Set(Object.keys(salesData));
     const neverSoldProducts = allProductNames.filter(name => !soldProductNames.has(name));
 
     return {
         topSellingProducts,
+        woodTypeDistribution,
+        topCustomers,
         trendingProducts,
-        slowMovingProducts: neverSoldProducts, // Untuk saat ini kita tampilkan yg belum pernah terjual
+        slowMovingProducts: neverSoldProducts,
     };
 
   } catch (err) {
     console.error('❌ Gagal melakukan analisis penjualan produk:', err.message);
-    return { topSellingProducts: [], trendingProducts: [], slowMovingProducts: [] };
+    return { topSellingProducts: [], woodTypeDistribution: [], topCustomers: [], trendingProducts: [], slowMovingProducts: [] };
   }
 }
