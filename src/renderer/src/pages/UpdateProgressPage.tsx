@@ -1,58 +1,26 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
-import { POHeader, POItem } from '../types'
+import { POHeader, POItem, ProductionStage } from '../types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 
-// Helper untuk menampilkan tanggal
-const formatDate = (d: string) => new Date(d).toLocaleString('id-ID')
+const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
+const formatDeadline = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
 
-// Komponen untuk satu item PO
 const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: string, poNumber: string, onUpdate: () => void }) => {
-  // [SARAN 1] Pindahkan logika `stages` ke dalam komponen ini agar lebih rapi.
- const stages: string[] = [];
-  if (item.sample === 'Ada sample') {
-    stages.push('Konfirmasi Detail Marketing');
-    stages.push('Acc Warna / Permukaan');
-    stages.push('Sample Warna / Permukaan');
-    stages.push('Perintah Mulai Kerja');
-  }
-  stages.push('Pembahanan');
-  stages.push('Start Produksi');
-  stages.push('Kirim');
+  const stages: ProductionStage[] = ['Cari Bahan Baku', 'Sawmill', 'KD', 'Pembahanan', 'Moulding', 'Coating', 'Siap Kirim'];
 
-  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage
-  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1
+  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage;
+  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1;
 
-  const [notes, setNotes] = useState('')
-
-  const [photoPath, setPhotoPath] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false)
-
-const handleCancelPhoto = () => {
-    setPhotoPath(null);
-  };
-
-  const handleViewPhoto = (url: string) => {
-    // @ts-ignore
-    window.api.openExternalLink(url);
-  };
-
-   const handleSelectPhoto = async () => {
-    // @ts-ignore
-    const selectedPath = await window.api.openFileDialog();
-    if (selectedPath) {
-      setPhotoPath(selectedPath);
-    }
-  };
+  const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUpdate = async (nextStage: string) => {
-    if (!notes && !photoPath) {
-      return alert('Harap isi catatan atau unggah foto.');
-    }
+    if (!notes && !photoFile) return alert('Harap isi catatan atau unggah foto.');
     setIsUpdating(true);
     try {
       const payload = {
@@ -61,19 +29,14 @@ const handleCancelPhoto = () => {
         poNumber: poNumber,
         stage: nextStage,
         notes: notes,
-        // [PERBAIKAN] Kirim path yang sudah kita simpan di state
-        photoPath: photoPath
+        photoPath: (photoFile as any)?.path
       };
       // @ts-ignore
-      const result = await window.api.updateItemProgress(payload);
-      if (result.success) {
-        alert(`Progress item ${item.product_name} berhasil diupdate ke tahap '${nextStage}'!`);
-        onUpdate();
-        setNotes('');
-        setPhotoPath(null); // Reset path foto
-      } else {
-        throw new Error(result.error);
-      }
+      await window.api.updateItemProgress(payload);
+      alert(`Progress item ${item.product_name} berhasil diupdate!`);
+      onUpdate();
+      setNotes('');
+      setPhotoFile(null);
     } catch (err) {
       alert(`Gagal update progress: ${(err as Error).message}`);
     } finally {
@@ -88,71 +51,41 @@ const handleCancelPhoto = () => {
         <span>Qty: {item.quantity} {item.satuan}</span>
       </div>
       <div className="progress-timeline">
-        {stages.map((stage, index) => (
-          <div key={stage} className={`stage ${index <= currentStageIndex ? 'completed' : ''}`}>
-            <div className="stage-dot"></div>
-            <div className="stage-name">{stage}</div>
-          </div>
-        ))}
+        {stages.map((stage, index) => {
+            const deadlineInfo = item.stageDeadlines?.find(d => d.stageName === stage);
+            const isCompleted = index <= currentStageIndex;
+            const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted;
+
+            return (
+              <div key={stage} className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
+                <div className="stage-dot"></div>
+                <div className="stage-name">{stage}</div>
+                {deadlineInfo && <div className="stage-deadline">Target: {formatDeadline(deadlineInfo.deadline)}</div>}
+              </div>
+            )
+        })}
       </div>
       {currentStageIndex < stages.length - 1 && (
         <div className="update-form">
           <h5>Update ke Tahap Berikutnya: {stages[currentStageIndex + 1]}</h5>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Tambahkan catatan..."
-            rows={3}
-          />
-          {/* [MODIFIKASI] Tampilan input file diubah menjadi kondisional */}
-          <div className="file-input-container">
-            {photoPath ? (
-              <div className="file-preview">
-                <span className="file-name" title={photoPath}>
-                  {photoPath.split(/[/\\]/).pop()}
-                </span>
-                <Button variant="secondary" onClick={handleCancelPhoto} className="cancel-photo-btn">
-                  Batal
-                </Button>
-              </div>
-            ) : (
-              <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
-            )}
-          </div>
-          {/* [PERBAIKAN] Ganti input file dengan tombol */}
-         
-          
-          <Button
-            onClick={() => handleUpdate(stages[currentStageIndex + 1])}
-            disabled={isUpdating}
-             className="btn-primary" // Anda bisa menambahkan class ini jika perlu
-          >
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
+          <input type="file" accept="image/*" onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])} />
+          <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
         </div>
       )}
-      {item.progressHistory && item.progressHistory.length > 0 && (
-        <div className="history-log">
-          <h6>Riwayat Progress</h6>
-          {item.progressHistory.map(log => (
-            <div key={log.id} className="log-entry">
-              <div className="log-details">
-                <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
-                {log.notes && <p>{log.notes}</p>}
-              </div>
-              
-              {log.photo_url && (
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleViewPhoto(log.photo_url)}
-                  className="view-photo-btn"
-                >
-                  Lihat Foto
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
+       {item.progressHistory && item.progressHistory.length > 0 && (
+         <div className="history-log">
+            <h6>Riwayat Progress</h6>
+            {item.progressHistory.map(log => (
+                <div key={log.id} className="log-entry">
+                    <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
+                    <p>{log.notes}</p>
+                    {log.photo_url && <a href={log.photo_url} target="_blank" rel="noopener noreferrer">Lihat Foto</a>}
+                </div>
+            ))}
+         </div>
       )}
     </Card>
   )
@@ -207,11 +140,13 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
 
       {isLoading ? (
         <p>Memuat item...</p>
-      ) : (
+      ) : items.length > 0 ? (
         items.map((item) => <ProgressItem key={item.id} item={item} poId={po.id} poNumber={po.po_number} onUpdate={fetchItems} />)
+      ) : (
+        <Card><p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p></Card>
       )}
     </div>
   )
-}
+};
 
-export default UpdateProgressPage
+export default UpdateProgressPage;

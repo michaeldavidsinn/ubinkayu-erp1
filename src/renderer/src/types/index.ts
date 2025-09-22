@@ -2,10 +2,13 @@
 // src/renderer/src/types/index.ts
 
 // [BARU] Tipe untuk satu entri progress
+
+export type ProductionStage = 'Cari Bahan Baku' | 'Sawmill' | 'KD' | 'Pembahanan' | 'Moulding' | 'Coating' | 'Siap Kirim';
+
 export interface ProgressUpdate {
   id: string;
   purchase_order_item_id: string;
-  stage: 'supply' | 'produksi' | 'sample' | 'selesai';
+  stage: ProductionStage;
   notes: string;
   photo_url: string | null;
   created_at: string;
@@ -34,6 +37,7 @@ export interface POItem {
   notes: string
   kubikasi?: number
   progressHistory?: ProgressUpdate[]; // Riwayat progress untuk item ini
+  stageDeadlines?: { stageName: string; deadline: string }[];
 }
 
 // [MODIFIKASI] POHeader ditambahkan progress

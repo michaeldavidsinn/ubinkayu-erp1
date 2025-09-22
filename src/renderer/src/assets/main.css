@@ -1304,3 +1304,19 @@ label {
 .top-customer-list li:last-child {
   border-bottom: none;
 }
+
+/* Tambahkan di akhir file main.css */
+.stage-deadline {
+  font-size: 0.7rem;
+  color: #718096; /* abu-abu */
+  margin-top: 4px;
+}
+.stage.overdue .stage-dot {
+  background-color: #E53E3E; /* merah */
+  border-color: #FFF5F5;
+}
+.stage.overdue .stage-name,
+.stage.overdue .stage-deadline {
+  color: #E53E3E;
+  font-weight: bold;
+}
