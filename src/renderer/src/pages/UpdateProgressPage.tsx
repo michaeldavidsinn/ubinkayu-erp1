@@ -12,10 +12,15 @@ const formatDate = (d: string) => new Date(d).toLocaleString('id-ID')
 
 // Komponen untuk satu item PO
 const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: string, poNumber: string, onUpdate: () => void }) => {
-  const stages = ['Pembahanan'];
+  // [SARAN 1] Pindahkan logika `stages` ke dalam komponen ini agar lebih rapi.
+ const stages: string[] = [];
   if (item.sample === 'Ada sample') {
-    stages.push('Kasih Sample');
+    stages.push('Konfirmasi Detail Marketing');
+    stages.push('Acc Warna / Permukaan');
+    stages.push('Sample Warna / Permukaan');
+    stages.push('Perintah Mulai Kerja');
   }
+  stages.push('Pembahanan');
   stages.push('Start Produksi');
   stages.push('Kirim');
 
