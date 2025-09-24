@@ -1,8 +1,3 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-
 import React, { useState, useMemo } from 'react'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -40,8 +35,27 @@ const POListPage: React.FC<POListPageProps> = ({
     dateFrom: '',
     dateTo: '',
     deadlineFrom: '',
-    deadlineTo: ''
+    deadlineTo: '',
+    woodType: 'all',
+    productType: 'all'
   })
+
+  const { availableWoodTypes, availableProductTypes } = useMemo(() => {
+    const woodTypes = new Set<string>()
+    const productTypes = new Set<string>()
+
+    poList.forEach((po) => {
+      po.items?.forEach((item) => {
+        if (item.wood_type) woodTypes.add(item.wood_type)
+        if (item.product_name) productTypes.add(item.product_name)
+      })
+    })
+
+    return {
+      availableWoodTypes: Array.from(woodTypes).sort(),
+      availableProductTypes: Array.from(productTypes).sort()
+    }
+  }, [poList])
 
   const handleFilterChange = (name: string, value: any) => {
     setFilters((prev) => ({ ...prev, [name]: value }))
@@ -50,7 +64,6 @@ const POListPage: React.FC<POListPageProps> = ({
   const filteredAndSortedPOs = useMemo(() => {
     let processedPOs = [...poList]
 
-    // --- Filtering ---
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase()
       processedPOs = processedPOs.filter(
@@ -72,9 +85,18 @@ const POListPage: React.FC<POListPageProps> = ({
       )
     }
 
-    // (Sisa logika filter dan sort tidak berubah)
+    if (filters.woodType !== 'all') {
+      processedPOs = processedPOs.filter((po) =>
+        po.items?.some((item) => item.wood_type === filters.woodType)
+      )
+    }
 
-    // --- Sorting ---
+    if (filters.productType !== 'all') {
+      processedPOs = processedPOs.filter((po) =>
+        po.items?.some((item) => item.product_name === filters.productType)
+      )
+    }
+
     const priorityMap: Record<string, number> = { urgent: 1, high: 2, normal: 3 }
     switch (filters.sortBy) {
       case 'deadline-asc':
@@ -191,6 +213,8 @@ const POListPage: React.FC<POListPageProps> = ({
         filters={filters}
         onFilterChange={handleFilterChange}
         poCount={{ displayed: filteredAndSortedPOs.length, total: poList.length }}
+        availableWoodTypes={availableWoodTypes}
+        availableProductTypes={availableProductTypes}
       />
 
       <div className="view-switcher">
@@ -211,6 +235,6 @@ const POListPage: React.FC<POListPageProps> = ({
       {renderContent()}
     </div>
   )
-} // <-- Kurung kurawal penutup yang hilang kemungkinan ada di sini
+}
 
 export default POListPage

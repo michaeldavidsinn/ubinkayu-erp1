@@ -7,9 +7,18 @@ interface FilterPanelProps {
   filters: any
   onFilterChange: (name: string, value: any) => void
   poCount: { displayed: number; total: number }
+  // [BARU] Data untuk populate filter dropdowns
+  availableWoodTypes?: string[]
+  availableProductTypes?: string[]
 }
 
-const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFilterChange, poCount }) => {
+const FilterPanel: React.FC<FilterPanelProps> = ({
+  filters,
+  onFilterChange,
+  poCount,
+  availableWoodTypes = [],
+  availableProductTypes = []
+}) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     onFilterChange(e.target.name, e.target.value)
   }
@@ -65,6 +74,32 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFilterChange, poCo
             <option value="Urgent">Urgent</option>
             <option value="High">High</option>
             <option value="Normal">Normal</option>
+          </select>
+        </div>
+
+        {/* [BARU] Filter berdasarkan jenis kayu */}
+        <div className="form-group">
+          <label>Jenis Kayu</label>
+          <select name="woodType" value={filters.woodType || 'all'} onChange={handleInputChange}>
+            <option value="all">Semua Jenis Kayu</option>
+            {availableWoodTypes.map((woodType) => (
+              <option key={woodType} value={woodType}>
+                {woodType}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* [BARU] Filter berdasarkan produk */}
+        <div className="form-group">
+          <label>Produk</label>
+          <select name="productType" value={filters.productType || 'all'} onChange={handleInputChange}>
+            <option value="all">Semua Produk</option>
+            {availableProductTypes.map((productType) => (
+              <option key={productType} value={productType}>
+                {productType}
+              </option>
+            ))}
           </select>
         </div>
 
