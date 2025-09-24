@@ -263,9 +263,6 @@ async function uploadProgressPhoto(photoPath, poNumber, itemId) {
   }
 }
 
-// ===============================
-// PUBLIC API
-// ===============================
 export async function testSheetConnection() {
   try {
     const doc = await openDoc()
@@ -274,8 +271,6 @@ export async function testSheetConnection() {
     console.error('❌ Gagal tes koneksi ke Google Sheets:', err.message)
   }
 }
-
-// Di dalam file: electron/sheet.js
 
 export async function listPOs() {
   try {
@@ -308,75 +303,66 @@ export async function listPOs() {
       return acc
     }, {})
 
-    const latestItemRevisions = new Map()
-    itemRows.forEach((item) => {
-      const poId = item.get('purchase_order_id')
-      const rev = toNum(item.get('revision_number'), -1)
-      const current = latestItemRevisions.get(poId)
+    const itemsByPoId = itemRows.reduce((acc, item) => {
+      const poId = item.get('purchase_order_id');
+      if (!acc[poId]) acc[poId] = [];
+      acc[poId].push(item.toObject());
+      return acc;
+    }, {});
+
+    const latestItemRevisions = new Map();
+    itemRows.forEach(item => {
+      const poId = item.get('purchase_order_id');
+      const rev = toNum(item.get('revision_number'), -1);
+      const current = latestItemRevisions.get(poId);
       if (!current || rev > current) {
-        latestItemRevisions.set(poId, rev)
+        latestItemRevisions.set(poId, rev);
       }
-    })
+    });
 
     const result = latestPoRows.map((po) => {
       const poObject = po.toObject()
       const poId = poObject.id
 
-      const latestRev = latestItemRevisions.get(poId) ?? -1
-      const poItems = itemRows.filter(
-        (item) =>
-          item.get('purchase_order_id') === poId &&
-          toNum(item.get('revision_number'), -1) === latestRev
-      )
+      const latestRev = latestItemRevisions.get(poId) ?? -1;
+      const poItems = (itemsByPoId[poId] || []).filter(
+        item => toNum(item.revision_number, -1) === latestRev
+      );
 
-      let poProgress = 0
+      let poProgress = 0;
       if (poItems.length > 0) {
-        let totalPercentage = 0
-        poItems.forEach((item) => {
-          const itemId = item.get('id')
-          const needsSample = item.get('sample') === 'Ada sample'
-
-          const stages = ['Pembahanan']
-          if (needsSample) stages.push('Kasih Sample')
-          stages.push('Start Produksi')
-          stages.push('Kirim')
-
-          const compositeKey = `${poId}-${itemId}`
-          const itemProgressHistory = progressByCompositeKey[compositeKey] || []
-
-          let latestStageIndex = -1
+        let totalPercentage = 0;
+        poItems.forEach(item => {
+          const itemId = item.id;
+          const needsSample = item.sample === 'Ada sample';
+          const stages = ['Pembahanan'];
+          if (needsSample) stages.push('Kasih Sample');
+          stages.push('Start Produksi', 'Kirim');
+          const compositeKey = `${poId}-${itemId}`;
+          const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
+          let latestStageIndex = -1;
           if (itemProgressHistory.length > 0) {
-            const latestProgress = itemProgressHistory.sort(
-              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0]
-            latestStageIndex = stages.indexOf(latestProgress.stage)
+            const latestProgress = itemProgressHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            latestStageIndex = stages.indexOf(latestProgress.stage);
           }
-
-          const itemPercentage =
-            latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0
-          totalPercentage += itemPercentage
-        })
-        poProgress = totalPercentage / poItems.length
+          const itemPercentage = latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0;
+          totalPercentage += itemPercentage;
+        });
+        poProgress = totalPercentage / poItems.length;
       }
 
-      // --- [LOGIKA BARU] Penentuan Status Otomatis ---
-      let finalStatus = poObject.status // Ambil status dari sheet sebagai dasar
-
-      // Hanya ubah status jika bukan status manual seperti "Cancelled"
+      let finalStatus = poObject.status;
       if (finalStatus !== 'Cancelled') {
-        if (poProgress >= 100) {
-          finalStatus = 'Completed'
-        } else if (poProgress > 0) {
-          finalStatus = 'In Progress'
-        } else {
-          finalStatus = 'Open'
-        }
+        if (poProgress >= 100) finalStatus = 'Completed';
+        else if (poProgress > 0) finalStatus = 'In Progress';
+        else finalStatus = 'Open';
       }
 
       return {
         ...poObject,
+        items: poItems,
         progress: Math.round(poProgress),
-        status: finalStatus, // Gunakan status yang baru dihitung
+        status: finalStatus,
         pdf_link: po.get('pdf_link') || null
       }
     })
@@ -518,7 +504,7 @@ export async function updatePO(data) {
       items: itemsWithIds,
       notes: data.catatan ?? prev.notes,
       created_at: now,
-      poPhotoPath: data.poPhotoPath // [MODIFIKASI KUNCI] Teruskan path foto
+      poPhotoPath: data.poPhotoPath
     }
 
     const uploadResult = await generateAndUploadPO(poDataForPdf, newRev)
@@ -545,7 +531,6 @@ export async function deletePO(poId) {
   try {
     const doc = await openDoc()
 
-    // Step 1: Fetch all required data in parallel (OPTIMIZATION)
     console.log(`📄 Mengambil data dari 3 sheet...`)
     const [poSheet, itemSheet, progressSheet] = await Promise.all([
       getSheet(doc, 'purchase_orders'),
@@ -553,14 +538,12 @@ export async function deletePO(poId) {
       getSheet(doc, 'progress_tracking')
     ])
 
-    // Step 2: Fetch all rows in parallel (OPTIMIZATION)
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
     ])
 
-    // Step 3: Filter relevant data
     const toDelHdr = poRows.filter((r) => String(r.get('id')).trim() === String(poId).trim())
     const toDelItems = itemRows.filter(
       (r) => String(r.get('purchase_order_id')).trim() === String(poId).trim()
@@ -569,10 +552,8 @@ export async function deletePO(poId) {
       (r) => String(r.get('purchase_order_id')).trim() === String(poId).trim()
     )
 
-    // Step 4: Extract file IDs from all sources
-    const fileIds = new Set() // Use Set to avoid duplicates
+    const fileIds = new Set()
 
-    // Extract PDF file IDs
     toDelHdr.forEach((poRow) => {
       const pdfLink = poRow.get('pdf_link')
       if (pdfLink && !pdfLink.startsWith('ERROR:') && !pdfLink.includes('generating')) {
@@ -581,7 +562,6 @@ export async function deletePO(poId) {
       }
     })
 
-    // Extract progress photo file IDs
     poProgressRows.forEach((progressRow) => {
       const photoUrl = progressRow.get('photo_url')
       if (photoUrl) {
@@ -592,7 +572,6 @@ export async function deletePO(poId) {
 
     const uniqueFileIds = Array.from(fileIds)
 
-    // Step 5: Delete files from Google Drive in parallel batches (MAJOR OPTIMIZATION)
     let deletedFilesCount = 0
     let failedFilesCount = 0
     let failedFiles = []
@@ -603,7 +582,7 @@ export async function deletePO(poId) {
       const deleteResults = await processBatch(
         uniqueFileIds,
         deleteGoogleDriveFile,
-        5 // Process 5 files simultaneously
+        5
       )
 
       deleteResults.forEach((result) => {
@@ -880,8 +859,13 @@ export async function getActivePOsWithProgress() {
       poItems.forEach((item) => {
         const itemId = item.get('id')
 
-        // [MODIFIKASI] Gunakan daftar tahapan yang baru
         const stages = PRODUCTION_STAGES
+        // const stages = ['Pembahanan'];
+        // if (needsSample) {
+        //   stages.push('Kasih Sample');
+        // }
+        // stages.push('Start Produksi');
+        // stages.push('Kirim');
 
         const compositeKey = `${poId}-${itemId}`
         const itemProgressHistory = progressByCompositeKey[compositeKey] || []
@@ -894,7 +878,6 @@ export async function getActivePOsWithProgress() {
           latestStageIndex = stages.indexOf(latestProgress.stage)
         }
 
-        // Kalkulasi persentase, +1 karena index mulai dari 0
         const itemPercentage =
           latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0
         totalPercentage += itemPercentage
@@ -913,90 +896,90 @@ export async function getActivePOsWithProgress() {
 export async function getPOItemsWithDetails(poId) {
   console.log(`\n--- [DEBUG] Memulai getPOItemsWithDetails untuk PO ID: ${poId} ---`);
   try {
-      const doc = await openDoc();
-      const poSheet = await getSheet(doc, 'purchase_orders');
-      const itemSheet = await getSheet(doc, 'purchase_order_items');
-      const progressSheet = await getSheet(doc, 'progress_tracking');
+    const doc = await openDoc();
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const progressSheet = await getSheet(doc, 'progress_tracking');
 
-      const [poRows, itemRows, progressRows] = await Promise.all([
-          poSheet.getRows(),
-          itemSheet.getRows(),
-          progressSheet.getRows()
-      ]);
+    const [poRows, itemRows, progressRows] = await Promise.all([
+      poSheet.getRows(),
+      itemSheet.getRows(),
+      progressSheet.getRows()
+    ]);
 
-      const allRevisionsForPO = poRows.filter(r => r.get('id') === poId);
-      console.log(`[DEBUG] Ditemukan ${allRevisionsForPO.length} baris revisi untuk PO ID ${poId}`);
+    const allRevisionsForPO = poRows.filter(r => r.get('id') === poId);
+    console.log(`[DEBUG] Ditemukan ${allRevisionsForPO.length} baris revisi untuk PO ID ${poId}`);
 
-      const latestPoRev = Math.max(-1, ...allRevisionsForPO.map(r => toNum(r.get('revision_number'))));
-      console.log(`[DEBUG] Revisi terbaru adalah: #${latestPoRev}`);
+    const latestPoRev = Math.max(-1, ...allRevisionsForPO.map(r => toNum(r.get('revision_number'))));
+    console.log(`[DEBUG] Revisi terbaru adalah: #${latestPoRev}`);
 
-      const poData = allRevisionsForPO.find(r => toNum(r.get('revision_number')) === latestPoRev);
+    const poData = allRevisionsForPO.find(r => toNum(r.get('revision_number')) === latestPoRev);
 
-      if (!poData) {
-          console.error(`[DEBUG] ERROR: Tidak ada data PO ditemukan untuk revisi #${latestPoRev}`);
-          throw new Error(`PO dengan ID ${poId} tidak ditemukan.`);
-      }
-      console.log(`[DEBUG] Data PO ditemukan.`);
+    if (!poData) {
+      console.error(`[DEBUG] ERROR: Tidak ada data PO ditemukan untuk revisi #${latestPoRev}`);
+      throw new Error(`PO dengan ID ${poId} tidak ditemukan.`);
+    }
+    console.log(`[DEBUG] Data PO ditemukan.`);
 
-      const createdAtRaw = poData.get('created_at');
-      const deadlineRaw = poData.get('deadline');
-      console.log(`[DEBUG] created_at (mentah): ${createdAtRaw} | Tipe: ${typeof createdAtRaw}`);
-      console.log(`[DEBUG] deadline (mentah): ${deadlineRaw} | Tipe: ${typeof deadlineRaw}`);
+    const createdAtRaw = poData.get('created_at');
+    const deadlineRaw = poData.get('deadline');
+    console.log(`[DEBUG] created_at (mentah): ${createdAtRaw} | Tipe: ${typeof createdAtRaw}`);
+    console.log(`[DEBUG] deadline (mentah): ${deadlineRaw} | Tipe: ${typeof deadlineRaw}`);
 
-      const poStartDate = new Date(createdAtRaw);
-      const poDeadline = new Date(deadlineRaw);
-      console.log(`[DEBUG] poStartDate (setelah new Date): ${poStartDate.toISOString()}`);
-      console.log(`[DEBUG] poDeadline (setelah new Date): ${poDeadline.toISOString()}`);
+    const poStartDate = new Date(createdAtRaw);
+    const poDeadline = new Date(deadlineRaw);
+    console.log(`[DEBUG] poStartDate (setelah new Date): ${poStartDate.toISOString()}`);
+    console.log(`[DEBUG] poDeadline (setelah new Date): ${poDeadline.toISOString()}`);
 
-      let stageDeadlines = [];
+    let stageDeadlines = [];
 
-      if (poStartDate && poDeadline && poDeadline > poStartDate) {
-          console.log('[DEBUG] Kondisi IF untuk kalkulasi deadline TERPENUHI.');
-          const totalDuration = poDeadline.getTime() - poStartDate.getTime();
-          const durationPerStage = totalDuration / PRODUCTION_STAGES.length;
-          console.log(`[DEBUG] Total Durasi: ${totalDuration} ms, Durasi per Tahap: ${durationPerStage} ms`);
+    if (poStartDate && poDeadline && poDeadline > poStartDate) {
+      console.log('[DEBUG] Kondisi IF untuk kalkulasi deadline TERPENUHI.');
+      const totalDuration = poDeadline.getTime() - poStartDate.getTime();
+      const durationPerStage = totalDuration / PRODUCTION_STAGES.length;
+      console.log(`[DEBUG] Total Durasi: ${totalDuration} ms, Durasi per Tahap: ${durationPerStage} ms`);
 
-          stageDeadlines = PRODUCTION_STAGES.map((stageName, index) => {
-              const deadlineTime = poStartDate.getTime() + (durationPerStage * (index + 1));
-              return {
-                  stageName,
-                  deadline: new Date(deadlineTime).toISOString()
-              };
-          });
-          console.log('[DEBUG] stageDeadlines berhasil dihitung:', stageDeadlines);
-      } else {
-          console.warn('[DEBUG] Kondisi IF untuk kalkulasi deadline TIDAK TERPENUHI.');
-      }
-
-      const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestPoRev);
-
-      // ... sisa fungsi tidak berubah ...
-      const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
-      const progressByItemId = poProgressRows.reduce((acc, row) => {
-          const itemId = row.get('purchase_order_item_id');
-          if (!acc[itemId]) acc[itemId] = [];
-          acc[itemId].push(row.toObject());
-          return acc;
-      }, {});
-      const result = poItems.map(item => {
-          const itemObject = {};
-          itemSheet.headerValues.forEach(header => {
-              itemObject[header] = item.get(header);
-          });
-          const itemId = String(itemObject.id);
-          const history = (progressByItemId[itemId] || []).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-
-          return {
-              ...itemObject,
-              progressHistory: history,
-              stageDeadlines: stageDeadlines,
-          };
+      stageDeadlines = PRODUCTION_STAGES.map((stageName, index) => {
+        const deadlineTime = poStartDate.getTime() + (durationPerStage * (index + 1));
+        return {
+          stageName,
+          deadline: new Date(deadlineTime).toISOString()
+        };
       });
-      console.log('--- [DEBUG] Proses Selesai ---');
-      return result;
+      console.log('[DEBUG] stageDeadlines berhasil dihitung:', stageDeadlines);
+    } else {
+      console.warn('[DEBUG] Kondisi IF untuk kalkulasi deadline TIDAK TERPENUHI.');
+    }
+
+    const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestPoRev);
+
+    // ... sisa fungsi tidak berubah ...
+    const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
+    const progressByItemId = poProgressRows.reduce((acc, row) => {
+      const itemId = row.get('purchase_order_item_id');
+      if (!acc[itemId]) acc[itemId] = [];
+      acc[itemId].push(row.toObject());
+      return acc;
+    }, {});
+    const result = poItems.map(item => {
+      const itemObject = {};
+      itemSheet.headerValues.forEach(header => {
+        itemObject[header] = item.get(header);
+      });
+      const itemId = String(itemObject.id);
+      const history = (progressByItemId[itemId] || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+      return {
+        ...itemObject,
+        progressHistory: history,
+        stageDeadlines: stageDeadlines,
+      };
+    });
+    console.log('--- [DEBUG] Proses Selesai ---');
+    return result;
   } catch (err) {
-      console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
-      return [];
+    console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
+    return [];
   }
 }
 
@@ -1013,11 +996,9 @@ export async function getRecentProgressUpdates(limit = 10) {
       poSheet.getRows()
     ])
 
-    // Buat Peta (Map) untuk pencarian data yang cepat
     const itemMap = new Map(itemRows.map((r) => [r.get('id'), r.toObject()]))
     const poMap = new Map()
     poRows.forEach((r) => {
-      // Simpan hanya revisi terakhir untuk setiap po id
       const poId = r.get('id')
       const rev = toNum(r.get('revision_number'))
       if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
@@ -1025,22 +1006,19 @@ export async function getRecentProgressUpdates(limit = 10) {
       }
     })
 
-    // 1. Urutkan semua progress dari yang paling baru
     const sortedUpdates = progressRows
       .map((r) => r.toObject())
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-    // 2. Ambil beberapa saja sesuai limit (misal: 10 terbaru)
     const recentUpdates = sortedUpdates.slice(0, limit)
 
-    // 3. Lengkapi datanya dengan nama item dan nomor PO
     const enrichedUpdates = recentUpdates
       .map((update) => {
         const item = itemMap.get(update.purchase_order_item_id)
-        if (!item) return null // Jika item tidak ditemukan, lewati
+        if (!item) return null
 
         const po = poMap.get(item.purchase_order_id)
-        if (!po) return null // Jika PO tidak ditemukan, lewati
+        if (!po) return null
 
         return {
           ...update,
@@ -1048,7 +1026,7 @@ export async function getRecentProgressUpdates(limit = 10) {
           po_number: po.po_number
         }
       })
-      .filter(Boolean) // Hapus entri yang null
+      .filter(Boolean)
 
     return enrichedUpdates
   } catch (err) {
@@ -1070,7 +1048,6 @@ export async function getAttentionData() {
       progressSheet.getRows()
     ])
 
-    // Dapatkan data PO dan Item versi terakhir
     const byId = new Map()
     poRows.forEach((r) => {
       const id = r.get('id')
@@ -1137,18 +1114,15 @@ export async function getAttentionData() {
         current_stage: currentStage
       }
 
-      // Cek item urgent
       if (po.get('priority') === 'Urgent') {
         urgentItems.push(attentionItem)
       }
 
-      // Cek item mendekati deadline
       const deadline = new Date(po.get('deadline'))
       if (deadline <= sevenDaysFromNow && deadline >= today && currentStage !== 'Kirim') {
         nearingDeadline.push({ ...attentionItem, deadline: po.get('deadline') })
       }
 
-      // Cek item macet
       if (
         latestProgress &&
         new Date(latestProgress.created_at) < fiveDaysAgo &&
@@ -1178,7 +1152,6 @@ export async function getProductSalesAnalysis() {
       productSheet.getRows()
     ])
 
-    // Peta untuk mencari detail PO dengan cepat
     const poMap = new Map()
     poRows.forEach((r) => {
       const poId = r.get('id')
@@ -1196,14 +1169,13 @@ export async function getProductSalesAnalysis() {
     itemRows.forEach((item) => {
       const productName = item.get('product_name')
       const quantity = toNum(item.get('quantity'), 0)
-      const woodType = item.get('wood_type') // Variabel ini hanya ada di dalam loop ini
+      const woodType = item.get('wood_type')
       const kubikasi = toNum(item.get('kubikasi'), 0)
       const poId = item.get('purchase_order_id')
       const po = poMap.get(poId)
 
       if (!productName || !po) return
 
-      // Kalkulasi total penjualan per produk
       if (!salesData[productName]) {
         salesData[productName] = { totalQuantity: 0, name: productName }
       }
@@ -1215,24 +1187,20 @@ export async function getProductSalesAnalysis() {
         quantity: quantity
       })
 
-      // Kalkulasi total kuantitas per jenis kayu
       if (woodType) {
         woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity
       }
 
-      // Kalkulasi total kubikasi per customer
       const customerName = po.project_name
       if (customerName) {
         customerData[customerName] = (customerData[customerName] || 0) + kubikasi
       }
     })
 
-    // 1. Dapatkan 10 produk terlaris sepanjang masa
     const topSellingProducts = Object.values(salesData)
       .sort((a, b) => b.totalQuantity - a.totalQuantity)
       .slice(0, 10)
 
-    // 2. Olah data jenis kayu untuk Pie Chart
     const woodTypeDistribution = Object.keys(woodTypeData)
       .map((name) => ({
         name,
@@ -1240,7 +1208,6 @@ export async function getProductSalesAnalysis() {
       }))
       .sort((a, b) => b.value - a.value)
 
-    // 3. Olah data customer untuk daftar peringkat
     const topCustomers = Object.keys(customerData)
       .map((name) => ({
         name,
@@ -1249,7 +1216,6 @@ export async function getProductSalesAnalysis() {
       .sort((a, b) => b.totalKubikasi - a.totalKubikasi)
       .slice(0, 5)
 
-    // 4. Analisis Tren: 30 hari terakhir vs 30 hari sebelumnya
     const today = new Date()
     const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30))
     const sixtyDaysAgo = new Date(new Date().setDate(today.getDate() - 60))
@@ -1275,7 +1241,6 @@ export async function getProductSalesAnalysis() {
       .filter((p) => p.change > 20 && p.last30 > p.prev30)
       .sort((a, b) => b.change - a.change)
 
-    // 5. Cari produk yang lambat terjual (slow-moving)
     const allProductNames = productRows.map((r) => r.get('product_name'))
     const soldProductNames = new Set(Object.keys(salesData))
     const neverSoldProducts = allProductNames.filter((name) => !soldProductNames.has(name))

@@ -40,7 +40,9 @@ const POListPage: React.FC<POListPageProps> = ({
     dateFrom: '',
     dateTo: '',
     deadlineFrom: '',
-    deadlineTo: ''
+    deadlineTo: '',
+    woodType: 'all',
+    productType: 'all'
   })
 
   const handleFilterChange = (name: string, value: any) => {
