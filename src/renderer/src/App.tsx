@@ -41,7 +41,7 @@ function App() {
     const poToDelete = purchaseOrders.find(po => po.id === poId)
     const poInfo = poToDelete ? `${poToDelete.po_number} - ${poToDelete.project_name}` : poId
 
-    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN ⚠️\n\n` +
+    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN\n\n` +
       `PO: ${poInfo}\n\n` +
       `Data yang akan dihapus PERMANEN:\n` +
       `• Semua revisi PO dari spreadsheet\n` +
