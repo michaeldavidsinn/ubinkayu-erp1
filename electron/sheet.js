@@ -848,12 +848,6 @@ export async function getActivePOsWithProgress() {
         const itemId = item.get('id')
 
         const stages = PRODUCTION_STAGES
-        // const stages = ['Pembahanan'];
-        // if (needsSample) {
-        //   stages.push('Kasih Sample');
-        // }
-        // stages.push('Start Produksi');
-        // stages.push('Kirim');
 
         const compositeKey = `${poId}-${itemId}`
         const itemProgressHistory = progressByCompositeKey[compositeKey] || []
@@ -1125,8 +1119,6 @@ export async function getAttentionData() {
     return { nearingDeadline: [], stuckItems: [], urgentItems: [] }
   }
 }
-
-// Di dalam file: electron/sheet.js
 
 export async function getProductSalesAnalysis() {
   try {
