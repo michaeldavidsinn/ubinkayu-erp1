@@ -274,34 +274,34 @@ export async function testSheetConnection() {
 
 export async function listPOs() {
   try {
-    const doc = await openDoc()
-    const poSheet = await getSheet(doc, 'purchase_orders')
-    const itemSheet = await getSheet(doc, 'purchase_order_items')
-    const progressSheet = await getSheet(doc, 'progress_tracking')
+    const doc = await openDoc();
+    const poSheet = await getSheet(doc, 'purchase_orders');
+    const itemSheet = await getSheet(doc, 'purchase_order_items');
+    const progressSheet = await getSheet(doc, 'progress_tracking');
 
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
-    ])
+    ]);
 
-    const byId = new Map()
+    const byId = new Map();
     for (const r of poRows) {
-      const id = String(r.get('id')).trim()
-      const rev = toNum(r.get('revision_number'), -1)
-      const keep = byId.get(id)
-      if (!keep || rev > keep.rev) byId.set(id, { rev, row: r })
+      const id = String(r.get('id')).trim();
+      const rev = toNum(r.get('revision_number'), -1);
+      const keep = byId.get(id);
+      if (!keep || rev > keep.rev) byId.set(id, { rev, row: r });
     }
-    const latestPoRows = Array.from(byId.values()).map(({ row }) => row)
+    const latestPoRows = Array.from(byId.values()).map(({ row }) => row);
 
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
-      const poId = row.get('purchase_order_id')
-      const itemId = row.get('purchase_order_item_id')
-      const key = `${poId}-${itemId}`
-      if (!acc[key]) acc[key] = []
-      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') })
-      return acc
-    }, {})
+      const poId = row.get('purchase_order_id');
+      const itemId = row.get('purchase_order_item_id');
+      const key = `${poId}-${itemId}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') });
+      return acc;
+    }, {});
 
     const itemsByPoId = itemRows.reduce((acc, item) => {
       const poId = item.get('purchase_order_id');
@@ -320,9 +320,9 @@ export async function listPOs() {
       }
     });
 
-    const result = latestPoRows.map((po) => {
-      const poObject = po.toObject()
-      const poId = poObject.id
+    const result = latestPoRows.map(po => {
+      const poObject = po.toObject();
+      const poId = poObject.id;
 
       const latestRev = latestItemRevisions.get(poId) ?? -1;
       const poItems = (itemsByPoId[poId] || []).filter(
@@ -364,13 +364,14 @@ export async function listPOs() {
         progress: Math.round(poProgress),
         status: finalStatus,
         pdf_link: po.get('pdf_link') || null
-      }
-    })
+      };
+    });
 
-    return result
+    return result;
+
   } catch (err) {
-    console.error('❌ listPOs error:', err.message)
-    return []
+    console.error('❌ listPOs error:', err.message);
+    return [];
   }
 }
 
