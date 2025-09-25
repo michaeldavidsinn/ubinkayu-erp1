@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import PDFDocument from 'pdfkit'
 import { app, shell } from 'electron'
 import { google } from 'googleapis'
-import { generatePOPdf } from './pdfGenerator.js' //
+import { generatePOJpeg } from './jpegGenerator.js'
 
 const SPREADSHEET_ID = '1Bp5rETvaAe9nT4DrNpm-WsQqQlPNaau4gIzw1nA5Khk'
 const PO_ARCHIVE_FOLDER_ID = '1-1Gw1ay4iQoFNFe2KcKDgCwOIi353QEC'
@@ -139,7 +139,7 @@ async function getLivePOItems(poId, doc) {
 
 async function generateAndUploadPO(poData, revisionNumber) {
   try {
-    const pdfResult = await generatePOPdf(poData, revisionNumber, false)
+    const pdfResult = await generatePOJpeg(poData, revisionNumber, false)
     if (!pdfResult.success) throw new Error('Gagal membuat file PDF lokal.')
     const auth = getAuth()
     const drive = google.drive({ version: 'v3', auth })
@@ -158,10 +158,6 @@ async function generateAndUploadPO(poData, revisionNumber) {
   }
 }
 
-// ===============================
-// GOOGLE DRIVE FILE UTILITIES
-// ===============================
-
 /**
  * Extract Google Drive file ID from various Drive URL formats
  * @param {string} driveUrl - Google Drive URL
@@ -170,12 +166,11 @@ async function generateAndUploadPO(poData, revisionNumber) {
 function extractGoogleDriveFileId(driveUrl) {
   if (!driveUrl || typeof driveUrl !== 'string') return null
 
-  // Handle different Google Drive URL formats
   const patterns = [
-    /\/d\/([a-zA-Z0-9-_]+)/, // /d/FILE_ID format
-    /id=([a-zA-Z0-9-_]+)/, // id=FILE_ID format
-    /file\/d\/([a-zA-Z0-9-_]+)/, // file/d/FILE_ID format
-    /open\?id=([a-zA-Z0-9-_]+)/ // open?id=FILE_ID format
+    /\/d\/([a-zA-Z0-9-_]+)/,
+    /id=([a-zA-Z0-9-_]+)/,
+    /file\/d\/([a-zA-Z0-9-_]+)/,
+    /open\?id=([a-zA-Z0-9-_]+)/
   ]
 
   for (const pattern of patterns) {
@@ -208,7 +203,6 @@ async function processBatch(items, processor, batchSize = 5) {
       )
     )
 
-    // Small delay between batches to be gentle on API
     if (i + batchSize < items.length) {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
@@ -599,31 +593,25 @@ export async function deletePO(poId) {
 
     console.log(`📄 Menghapus data dari spreadsheet...`)
 
-    // Step 6: Delete spreadsheet data in parallel where possible (OPTIMIZATION)
     const sheetDeletions = []
 
-    // Add progress row deletions
     poProgressRows.reverse().forEach((row) => {
       sheetDeletions.push(row.delete())
     })
 
-    // Add PO header deletions
     toDelHdr.reverse().forEach((row) => {
       sheetDeletions.push(row.delete())
     })
 
-    // Add item deletions
     toDelItems.reverse().forEach((row) => {
       sheetDeletions.push(row.delete())
     })
 
-    // Execute all sheet deletions in parallel (MAJOR OPTIMIZATION)
     await Promise.allSettled(sheetDeletions)
 
     const endTime = Date.now()
     const duration = ((endTime - startTime) / 1000).toFixed(1)
 
-    // Step 7: Prepare summary report
     const summary = {
       deletedRevisions: toDelHdr.length,
       deletedItems: toDelItems.length,
@@ -712,7 +700,7 @@ export async function previewPO(data) {
       items: data.items || [],
       notes: data.catatan || ''
     }
-    return await generatePOPdf(poData, 'preview', true)
+    return await generatePOJpeg(poData, 'preview', true)
   } catch (err) {
     console.error('❌ previewPO error:', err.message)
     return { success: false, error: err.message }
@@ -732,7 +720,6 @@ export async function getRevisionHistory(poId) {
         .filter(
           (r) =>
             String(r.get('purchase_order_id')) === String(poId) &&
-            // [MODIFIKASI] Pastikan kedua sisi perbandingan adalah ANGKA
             toNum(r.get('revision_number'), -1) === toNum(m.revision_number, -1)
         )
         .map((r) => r.toObject())
@@ -755,14 +742,14 @@ export async function updateItemProgress(data) {
       const auth = getAuth()
       const drive = google.drive({ version: 'v3', auth })
       const timestamp = new Date().toISOString().replace(/:/g, '-')
-      const fileName = `PO-${poNumber}_ITEM-${itemId}_${timestamp}.jpg` // Nama file yang unik
+      const fileName = `PO-${poNumber}_ITEM-${itemId}_${timestamp}.jpg`
 
       console.log(`Mengunggah foto progress: ${fileName}`)
       const response = await drive.files.create({
         requestBody: {
           name: fileName,
           mimeType: 'image/jpeg',
-          parents: [PROGRESS_PHOTOS_FOLDER_ID] // ID Folder dari konstanta di atas
+          parents: [PROGRESS_PHOTOS_FOLDER_ID]
         },
         media: {
           mimeType: 'image/jpeg',
@@ -786,7 +773,7 @@ export async function updateItemProgress(data) {
       purchase_order_item_id: itemId,
       stage: stage,
       notes: notes,
-      photo_url: photoLink, // Simpan link foto dari Drive
+      photo_url: photoLink,
       created_at: new Date().toISOString()
     })
     console.log(`✅ Log progress untuk item ID ${itemId} berhasil disimpan.`)
@@ -954,7 +941,6 @@ export async function getPOItemsWithDetails(poId) {
 
     const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestPoRev);
 
-    // ... sisa fungsi tidak berubah ...
     const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
     const progressByItemId = poProgressRows.reduce((acc, row) => {
       const itemId = row.get('purchase_order_item_id');
