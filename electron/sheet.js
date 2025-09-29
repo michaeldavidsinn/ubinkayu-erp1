@@ -1,9 +1,7 @@
-/* eslint-disable prettier/prettier */
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 import path from 'node:path'
 import fs from 'node:fs'
-import PDFDocument from 'pdfkit'
 import { app, shell } from 'electron'
 import { google } from 'googleapis'
 import { generatePOJpeg } from './jpegGenerator.js'
@@ -698,7 +696,8 @@ export async function previewPO(data) {
       deadline: data.tanggalKirim || '',
       priority: data.prioritas || '',
       items: data.items || [],
-      notes: data.catatan || ''
+      notes: data.catatan || '',
+      poPhotoPath: data.poPhotoPath
     }
     return await generatePOJpeg(poData, 'preview', true)
   } catch (err) {

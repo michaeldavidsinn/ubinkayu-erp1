@@ -1,9 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable prettier/prettier */
-// src/renderer/src/pages/InputPOPage.tsx
-
 import React, { useState, useEffect } from 'react'
 import { Card } from '../components/Card'
 import { Input } from '../components/Input'
@@ -31,17 +25,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
-   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
+  const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
 
   useEffect(() => {
     // ... (useEffect Anda yang lain tidak perlu diubah)
     if (editingPO) {
-        // ... (logika untuk mode edit)
-        // [BARU] Jika mode edit, set juga path foto jika ada
-        setPoPhotoPath(editingPO.photo_url || null);
+      // ... (logika untuk mode edit)
+      // [BARU] Jika mode edit, set juga path foto jika ada
+      setPoPhotoPath(editingPO.photo_url || null);
     } else {
-        // ... (logika untuk mode baru)
-        setPoPhotoPath(null); // Pastikan path foto di-reset saat membuat PO baru
+      // ... (logika untuk mode baru)
+      setPoPhotoPath(null); // Pastikan path foto di-reset saat membuat PO baru
     }
   }, [editingPO])
 
@@ -157,58 +151,51 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-// Ganti fungsi handleSaveOrUpdatePO Anda dengan versi ini
-
-const handleSaveOrUpdatePO = async () => {
-  // Validasi input (tetap sama)
-  if (!poData.nomorPo || !poData.namaCustomer) {
-    return alert('Nomor PO dan Nama Customer harus diisi!')
-  }
-  if (items.length === 0) {
-    return alert('Tambahkan minimal satu item.')
-  }
-
-  setIsSaving(true)
-  try {
-    // Siapkan payload (tetap sama)
-    const itemsWithKubikasi = items.map((item) => ({
-      ...item,
-      kubikasi: calculateKubikasi(item),
-    }))
-
-    const kubikasiTotal = itemsWithKubikasi.reduce(
-      (acc, item) => acc + (item.kubikasi || 0),
-      0
-    )
-
-    const payload = {
-      ...poData,
-      items: itemsWithKubikasi,
-      kubikasi_total: kubikasiTotal,
-      poId: editingPO?.id,
-       poPhotoPath: poPhotoPath
+  const handleSaveOrUpdatePO = async () => {
+    if (!poData.nomorPo || !poData.namaCustomer) {
+      return alert('Nomor PO dan Nama Customer harus diisi!')
     }
-console.log('TITIK A (Frontend): Mengirim payload:', payload);
-    // --- PERUBAHAN UTAMA DI SINI ---
-    // Cukup panggil satu fungsi. Backend akan mengurus sisanya (save + upload).
-    // @ts-ignore
-    const result = editingPO
-      ? await window.api.updatePO(payload)
-      : await window.api.saveNewPO(payload)
-
-    if (result.success) {
-      alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan PDF telah diunggah!`)
-      onSaveSuccess() // Kembali ke halaman daftar
-    } else {
-      throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
+    if (items.length === 0) {
+      return alert('Tambahkan minimal satu item.')
     }
 
-  } catch (error) {
-    alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
-  } finally {
-    setIsSaving(false)
+    setIsSaving(true)
+    try {
+      const itemsWithKubikasi = items.map((item) => ({
+        ...item,
+        kubikasi: calculateKubikasi(item),
+      }))
+
+      const kubikasiTotal = itemsWithKubikasi.reduce(
+        (acc, item) => acc + (item.kubikasi || 0),
+        0
+      )
+
+      const payload = {
+        ...poData,
+        items: itemsWithKubikasi,
+        kubikasi_total: kubikasiTotal,
+        poId: editingPO?.id,
+        poPhotoPath: poPhotoPath
+      }
+      console.log('TITIK A (Frontend): Mengirim payload:', payload);
+      const result = editingPO
+        ? await window.api.updatePO(payload)
+        : await window.api.saveNewPO(payload)
+
+      if (result.success) {
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan PDF telah diunggah!`)
+        onSaveSuccess()
+      } else {
+        throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
+      }
+
+    } catch (error) {
+      alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
 
   const handlePreviewPO = async () => {
     if (items.length === 0) {
@@ -224,20 +211,21 @@ console.log('TITIK A (Frontend): Mengirim payload:', payload);
       const payload = {
         ...poData,
         items: itemsWithKubikasi,
+        poPhotoPath: poPhotoPath
       }
 
       // @ts-ignore
       const result = await window.api.previewPO(payload)
 
       if (result.success) {
-        const pdfWindow = window.open()
-        if (pdfWindow) {
-          pdfWindow.document.write(
-            `<iframe src="data:application/pdf;base64,${result.base64Data}" width="100%" height="100%"></iframe>`
+        const imageWindow = window.open()
+        if (imageWindow) {
+          imageWindow.document.write(
+            `<title>PO Preview</title><style>body{margin:0;}</style><img src="data:image/jpeg;base64,${result.base64Data}" style="width:100%;">`
           )
         }
       } else {
-        throw new Error(result.error)
+        throw new Error(result.error || 'Gagal menghasilkan data preview.')
       }
     } catch (error) {
       alert(`❌ Gagal preview PO: ${(error as Error).message}`)
@@ -247,35 +235,31 @@ console.log('TITIK A (Frontend): Mengirim payload:', payload);
   }
 
   const calculateKubikasi = (item: POItem) => {
-  // Ambil semua nilai dimensi dan kuantitas, default ke 0 jika tidak ada
-  const tebal = item.thickness_mm || 0;
-  const lebar = item.width_mm || 0;
-  const panjang = item.length_mm || 0;
-  const qty = item.quantity || 0;
+    const tebal = item.thickness_mm || 0;
+    const lebar = item.width_mm || 0;
+    const panjang = item.length_mm || 0;
+    const qty = item.quantity || 0;
 
-  // Rumus untuk satuan 'pcs' (Potongan)
-  // Volume = (Tebal(mm) * Lebar(mm) * Panjang(mm) * Jumlah Pcs) / 1 Miliar
-  if (item.satuan === 'pcs') {
-    return (tebal * lebar * panjang * qty) / 1_000_000_000;
-  }
+    // Rumus untuk satuan 'pcs' (Potongan)
+    // Volume = (Tebal(mm) * Lebar(mm) * Panjang(mm) * Jumlah Pcs) / 1 Miliar
+    if (item.satuan === 'pcs') {
+      return (tebal * lebar * panjang * qty) / 1_000_000_000;
+    }
 
-  // Rumus untuk satuan 'm1' (Meter Lari)
-  // Volume = (Tebal(mm) * Lebar(mm) * Kuantitas(meter)) / 1 Juta
-  if (item.satuan === 'm1') {
-    // Di sini 'qty' adalah panjang dalam meter, jadi pembaginya berbeda
-    return (tebal * lebar * qty) / 1_000_000;
-  }
+    // Rumus untuk satuan 'm1' (Meter Lari)
+    // Volume = (Tebal(mm) * Lebar(mm) * Kuantitas(meter)) / 1 Juta
+    if (item.satuan === 'm1') {
+      return (tebal * lebar * qty) / 1_000_000;
+    }
 
-  // [BARU] Rumus untuk satuan 'm2' (Meter Persegi)
-  // Volume = (Tebal(mm) * Kuantitas(meter persegi)) / 1000
-  if (item.satuan === 'm2') {
-    // Di sini 'qty' adalah luas dalam meter persegi
-    return (tebal * qty) / 1000;
-  }
+    // [BARU] Rumus untuk satuan 'm2' (Meter Persegi)
+    // Volume = (Tebal(mm) * Kuantitas(meter persegi)) / 1000
+    if (item.satuan === 'm2') {
+      return (tebal * qty) / 1000;
+    }
 
-  // Jika satuan tidak dikenali, kembalikan 0
-  return 0;
-};
+    return 0;
+  };
 
   const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
 
