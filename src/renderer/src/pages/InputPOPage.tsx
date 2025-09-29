@@ -208,9 +208,15 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         kubikasi: calculateKubikasi(item),
       }))
 
+      const kubikasiTotal = itemsWithKubikasi.reduce(
+        (acc, item) => acc + (item.kubikasi || 0),
+        0
+      )
+
       const payload = {
         ...poData,
         items: itemsWithKubikasi,
+        kubikasi_total: kubikasiTotal,
         poPhotoPath: poPhotoPath
       }
 

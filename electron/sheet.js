@@ -697,6 +697,7 @@ export async function previewPO(data) {
       priority: data.prioritas || '',
       items: data.items || [],
       notes: data.catatan || '',
+      kubikasi_total: data.kubikasi_total || 0,
       poPhotoPath: data.poPhotoPath
     }
     return await generatePOJpeg(poData, 'preview', true)
@@ -1134,11 +1135,11 @@ export async function getProductSalesAnalysis() {
 
     const poMap = new Map();
     poRows.forEach(r => {
-        const poId = r.get('id');
-        const rev = toNum(r.get('revision_number'));
-        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-            poMap.set(poId, r.toObject());
-        }
+      const poId = r.get('id');
+      const rev = toNum(r.get('revision_number'));
+      if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+        poMap.set(poId, r.toObject());
+      }
     });
 
     const salesData = {};
@@ -1168,12 +1169,12 @@ export async function getProductSalesAnalysis() {
       });
 
       if (woodType) {
-          woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity;
+        woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity;
       }
 
       const customerName = po.project_name
       if (customerName) {
-          customerData[customerName] = (customerData[customerName] || 0) + kubikasi;
+        customerData[customerName] = (customerData[customerName] || 0) + kubikasi;
       }
     });
 
@@ -1185,13 +1186,13 @@ export async function getProductSalesAnalysis() {
       .map((name) => ({
         name,
         value: woodTypeData[name]
-    })).sort((a,b) => b.value - a.value);
+      })).sort((a, b) => b.value - a.value);
 
     const topCustomers = Object.keys(customerData)
       .map((name) => ({
         name,
         totalKubikasi: customerData[name]
-    })).sort((a,b) => b.totalKubikasi - a.totalKubikasi).slice(0, 5);
+      })).sort((a, b) => b.totalKubikasi - a.totalKubikasi).slice(0, 5);
 
     const today = new Date()
     const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30))
@@ -1223,11 +1224,11 @@ export async function getProductSalesAnalysis() {
     const neverSoldProducts = allProductNames.filter(name => !soldProductNames.has(name));
 
     return {
-        topSellingProducts,
-        woodTypeDistribution,
-        topCustomers,
-        trendingProducts,
-        slowMovingProducts: neverSoldProducts,
+      topSellingProducts,
+      woodTypeDistribution,
+      topCustomers,
+      trendingProducts,
+      slowMovingProducts: neverSoldProducts,
     };
 
   } catch (err) {
@@ -1249,11 +1250,11 @@ export async function getSalesItemData() {
 
     const poMap = new Map();
     poRows.forEach(r => {
-        const poId = r.get('id');
-        const rev = toNum(r.get('revision_number'));
-        if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-            poMap.set(poId, r.toObject());
-        }
+      const poId = r.get('id');
+      const rev = toNum(r.get('revision_number'));
+      if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
+        poMap.set(poId, r.toObject());
+      }
     });
 
     const combinedData = itemRows.map(item => {
