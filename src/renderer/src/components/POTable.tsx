@@ -13,7 +13,7 @@ interface POTableProps {
   onShowProgress: (po: POHeader) => void // [BARU] Tambahkan prop ini
 }
 
-const POTable: React.FC<POTableProps> = ({ poList, /* ... props lain */ }) => {
+const POTable: React.FC<POTableProps> = ({ poList, onDeletePO, onEditPO, onShowDetail, onShowProgress }) => {
   return (
     <div className="po-table-container">
       <table className="po-table">
