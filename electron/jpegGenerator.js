@@ -3,16 +3,24 @@ import fs from 'fs'
 import path from 'path'
 import { app, shell } from 'electron'
 
+// Fungsi helper untuk memastikan direktori ada
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true })
   }
 }
 
+// Fungsi helper untuk word-wrapping teks
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
   let lineCount = 1
+
+  if (words.length === 0) {
+    context.fillText('', x, y)
+    return 1
+  }
+
   for (let n = 0; n < words.length; n++) {
     const testLine = line + words[n] + ' '
     const metrics = context.measureText(testLine)
@@ -26,7 +34,29 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
       line = testLine
     }
   }
-  context.fillText(line, x, y)
+  context.fillText(line.trim(), x, y)
+  return lineCount
+}
+
+// Fungsi helper untuk MENGHITUNG jumlah baris yang dibutuhkan oleh wrapText
+function calculateLineCount(context, text, maxWidth) {
+  if (!text || text.trim() === '') {
+    return 1
+  }
+  const words = text.split(' ')
+  let line = ''
+  let lineCount = 1
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' '
+    const metrics = context.measureText(testLine)
+    const testWidth = metrics.width
+    if (testWidth > maxWidth && n > 0) {
+      line = words[n] + ' '
+      lineCount++
+    } else {
+      line = testLine
+    }
+  }
   return lineCount
 }
 
@@ -35,73 +65,148 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     if (!app.isReady()) {
       await app.whenReady()
     }
+
+    // --- PENGATURAN PATH FILE ---
     const baseDir = path.resolve(app.getPath('documents'), 'UbinkayuERP', 'PO')
     const poFolderName = `${poData.po_number}-${poData.project_name}`.replace(/[/\\?%*:|"<>]/g, '-')
     const poDir = path.join(baseDir, poFolderName)
     ensureDirSync(poDir)
-    const fileName = `PO-${poData.po_number.replace(
-      /[/\\?%*:|"<>]/g,
-      '-'
-    )}-Rev${revisionNumber}.jpeg`
+    const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-Rev${revisionNumber}.jpeg`
     const filePath = path.join(poDir, fileName)
 
+    // --- PENGATURAN KANVAS & WARNA ---
     const width = 1200
-    const height = 1800
-    const canvas = createCanvas(width, height)
-    const ctx = canvas.getContext('2d')
-
-    ctx.fillStyle = '#FFFFFF'
-    ctx.fillRect(0, 0, width, height)
-
     const redColor = '#D92121'
     const blueColor = '#0000FF'
-    const blackColor = '#000000'
+    const blackColor = '#333333'
     const greenColor = '#006400'
     const headerBgColor = '#F0F0F0'
     const totalBgColor = '#FFE6E6'
     const borderColor = '#AAAAAA'
 
-    ctx.font = 'bold 24px Arial'
-    ctx.fillStyle = redColor
-    const headerText = `${poData.po_number || 'N/A'} ${poData.project_name || 'N/A'}`
-    ctx.textAlign = 'center'
-    ctx.fillText(headerText, width / 2, 40)
-    ctx.textAlign = 'left'
-    ctx.font = 'bold 20px Arial'
-    ctx.fillStyle = blackColor
-    const sbyText = `SBY R: ${revisionNumber}`
-    const dateText = poData.created_at ? new Date(poData.created_at).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID')
-    const rightHeaderText = `${sbyText}  ${dateText}`
-    ctx.textAlign = 'right'
-    ctx.fillText(rightHeaderText, width - 30, 40)
-    ctx.textAlign = 'left'
-    const tableTop = 70
+    // --- PENGATURAN FONT & KONSTANTA LAYOUT ---
+    const baseFont = 'Calibri'
     const tableLeft = 30
     const tableWidth = width - 60
-    const cols = {
-      rencKirim: { x: 0, width: 100 },
-      noPo: { x: 100, width: 150 },
-      produk: { x: 250, width: 200 },
-      finishing: { x: 450, width: 180 },
-      ukuran: { x: 630, width: 150 },
-      kuantiti: { x: 780, width: 100 },
-      kubikasi: { x: 880, width: 100 },
-      lokasi: { x: 980, width: 160 }
+    const rowPadding = 8
+    const itemLineHeight = 14
+
+    // --- [LANGKAH 1] HITUNG TOTAL TINGGI KANVAS SECARA DINAMIS ---
+    const tempCanvas = createCanvas(width, 100)
+    const ctx = tempCanvas.getContext('2d')
+
+    let totalHeight = 0
+
+    totalHeight += 70 // Tinggi Header
+    totalHeight += 60 // Tinggi Header Tabel
+
+    // Tinggi Semua Item
+    const items = poData.items || []
+    items.forEach((item) => {
+      ctx.font = `10px ${baseFont}`
+      const poLines = calculateLineCount(
+        ctx,
+        `${poData.po_number || 'N/A'}\n${poData.project_name || 'N/A'}`,
+        140 - rowPadding * 2
+      )
+      const produkText = `${item.product_name || ''}\n${item.wood_type || ''} ${item.profile || ''}`
+      const produkLines = calculateLineCount(ctx, produkText, 200 - rowPadding * 2)
+      const finishingText = `${item.finishing || ''}\n${item.sample || ''}`
+      const finishingLines = calculateLineCount(ctx, finishingText, 180 - rowPadding * 2)
+      const lokasiLines = calculateLineCount(ctx, item.location || '-', 170 - rowPadding * 2)
+
+      const maxLines = Math.max(poLines, produkLines, finishingLines, lokasiLines, 2)
+      const rowHeight = maxLines * itemLineHeight + rowPadding * 2
+      totalHeight += rowHeight
+    })
+
+    totalHeight += 30 // Tinggi Baris Total
+
+    // Tinggi Bagian Catatan
+    ctx.font = `10px ${baseFont}`
+    const notesText = poData.notes || '-'
+    const noteLineCount = calculateLineCount(ctx, notesText, tableWidth - 20)
+    totalHeight += noteLineCount * 15 + 15 * 2 + 20 + 10
+
+    totalHeight += 80 // Tinggi Tabel Approval
+
+    // Tinggi Foto Referensi (jika ada)
+    let photoDrawHeight = 0
+    if (poData.poPhotoPath && fs.existsSync(poData.poPhotoPath)) {
+      try {
+        const userImage = await loadImage(poData.poPhotoPath)
+        const aspectRatio = userImage.height / userImage.width
+        photoDrawHeight = tableWidth * aspectRatio
+        totalHeight += 20 + 30 + photoDrawHeight
+      } catch (imgError) {
+        console.error('Gagal memuat gambar untuk kalkulasi tinggi:', imgError)
+        totalHeight += 60
+      }
+    } else {
+      totalHeight += 60
     }
-    ctx.fillStyle = headerBgColor
-    ctx.fillRect(tableLeft, tableTop, tableWidth, 60)
-    ctx.strokeStyle = borderColor
-    ctx.lineWidth = 1
-    ctx.fillStyle = blackColor
-    ctx.font = 'bold 10px Arial'
-    ctx.textAlign = 'center'
-    function drawHeader(text, col, yOffset1, yOffset2) {
+
+    totalHeight += 30 // Margin bawah final
+
+    // --- [LANGKAH 2] BUAT KANVAS FINAL & GAMBAR SEMUA ELEMEN ---
+    const canvas = createCanvas(width, totalHeight)
+    const finalCtx = canvas.getContext('2d')
+
+    finalCtx.fillStyle = '#FFFFFF'
+    finalCtx.fillRect(0, 0, width, totalHeight)
+
+    // --- GAMBAR HEADER ---
+    let currentY = 40
+    finalCtx.font = `bold 24px ${baseFont}`
+    finalCtx.fillStyle = redColor
+    const headerText = `${poData.po_number || 'N/A'} ${poData.project_name || 'N/A'}`
+    finalCtx.textAlign = 'center'
+    finalCtx.fillText(headerText, width / 2, currentY)
+
+    finalCtx.font = `bold 16px ${baseFont}`
+    finalCtx.fillStyle = blackColor
+    const date = poData.created_at ? new Date(poData.created_at) : new Date()
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const dateText = `AD${year}年${month}月${day}日`
+    const sbyText = `SBY R: ${revisionNumber}`
+    finalCtx.textAlign = 'right'
+    finalCtx.fillText(sbyText, width - 30, currentY - 15)
+    finalCtx.fillText(dateText, width - 30, currentY + 10)
+    finalCtx.textAlign = 'left'
+
+    // --- GAMBAR TABEL ---
+    currentY += 30
+    const cols = {
+      rencKirim: { x: 0, width: 90 },
+      noPo: { x: 90, width: 140 },
+      produk: { x: 230, width: 200 },
+      finishing: { x: 430, width: 180 },
+      ukuran: { x: 610, width: 150 },
+      kuantiti: { x: 760, width: 120 },
+      kubikasi: { x: 880, width: 110 },
+      lokasi: { x: 990, width: 180 }
+    }
+
+    // Header Tabel
+    finalCtx.fillStyle = headerBgColor
+    finalCtx.fillRect(tableLeft, currentY, tableWidth, 60)
+    finalCtx.strokeStyle = borderColor
+    finalCtx.lineWidth = 1
+
+    finalCtx.fillStyle = greenColor
+    finalCtx.font = `bold 10px ${baseFont}`
+    finalCtx.textAlign = 'center'
+
+    const drawHeader = (text, col, yOffset1, yOffset2) => {
       const lines = text.split('\n')
-      ctx.fillText(lines[0], tableLeft + col.x + col.width / 2, tableTop + yOffset1)
+      finalCtx.fillText(lines[0], tableLeft + col.x + col.width / 2, currentY + yOffset1)
       if (lines[1]) {
-        ctx.fillText(lines[1], tableLeft + col.x + col.width / 2, tableTop + yOffset2)
+        finalCtx.fillText(lines[1], tableLeft + col.x + col.width / 2, currentY + yOffset2)
       }
     }
+
     drawHeader('Renc Kirim\n/ TGL PO', cols.rencKirim, 25, 45)
     drawHeader('No PO\n/ Nama Proyek', cols.noPo, 25, 45)
     drawHeader('Produk / Kayu / Profil', cols.produk, 35, 0)
@@ -109,182 +214,287 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     drawHeader('KUANTITI', cols.kuantiti, 35, 0)
     drawHeader('KUBIKASI', cols.kubikasi, 35, 0)
     drawHeader('Lokasi & Keterangan lain', cols.lokasi, 35, 0)
+
     const ukuranStartX = tableLeft + cols.ukuran.x
     const ukuranSubWidth = cols.ukuran.width / 3
-    ctx.fillText('UKURAN', ukuranStartX + cols.ukuran.width / 2, tableTop + 20)
-    ctx.beginPath()
-    ctx.moveTo(ukuranStartX, tableTop + 30)
-    ctx.lineTo(ukuranStartX + cols.ukuran.width, tableTop + 30)
-    ctx.stroke()
-    ctx.font = 'bold 9px Arial'
-    ctx.fillText('tbl', ukuranStartX + ukuranSubWidth / 2, tableTop + 48)
-    ctx.fillText('lebar', ukuranStartX + ukuranSubWidth + ukuranSubWidth / 2, tableTop + 48)
-    ctx.fillText('panjang', ukuranStartX + ukuranSubWidth * 2 + ukuranSubWidth / 2, tableTop + 48)
-    Object.values(cols).forEach((col) => {
-      ctx.strokeRect(tableLeft + col.x, tableTop, col.width, 60)
-    })
-    ctx.strokeRect(ukuranStartX + ukuranSubWidth, tableTop + 30, 0, 30)
-    ctx.strokeRect(ukuranStartX + ukuranSubWidth * 2, tableTop + 30, 0, 30)
-    let rowTop = tableTop + 60
-    const items = poData.items || []
-    const rowPadding = 8
-    const itemLineHeight = 12
+    finalCtx.fillText('UKURAN', ukuranStartX + cols.ukuran.width / 2, currentY + 20)
+    finalCtx.beginPath()
+    finalCtx.moveTo(ukuranStartX, currentY + 30)
+    finalCtx.lineTo(ukuranStartX + cols.ukuran.width, currentY + 30)
+    finalCtx.stroke()
+
+    finalCtx.font = `bold 9px ${baseFont}`
+    finalCtx.fillStyle = blackColor
+    finalCtx.fillText('tbl', ukuranStartX + ukuranSubWidth / 2, currentY + 48)
+    finalCtx.fillText('lebar', ukuranStartX + ukuranSubWidth + ukuranSubWidth / 2, currentY + 48)
+    finalCtx.fillText(
+      'panjang',
+      ukuranStartX + ukuranSubWidth * 2 + ukuranSubWidth / 2,
+      currentY + 48
+    )
+
+    Object.values(cols).forEach((col) =>
+      finalCtx.strokeRect(tableLeft + col.x, currentY, col.width, 60)
+    )
+    finalCtx.strokeRect(ukuranStartX + ukuranSubWidth, currentY + 30, 0, 30)
+    finalCtx.strokeRect(ukuranStartX + ukuranSubWidth * 2, currentY + 30, 0, 30)
+
+    currentY += 60
+
+    // Baris Item
     items.forEach((item) => {
-      let maxLines = 1
-      ctx.font = '10px Arial'
-      ctx.textAlign = 'left'
-      const produkLines = (item.product_name || '').split('\n').length
-      const profilLines = (item.profile || '').split('\n').length
-      const finishingLines = (`${item.finishing || ''}\n${item.sample || ''}`).split('\n').length
-      maxLines = Math.max(produkLines + profilLines, finishingLines, 2)
-      const rowHeight = maxLines * itemLineHeight + rowPadding * 2
-      ctx.strokeStyle = borderColor
-      ctx.textAlign = 'center'
-      const deadline = poData.deadline ? new Date(poData.deadline).toLocaleDateString('id-ID') : 'N/A'
-      const poDate = poData.created_at ? new Date(poData.created_at).toLocaleDateString('id-ID') : 'N/A'
-      ctx.fillStyle = blueColor
-      ctx.fillText(deadline, tableLeft + cols.rencKirim.x + cols.rencKirim.width / 2, rowTop + rowPadding + 10)
-      ctx.fillStyle = blackColor
-      ctx.fillText(poDate, tableLeft + cols.rencKirim.x + cols.rencKirim.width / 2, rowTop + rowPadding + 25)
-      ctx.textAlign = 'left'
-      wrapText(ctx, poData.po_number || 'N/A', tableLeft + cols.noPo.x + rowPadding, rowTop + rowPadding + 10, cols.noPo.width - rowPadding * 2, itemLineHeight)
-      wrapText(ctx, poData.project_name || 'N/A', tableLeft + cols.noPo.x + rowPadding, rowTop + rowPadding + 25, cols.noPo.width - rowPadding * 2, itemLineHeight)
+      finalCtx.font = `10px ${baseFont}`
+      const poLines = calculateLineCount(
+        finalCtx,
+        `${poData.po_number || 'N/A'}\n${poData.project_name || 'N/A'}`,
+        cols.noPo.width - rowPadding * 2
+      )
       const produkText = `${item.product_name || ''}\n${item.wood_type || ''} ${item.profile || ''}`
-      wrapText(ctx, produkText, tableLeft + cols.produk.x + rowPadding, rowTop + rowPadding + 10, cols.produk.width - rowPadding * 2, itemLineHeight)
+      const produkLines = calculateLineCount(
+        finalCtx,
+        produkText,
+        cols.produk.width - rowPadding * 2
+      )
       const finishingText = `${item.finishing || ''}\n${item.sample || ''}`
-      wrapText(ctx, finishingText, tableLeft + cols.finishing.x + rowPadding, rowTop + rowPadding + 10, cols.finishing.width - rowPadding * 2, itemLineHeight)
-      ctx.textAlign = 'center'
-      ctx.fillText((item.thickness_mm || '0').toString(), tableLeft + cols.ukuran.x + ukuranSubWidth / 2, rowTop + rowHeight / 2)
-      ctx.fillText((item.width_mm || '0').toString(), tableLeft + cols.ukuran.x + ukuranSubWidth + ukuranSubWidth / 2, rowTop + rowHeight / 2)
-      ctx.fillText((item.length_mm || '0').toString(), tableLeft + cols.ukuran.x + ukuranSubWidth * 2 + ukuranSubWidth / 2, rowTop + rowHeight / 2)
+      const finishingLines = calculateLineCount(
+        finalCtx,
+        finishingText,
+        cols.finishing.width - rowPadding * 2
+      )
+      const lokasiLines = calculateLineCount(
+        finalCtx,
+        item.location || '-',
+        cols.lokasi.width - rowPadding * 2
+      )
+
+      const maxLines = Math.max(poLines, produkLines, finishingLines, lokasiLines, 2)
+      const rowHeight = maxLines * itemLineHeight + rowPadding * 2
+
+      finalCtx.textAlign = 'center'
+      const deadline = poData.deadline
+        ? new Date(poData.deadline).toLocaleDateString('id-ID')
+        : 'N/A'
+      const poDate = poData.created_at
+        ? new Date(poData.created_at).toLocaleDateString('id-ID')
+        : 'N/A'
+      finalCtx.fillStyle = blueColor
+      finalCtx.fillText(
+        deadline,
+        tableLeft + cols.rencKirim.x + cols.rencKirim.width / 2,
+        currentY + rowPadding + 10
+      )
+      finalCtx.fillStyle = blackColor
+      finalCtx.fillText(
+        poDate,
+        tableLeft + cols.rencKirim.x + cols.rencKirim.width / 2,
+        currentY + rowPadding + 10 + itemLineHeight * 1.5
+      )
+
+      finalCtx.textAlign = 'left'
+      wrapText(
+        finalCtx,
+        `${poData.po_number || 'N/A'}\n${poData.project_name || 'N/A'}`,
+        tableLeft + cols.noPo.x + rowPadding,
+        currentY + rowPadding + 10,
+        cols.noPo.width - rowPadding * 2,
+        itemLineHeight
+      )
+      wrapText(
+        finalCtx,
+        produkText,
+        tableLeft + cols.produk.x + rowPadding,
+        currentY + rowPadding + 10,
+        cols.produk.width - rowPadding * 2,
+        itemLineHeight
+      )
+      wrapText(
+        finalCtx,
+        finishingText,
+        tableLeft + cols.finishing.x + rowPadding,
+        currentY + rowPadding + 10,
+        cols.finishing.width - rowPadding * 2,
+        itemLineHeight
+      )
+      wrapText(
+        finalCtx,
+        item.location || '-',
+        tableLeft + cols.lokasi.x + rowPadding,
+        currentY + rowPadding + 10,
+        cols.lokasi.width - rowPadding * 2,
+        itemLineHeight
+      )
+
+      finalCtx.textAlign = 'center'
+      finalCtx.fillText(
+        (item.thickness_mm || '0').toString(),
+        tableLeft + cols.ukuran.x + ukuranSubWidth / 2,
+        currentY + rowHeight / 2
+      )
+      finalCtx.fillText(
+        (item.width_mm || '0').toString(),
+        tableLeft + cols.ukuran.x + ukuranSubWidth + ukuranSubWidth / 2,
+        currentY + rowHeight / 2
+      )
+      finalCtx.fillText(
+        (item.length_mm || '0').toString(),
+        tableLeft + cols.ukuran.x + ukuranSubWidth * 2 + ukuranSubWidth / 2,
+        currentY + rowHeight / 2
+      )
       const quantity = `${item.quantity || 0} ${item.satuan || 'pcs'}`
-      ctx.fillText(quantity, tableLeft + cols.kuantiti.x + cols.kuantiti.width / 2, rowTop + rowHeight / 2)
+      finalCtx.fillText(
+        quantity,
+        tableLeft + cols.kuantiti.x + cols.kuantiti.width / 2,
+        currentY + rowHeight / 2
+      )
       const kubikasi = item.kubikasi ? item.kubikasi.toFixed(4) : '0.0000'
-      ctx.fillText(kubikasi, tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2, rowTop + rowHeight / 2)
-      ctx.textAlign = 'left'
-      wrapText(ctx, item.location || '-', tableLeft + cols.lokasi.x + rowPadding, rowTop + rowPadding + 10, cols.lokasi.width - rowPadding * 2, itemLineHeight)
+      finalCtx.fillText(
+        kubikasi,
+        tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2,
+        currentY + rowHeight / 2
+      )
+
+      // --- [PERUBAHAN] Logika menggambar border agar rapi ---
+      // 1. Gambar border luar untuk seluruh baris
+      finalCtx.strokeRect(tableLeft, currentY, tableWidth, rowHeight)
+
+      // 2. Gambar garis vertikal pemisah kolom (satu per satu)
       Object.values(cols).forEach((col) => {
-        ctx.strokeRect(tableLeft + col.x, rowTop, col.width, rowHeight)
+        if (col.x > 0) {
+          // Jangan gambar garis di paling kiri
+          finalCtx.beginPath()
+          finalCtx.moveTo(tableLeft + col.x, currentY)
+          finalCtx.lineTo(tableLeft + col.x, currentY + rowHeight)
+          finalCtx.stroke()
+        }
       })
-      ctx.strokeRect(ukuranStartX + ukuranSubWidth, rowTop, 0, rowHeight)
-      ctx.strokeRect(ukuranStartX + ukuranSubWidth * 2, rowTop, 0, rowHeight)
-      rowTop += rowHeight
+
+      // 3. Gambar garis vertikal sub-kolom Ukuran
+      finalCtx.beginPath()
+      finalCtx.moveTo(ukuranStartX + ukuranSubWidth, currentY)
+      finalCtx.lineTo(ukuranStartX + ukuranSubWidth, currentY + rowHeight)
+      finalCtx.stroke()
+
+      finalCtx.beginPath()
+      finalCtx.moveTo(ukuranStartX + ukuranSubWidth * 2, currentY)
+      finalCtx.lineTo(ukuranStartX + ukuranSubWidth * 2, currentY + rowHeight)
+      finalCtx.stroke()
+      // --- Akhir Perubahan ---
+
+      currentY += rowHeight
     })
 
     // Baris Total
-    ctx.fillStyle = totalBgColor
-    ctx.fillRect(tableLeft, rowTop, tableWidth, 30)
-    ctx.strokeRect(tableLeft, rowTop, tableWidth, 30)
-    ctx.fillStyle = redColor
-    ctx.font = 'bold 12px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('TOTAL', tableLeft + cols.kuantiti.x - 30, rowTop + 20)
-    const totalKubikasi = poData.kubikasi_total ? poData.kubikasi_total.toFixed(4) + ' m³' : '0.0000 m³'
-    ctx.fillText(totalKubikasi, tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2, rowTop + 20)
-    rowTop += 30
+    finalCtx.fillStyle = totalBgColor
+    finalCtx.fillRect(tableLeft, currentY, tableWidth, 30)
+    finalCtx.strokeRect(tableLeft, currentY, tableWidth, 30)
+    finalCtx.fillStyle = redColor
+    finalCtx.font = `bold 12px ${baseFont}`
+    finalCtx.textAlign = 'right'
+    finalCtx.fillText(
+      'TOTAL',
+      tableLeft + cols.kuantiti.x + cols.kuantiti.width - rowPadding,
+      currentY + 20
+    )
+    finalCtx.textAlign = 'center'
+    const totalKubikasi = poData.kubikasi_total
+      ? poData.kubikasi_total.toFixed(4) + ' m³'
+      : '0.0000 m³'
+    finalCtx.fillText(
+      totalKubikasi,
+      tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2,
+      currentY + 20
+    )
+    currentY += 30
 
     // Bagian Catatan
+    const notesBoxY = currentY
     const notesLineHeight = 15
     const notesPadding = notesLineHeight * 2
-    const notesText = poData.notes || '-'
-    ctx.fillStyle = greenColor
-    ctx.font = 'bold 10px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText('Cara kerja / request klien / detail lainnya:', tableLeft + 10, rowTop + notesPadding)
-    ctx.fillStyle = blackColor
-    ctx.font = '10px Arial'
-    const noteLineCount = wrapText(ctx, notesText, tableLeft + 10, rowTop + notesPadding + 20, tableWidth - 20, notesLineHeight)
-    const notesBoxHeight = (noteLineCount * notesLineHeight) + (notesPadding * 2) + 20
-    ctx.strokeStyle = borderColor
-    ctx.beginPath()
-    ctx.moveTo(tableLeft, rowTop + notesBoxHeight)
-    ctx.lineTo(tableLeft + tableWidth, rowTop + notesBoxHeight)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(tableLeft, rowTop)
-    ctx.lineTo(tableLeft, rowTop + notesBoxHeight)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(tableLeft + tableWidth, rowTop)
-    ctx.lineTo(tableLeft + tableWidth, rowTop + notesBoxHeight)
-    ctx.stroke()
+    finalCtx.fillStyle = greenColor
+    finalCtx.font = `bold 10px ${baseFont}`
+    finalCtx.textAlign = 'left'
+    finalCtx.fillText(
+      'Cara kerja / request klien / detail lainnya:',
+      tableLeft + 10,
+      notesBoxY + notesPadding
+    )
+    finalCtx.fillStyle = blackColor
+    finalCtx.font = `10px ${baseFont}`
+    const notesBoxHeight = noteLineCount * notesLineHeight + notesPadding + 20
+    wrapText(
+      finalCtx,
+      notesText,
+      tableLeft + 10,
+      notesBoxY + notesPadding + 20,
+      tableWidth - 20,
+      notesLineHeight
+    )
+    finalCtx.strokeRect(tableLeft, notesBoxY, tableWidth, notesBoxHeight)
+    currentY += notesBoxHeight + 10
 
-    rowTop += notesBoxHeight
-
-    // [PERUBAHAN] Menggambar Tabel Approval dan Tanggal Cetak dalam satu baris
-    const approvalMarginTop = 10
-    rowTop += approvalMarginTop
+    // Tabel Approval & Tanggal Cetak
     const approvalTableHeight = 80
     const approvalCols = [
-      'Gambar MKT', 'Gambar Pengawas', 'Gambar Kerja',
-      'Foto Lokasi', 'ACC Mrktng', 'ACC SPV', 'ACC MNGR'
+      'Gambar MKT',
+      'Gambar Pengawas',
+      'Gambar Kerja',
+      'Foto Lokasi',
+      'ACC Mrktng',
+      'ACC SPV',
+      'ACC MNGR'
     ]
-
-    // Perkecil lebar tabel approval agar ada ruang untuk tanggal
     const approvalTableWidth = tableWidth * 0.8
     const approvalColWidth = approvalTableWidth / approvalCols.length
+    finalCtx.font = `bold 9px ${baseFont}`
+    finalCtx.textAlign = 'center'
 
-    ctx.font = 'bold 9px Arial'
-    ctx.textAlign = 'center'
-
-    // Gambar 7 kolom approval di sisi kiri
     approvalCols.forEach((title, index) => {
-      const colX = tableLeft + (index * approvalColWidth)
-      ctx.strokeStyle = borderColor
-      ctx.strokeRect(colX, rowTop, approvalColWidth, approvalTableHeight)
-      ctx.fillStyle = greenColor
-      ctx.fillText(title, colX + approvalColWidth / 2, rowTop + 15)
-      ctx.beginPath()
-      ctx.moveTo(colX, rowTop + 25)
-      ctx.lineTo(colX + approvalColWidth, rowTop + 25)
-      ctx.stroke()
+      const colX = tableLeft + index * approvalColWidth
+      finalCtx.strokeStyle = borderColor
+      finalCtx.strokeRect(colX, currentY, approvalColWidth, approvalTableHeight)
+      finalCtx.fillStyle = greenColor
+      finalCtx.fillText(title, colX + approvalColWidth / 2, currentY + 15)
+      finalCtx.beginPath()
+      finalCtx.moveTo(colX, currentY + 25)
+      finalCtx.lineTo(colX + approvalColWidth, currentY + 25)
+      finalCtx.stroke()
+      finalCtx.fillText('tgl:', colX + approvalColWidth / 2, currentY + approvalTableHeight - 10)
     })
 
-    // Gambar tanggal cetak di sisi kanan pada baris yang sama
-    ctx.fillStyle = greenColor
-    ctx.font = '10px Arial'
-    ctx.textAlign = 'right'
-    ctx.fillText('Tanggal cetak:', width - 30, rowTop + 30)
-    ctx.fillText(new Date().toLocaleDateString('id-ID'), width - 30, rowTop + 45)
-
-    // Pindahkan kursor ke bawah berdasarkan elemen tertinggi di baris ini (yaitu tabel approval)
-    rowTop += approvalTableHeight
+    finalCtx.fillStyle = greenColor
+    finalCtx.font = `10px ${baseFont}`
+    finalCtx.textAlign = 'right'
+    finalCtx.fillText('Tanggal cetak:', width - 30, currentY + 30)
+    finalCtx.fillText(new Date().toLocaleDateString('id-ID'), width - 30, currentY + 45)
+    currentY += approvalTableHeight
 
     // Lampiran Foto Referensi
-    const imageMarginTop = 20
-    rowTop += imageMarginTop
-    ctx.fillStyle = blackColor
-    ctx.font = 'bold 14px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText('Lampiran: Foto Referensi', tableLeft, rowTop)
-    rowTop += 30
-    console.log('[JPEG Generator] Mencari path foto:', poData.poPhotoPath)
+    currentY += 20
+    finalCtx.fillStyle = blackColor
+    finalCtx.font = `bold 14px ${baseFont}`
+    finalCtx.textAlign = 'left'
+    finalCtx.fillText('Lampiran: Foto Referensi', tableLeft, currentY)
+    currentY += 30
+
     if (poData.poPhotoPath && fs.existsSync(poData.poPhotoPath)) {
-      console.log('[JPEG Generator] Path ditemukan. Memuat gambar...')
       try {
         const userImage = await loadImage(poData.poPhotoPath)
-        console.log(`[JPEG Generator] Gambar berhasil dimuat (${userImage.width}x${userImage.height}).`)
-        const aspectRatio = userImage.height / userImage.width
-        const drawWidth = tableWidth
-        const drawHeight = tableWidth * aspectRatio
-        console.log(`[JPEG Generator] Menggambar di: {x: ${tableLeft}, y: ${rowTop}, w: ${drawWidth}, h: ${drawHeight}}`)
-        ctx.drawImage(userImage, tableLeft, rowTop, drawWidth, drawHeight)
+        finalCtx.drawImage(userImage, tableLeft, currentY, tableWidth, photoDrawHeight)
       } catch (imgError) {
-        console.error('Gagal memuat gambar referensi:', imgError)
-        ctx.fillStyle = redColor
-        ctx.font = '12px Arial'
-        ctx.textAlign = 'left'
-        ctx.fillText(`Gagal memuat file gambar: ${poData.poPhotoPath}`, tableLeft, rowTop)
+        console.error('Gagal menggambar gambar referensi:', imgError)
+        finalCtx.fillStyle = redColor
+        finalCtx.font = `12px ${baseFont}`
+        finalCtx.textAlign = 'left'
+        finalCtx.fillText(`Gagal memuat file gambar: ${poData.poPhotoPath}`, tableLeft, currentY)
       }
     } else {
-      console.log('[JPEG Generator] Path foto tidak ditemukan atau file tidak ada.')
-      ctx.font = '12px Arial'
-      ctx.fillStyle = '#888'
-      ctx.textAlign = 'left'
-      ctx.fillText('Tidak ada foto referensi yang dilampirkan.', tableLeft, rowTop)
+      finalCtx.font = `12px ${baseFont}`
+      finalCtx.fillStyle = '#888'
+      finalCtx.textAlign = 'left'
+      finalCtx.fillText('Tidak ada foto referensi yang dilampirkan.', tableLeft, currentY)
     }
 
-    // Simpan file
+    // --- [LANGKAH 3] SIMPAN FILE ---
     const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 })
     fs.writeFileSync(filePath, buffer)
     shell.openPath(filePath)

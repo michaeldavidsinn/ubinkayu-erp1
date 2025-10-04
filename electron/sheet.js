@@ -266,88 +266,91 @@ export async function testSheetConnection() {
 
 export async function listPOs() {
   try {
-    const doc = await openDoc();
-    const poSheet = await getSheet(doc, 'purchase_orders');
-    const itemSheet = await getSheet(doc, 'purchase_order_items');
-    const progressSheet = await getSheet(doc, 'progress_tracking');
+    const doc = await openDoc()
+    const poSheet = await getSheet(doc, 'purchase_orders')
+    const itemSheet = await getSheet(doc, 'purchase_order_items')
+    const progressSheet = await getSheet(doc, 'progress_tracking')
 
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
-    ]);
+    ])
 
-    const byId = new Map();
+    const byId = new Map()
     for (const r of poRows) {
-      const id = String(r.get('id')).trim();
-      const rev = toNum(r.get('revision_number'), -1);
-      const keep = byId.get(id);
-      if (!keep || rev > keep.rev) byId.set(id, { rev, row: r });
+      const id = String(r.get('id')).trim()
+      const rev = toNum(r.get('revision_number'), -1)
+      const keep = byId.get(id)
+      if (!keep || rev > keep.rev) byId.set(id, { rev, row: r })
     }
-    const latestPoRows = Array.from(byId.values()).map(({ row }) => row);
+    const latestPoRows = Array.from(byId.values()).map(({ row }) => row)
 
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
-      const poId = row.get('purchase_order_id');
-      const itemId = row.get('purchase_order_item_id');
-      const key = `${poId}-${itemId}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') });
-      return acc;
-    }, {});
+      const poId = row.get('purchase_order_id')
+      const itemId = row.get('purchase_order_item_id')
+      const key = `${poId}-${itemId}`
+      if (!acc[key]) acc[key] = []
+      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') })
+      return acc
+    }, {})
 
     const itemsByPoId = itemRows.reduce((acc, item) => {
-      const poId = item.get('purchase_order_id');
-      if (!acc[poId]) acc[poId] = [];
-      acc[poId].push(item.toObject());
-      return acc;
-    }, {});
+      const poId = item.get('purchase_order_id')
+      if (!acc[poId]) acc[poId] = []
+      acc[poId].push(item.toObject())
+      return acc
+    }, {})
 
-    const latestItemRevisions = new Map();
-    itemRows.forEach(item => {
-      const poId = item.get('purchase_order_id');
-      const rev = toNum(item.get('revision_number'), -1);
-      const current = latestItemRevisions.get(poId);
+    const latestItemRevisions = new Map()
+    itemRows.forEach((item) => {
+      const poId = item.get('purchase_order_id')
+      const rev = toNum(item.get('revision_number'), -1)
+      const current = latestItemRevisions.get(poId)
       if (!current || rev > current) {
-        latestItemRevisions.set(poId, rev);
+        latestItemRevisions.set(poId, rev)
       }
-    });
+    })
 
-    const result = latestPoRows.map(po => {
-      const poObject = po.toObject();
-      const poId = poObject.id;
+    const result = latestPoRows.map((po) => {
+      const poObject = po.toObject()
+      const poId = poObject.id
 
-      const latestRev = latestItemRevisions.get(poId) ?? -1;
+      const latestRev = latestItemRevisions.get(poId) ?? -1
       const poItems = (itemsByPoId[poId] || []).filter(
-        item => toNum(item.revision_number, -1) === latestRev
-      );
+        (item) => toNum(item.revision_number, -1) === latestRev
+      )
 
-      let poProgress = 0;
+      let poProgress = 0
       if (poItems.length > 0) {
-        let totalPercentage = 0;
-        poItems.forEach(item => {
-          const itemId = item.id;
-          const needsSample = item.sample === 'Ada sample';
-          const stages = ['Pembahanan'];
-          if (needsSample) stages.push('Kasih Sample');
-          stages.push('Start Produksi', 'Kirim');
-          const compositeKey = `${poId}-${itemId}`;
-          const itemProgressHistory = progressByCompositeKey[compositeKey] || [];
-          let latestStageIndex = -1;
+        let totalPercentage = 0
+        poItems.forEach((item) => {
+          const itemId = item.id
+          const needsSample = item.sample === 'Ada sample'
+          const stages = ['Pembahanan']
+          if (needsSample) stages.push('Kasih Sample')
+          stages.push('Start Produksi', 'Kirim')
+          const compositeKey = `${poId}-${itemId}`
+          const itemProgressHistory = progressByCompositeKey[compositeKey] || []
+          let latestStageIndex = -1
           if (itemProgressHistory.length > 0) {
-            const latestProgress = itemProgressHistory.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-            latestStageIndex = stages.indexOf(latestProgress.stage);
+            const latestProgress = itemProgressHistory.sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0]
+            latestStageIndex = stages.indexOf(latestProgress.stage)
           }
-          const itemPercentage = latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0;
-          totalPercentage += itemPercentage;
-        });
-        poProgress = totalPercentage / poItems.length;
+          const itemPercentage =
+            latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0
+          totalPercentage += itemPercentage
+        })
+        poProgress = totalPercentage / poItems.length
       }
 
-      let finalStatus = poObject.status;
+      let finalStatus = poObject.status
       if (finalStatus !== 'Cancelled') {
-        if (poProgress >= 100) finalStatus = 'Completed';
-        else if (poProgress > 0) finalStatus = 'In Progress';
-        else finalStatus = 'Open';
+        if (poProgress >= 100) finalStatus = 'Completed'
+        else if (poProgress > 0) finalStatus = 'In Progress'
+        else finalStatus = 'Open'
       }
 
       return {
@@ -356,14 +359,13 @@ export async function listPOs() {
         progress: Math.round(poProgress),
         status: finalStatus,
         pdf_link: po.get('pdf_link') || null
-      };
-    });
+      }
+    })
 
-    return result;
-
+    return result
   } catch (err) {
-    console.error('❌ listPOs error:', err.message);
-    return [];
+    console.error('❌ listPOs error:', err.message)
+    return []
   }
 }
 
@@ -572,11 +574,7 @@ export async function deletePO(poId) {
     if (uniqueFileIds.length > 0) {
       console.log(`🗂️ Menghapus ${uniqueFileIds.length} file dari Google Drive dalam batch...`)
 
-      const deleteResults = await processBatch(
-        uniqueFileIds,
-        deleteGoogleDriveFile,
-        5
-      )
+      const deleteResults = await processBatch(uniqueFileIds, deleteGoogleDriveFile, 5)
 
       deleteResults.forEach((result) => {
         if (result.success) {
@@ -876,91 +874,102 @@ export async function getActivePOsWithProgress() {
 }
 
 export async function getPOItemsWithDetails(poId) {
-  console.log(`\n--- [DEBUG] Memulai getPOItemsWithDetails untuk PO ID: ${poId} ---`);
+  console.log(`\n--- [DEBUG] Memulai getPOItemsWithDetails untuk PO ID: ${poId} ---`)
   try {
-    const doc = await openDoc();
-    const poSheet = await getSheet(doc, 'purchase_orders');
-    const itemSheet = await getSheet(doc, 'purchase_order_items');
-    const progressSheet = await getSheet(doc, 'progress_tracking');
+    const doc = await openDoc()
+    const poSheet = await getSheet(doc, 'purchase_orders')
+    const itemSheet = await getSheet(doc, 'purchase_order_items')
+    const progressSheet = await getSheet(doc, 'progress_tracking')
 
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
-    ]);
+    ])
 
-    const allRevisionsForPO = poRows.filter(r => r.get('id') === poId);
-    console.log(`[DEBUG] Ditemukan ${allRevisionsForPO.length} baris revisi untuk PO ID ${poId}`);
+    const allRevisionsForPO = poRows.filter((r) => r.get('id') === poId)
+    console.log(`[DEBUG] Ditemukan ${allRevisionsForPO.length} baris revisi untuk PO ID ${poId}`)
 
-    const latestPoRev = Math.max(-1, ...allRevisionsForPO.map(r => toNum(r.get('revision_number'))));
-    console.log(`[DEBUG] Revisi terbaru adalah: #${latestPoRev}`);
+    const latestPoRev = Math.max(
+      -1,
+      ...allRevisionsForPO.map((r) => toNum(r.get('revision_number')))
+    )
+    console.log(`[DEBUG] Revisi terbaru adalah: #${latestPoRev}`)
 
-    const poData = allRevisionsForPO.find(r => toNum(r.get('revision_number')) === latestPoRev);
+    const poData = allRevisionsForPO.find((r) => toNum(r.get('revision_number')) === latestPoRev)
 
     if (!poData) {
-      console.error(`[DEBUG] ERROR: Tidak ada data PO ditemukan untuk revisi #${latestPoRev}`);
-      throw new Error(`PO dengan ID ${poId} tidak ditemukan.`);
+      console.error(`[DEBUG] ERROR: Tidak ada data PO ditemukan untuk revisi #${latestPoRev}`)
+      throw new Error(`PO dengan ID ${poId} tidak ditemukan.`)
     }
-    console.log(`[DEBUG] Data PO ditemukan.`);
+    console.log(`[DEBUG] Data PO ditemukan.`)
 
-    const createdAtRaw = poData.get('created_at');
-    const deadlineRaw = poData.get('deadline');
-    console.log(`[DEBUG] created_at (mentah): ${createdAtRaw} | Tipe: ${typeof createdAtRaw}`);
-    console.log(`[DEBUG] deadline (mentah): ${deadlineRaw} | Tipe: ${typeof deadlineRaw}`);
+    const createdAtRaw = poData.get('created_at')
+    const deadlineRaw = poData.get('deadline')
+    console.log(`[DEBUG] created_at (mentah): ${createdAtRaw} | Tipe: ${typeof createdAtRaw}`)
+    console.log(`[DEBUG] deadline (mentah): ${deadlineRaw} | Tipe: ${typeof deadlineRaw}`)
 
-    const poStartDate = new Date(createdAtRaw);
-    const poDeadline = new Date(deadlineRaw);
-    console.log(`[DEBUG] poStartDate (setelah new Date): ${poStartDate.toISOString()}`);
-    console.log(`[DEBUG] poDeadline (setelah new Date): ${poDeadline.toISOString()}`);
+    const poStartDate = new Date(createdAtRaw)
+    const poDeadline = new Date(deadlineRaw)
+    console.log(`[DEBUG] poStartDate (setelah new Date): ${poStartDate.toISOString()}`)
+    console.log(`[DEBUG] poDeadline (setelah new Date): ${poDeadline.toISOString()}`)
 
-    let stageDeadlines = [];
+    let stageDeadlines = []
 
     if (poStartDate && poDeadline && poDeadline > poStartDate) {
-      console.log('[DEBUG] Kondisi IF untuk kalkulasi deadline TERPENUHI.');
-      const totalDuration = poDeadline.getTime() - poStartDate.getTime();
-      const durationPerStage = totalDuration / PRODUCTION_STAGES.length;
-      console.log(`[DEBUG] Total Durasi: ${totalDuration} ms, Durasi per Tahap: ${durationPerStage} ms`);
+      console.log('[DEBUG] Kondisi IF untuk kalkulasi deadline TERPENUHI.')
+      const totalDuration = poDeadline.getTime() - poStartDate.getTime()
+      const durationPerStage = totalDuration / PRODUCTION_STAGES.length
+      console.log(
+        `[DEBUG] Total Durasi: ${totalDuration} ms, Durasi per Tahap: ${durationPerStage} ms`
+      )
 
       stageDeadlines = PRODUCTION_STAGES.map((stageName, index) => {
-        const deadlineTime = poStartDate.getTime() + (durationPerStage * (index + 1));
+        const deadlineTime = poStartDate.getTime() + durationPerStage * (index + 1)
         return {
           stageName,
           deadline: new Date(deadlineTime).toISOString()
-        };
-      });
-      console.log('[DEBUG] stageDeadlines berhasil dihitung:', stageDeadlines);
+        }
+      })
+      console.log('[DEBUG] stageDeadlines berhasil dihitung:', stageDeadlines)
     } else {
-      console.warn('[DEBUG] Kondisi IF untuk kalkulasi deadline TIDAK TERPENUHI.');
+      console.warn('[DEBUG] Kondisi IF untuk kalkulasi deadline TIDAK TERPENUHI.')
     }
 
-    const poItems = itemRows.filter(item => item.get('purchase_order_id') === poId && toNum(item.get('revision_number'), -1) === latestPoRev);
+    const poItems = itemRows.filter(
+      (item) =>
+        item.get('purchase_order_id') === poId &&
+        toNum(item.get('revision_number'), -1) === latestPoRev
+    )
 
-    const poProgressRows = progressRows.filter(row => row.get('purchase_order_id') === poId);
+    const poProgressRows = progressRows.filter((row) => row.get('purchase_order_id') === poId)
     const progressByItemId = poProgressRows.reduce((acc, row) => {
-      const itemId = row.get('purchase_order_item_id');
-      if (!acc[itemId]) acc[itemId] = [];
-      acc[itemId].push(row.toObject());
-      return acc;
-    }, {});
-    const result = poItems.map(item => {
-      const itemObject = {};
-      itemSheet.headerValues.forEach(header => {
-        itemObject[header] = item.get(header);
-      });
-      const itemId = String(itemObject.id);
-      const history = (progressByItemId[itemId] || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const itemId = row.get('purchase_order_item_id')
+      if (!acc[itemId]) acc[itemId] = []
+      acc[itemId].push(row.toObject())
+      return acc
+    }, {})
+    const result = poItems.map((item) => {
+      const itemObject = {}
+      itemSheet.headerValues.forEach((header) => {
+        itemObject[header] = item.get(header)
+      })
+      const itemId = String(itemObject.id)
+      const history = (progressByItemId[itemId] || []).sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      )
 
       return {
         ...itemObject,
         progressHistory: history,
-        stageDeadlines: stageDeadlines,
-      };
-    });
-    console.log('--- [DEBUG] Proses Selesai ---');
-    return result;
+        stageDeadlines: stageDeadlines
+      }
+    })
+    console.log('--- [DEBUG] Proses Selesai ---')
+    return result
   } catch (err) {
-    console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message);
-    return [];
+    console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message)
+    return []
   }
 }
 
@@ -1122,77 +1131,80 @@ export async function getAttentionData() {
 
 export async function getProductSalesAnalysis() {
   try {
-    const doc = await openDoc();
-    const itemSheet = await getSheet(doc, 'purchase_order_items');
-    const poSheet = await getSheet(doc, 'purchase_orders');
-    const productSheet = await getSheet(doc, 'product_master');
+    const doc = await openDoc()
+    const itemSheet = await getSheet(doc, 'purchase_order_items')
+    const poSheet = await getSheet(doc, 'purchase_orders')
+    const productSheet = await getSheet(doc, 'product_master')
 
     const [itemRows, poRows, productRows] = await Promise.all([
       itemSheet.getRows(),
       poSheet.getRows(),
-      productSheet.getRows(),
-    ]);
+      productSheet.getRows()
+    ])
 
-    const poMap = new Map();
-    poRows.forEach(r => {
-      const poId = r.get('id');
-      const rev = toNum(r.get('revision_number'));
+    const poMap = new Map()
+    poRows.forEach((r) => {
+      const poId = r.get('id')
+      const rev = toNum(r.get('revision_number'))
       if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-        poMap.set(poId, r.toObject());
+        poMap.set(poId, r.toObject())
       }
-    });
+    })
 
-    const salesData = {};
-    const salesByDate = [];
-    const woodTypeData = {};
-    const customerData = {};
+    const salesData = {}
+    const salesByDate = []
+    const woodTypeData = {}
+    const customerData = {}
 
-    itemRows.forEach(item => {
-      const productName = item.get('product_name');
-      const quantity = toNum(item.get('quantity'), 0);
-      const woodType = item.get('wood_type');
-      const kubikasi = toNum(item.get('kubikasi'), 0);
-      const poId = item.get('purchase_order_id');
-      const po = poMap.get(poId);
+    itemRows.forEach((item) => {
+      const productName = item.get('product_name')
+      const quantity = toNum(item.get('quantity'), 0)
+      const woodType = item.get('wood_type')
+      const kubikasi = toNum(item.get('kubikasi'), 0)
+      const poId = item.get('purchase_order_id')
+      const po = poMap.get(poId)
 
-      if (!productName || !po) return;
+      if (!productName || !po) return
 
       if (!salesData[productName]) {
-        salesData[productName] = { totalQuantity: 0, name: productName };
+        salesData[productName] = { totalQuantity: 0, name: productName }
       }
-      salesData[productName].totalQuantity += quantity;
+      salesData[productName].totalQuantity += quantity
 
       salesByDate.push({
         date: new Date(po.created_at),
         name: productName,
         quantity: quantity
-      });
+      })
 
       if (woodType) {
-        woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity;
+        woodTypeData[woodType] = (woodTypeData[woodType] || 0) + quantity
       }
 
       const customerName = po.project_name
       if (customerName) {
-        customerData[customerName] = (customerData[customerName] || 0) + kubikasi;
+        customerData[customerName] = (customerData[customerName] || 0) + kubikasi
       }
-    });
+    })
 
     const topSellingProducts = Object.values(salesData)
       .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, 10);
+      .slice(0, 10)
 
     const woodTypeDistribution = Object.keys(woodTypeData)
       .map((name) => ({
         name,
         value: woodTypeData[name]
-      })).sort((a, b) => b.value - a.value);
+      }))
+      .sort((a, b) => b.value - a.value)
 
     const topCustomers = Object.keys(customerData)
       .map((name) => ({
         name,
         totalKubikasi: customerData[name]
-      })).sort((a, b) => b.totalKubikasi - a.totalKubikasi).slice(0, 5);
+      }))
+      .sort((a, b) => b.totalKubikasi - a.totalKubikasi)
+      .slice(0, 5)
 
     const today = new Date()
     const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30))
@@ -1203,76 +1215,80 @@ export async function getProductSalesAnalysis() {
 
     salesByDate.forEach((sale) => {
       if (sale.date >= thirtyDaysAgo) {
-        salesLast30[sale.name] = (salesLast30[sale.name] || 0) + sale.quantity;
+        salesLast30[sale.name] = (salesLast30[sale.name] || 0) + sale.quantity
       } else if (sale.date >= sixtyDaysAgo) {
-        salesPrev30[sale.name] = (salesPrev30[sale.name] || 0) + sale.quantity;
+        salesPrev30[sale.name] = (salesPrev30[sale.name] || 0) + sale.quantity
       }
-    });
+    })
 
     const trendingProducts = Object.keys(salesLast30)
-      .map(name => {
-        const last30 = salesLast30[name];
-        const prev30 = salesPrev30[name] || 0;
-        const change = prev30 === 0 && last30 > 0 ? 100 : ((last30 - prev30) / (prev30 || 1)) * 100;
-        return { name, last30, prev30, change };
+      .map((name) => {
+        const last30 = salesLast30[name]
+        const prev30 = salesPrev30[name] || 0
+        const change = prev30 === 0 && last30 > 0 ? 100 : ((last30 - prev30) / (prev30 || 1)) * 100
+        return { name, last30, prev30, change }
       })
-      .filter(p => p.change > 20 && p.last30 > p.prev30)
-      .sort((a, b) => b.change - a.change);
+      .filter((p) => p.change > 20 && p.last30 > p.prev30)
+      .sort((a, b) => b.change - a.change)
 
-    const allProductNames = productRows.map(r => r.get('product_name'));
-    const soldProductNames = new Set(Object.keys(salesData));
-    const neverSoldProducts = allProductNames.filter(name => !soldProductNames.has(name));
+    const allProductNames = productRows.map((r) => r.get('product_name'))
+    const soldProductNames = new Set(Object.keys(salesData))
+    const neverSoldProducts = allProductNames.filter((name) => !soldProductNames.has(name))
 
     return {
       topSellingProducts,
       woodTypeDistribution,
       topCustomers,
       trendingProducts,
-      slowMovingProducts: neverSoldProducts,
-    };
-
+      slowMovingProducts: neverSoldProducts
+    }
   } catch (err) {
-    console.error('❌ Gagal melakukan analisis penjualan produk:', err.message);
-    return { topSellingProducts: [], woodTypeDistribution: [], topCustomers: [], trendingProducts: [], slowMovingProducts: [] };
+    console.error('❌ Gagal melakukan analisis penjualan produk:', err.message)
+    return {
+      topSellingProducts: [],
+      woodTypeDistribution: [],
+      topCustomers: [],
+      trendingProducts: [],
+      slowMovingProducts: []
+    }
   }
 }
 
 export async function getSalesItemData() {
   try {
-    const doc = await openDoc();
-    const itemSheet = await getSheet(doc, 'purchase_order_items');
-    const poSheet = await getSheet(doc, 'purchase_orders');
+    const doc = await openDoc()
+    const itemSheet = await getSheet(doc, 'purchase_order_items')
+    const poSheet = await getSheet(doc, 'purchase_orders')
 
-    const [itemRows, poRows] = await Promise.all([
-      itemSheet.getRows(),
-      poSheet.getRows()
-    ]);
+    const [itemRows, poRows] = await Promise.all([itemSheet.getRows(), poSheet.getRows()])
 
-    const poMap = new Map();
-    poRows.forEach(r => {
-      const poId = r.get('id');
-      const rev = toNum(r.get('revision_number'));
+    const poMap = new Map()
+    poRows.forEach((r) => {
+      const poId = r.get('id')
+      const rev = toNum(r.get('revision_number'))
       if (!poMap.has(poId) || rev > poMap.get(poId).revision_number) {
-        poMap.set(poId, r.toObject());
+        poMap.set(poId, r.toObject())
       }
-    });
+    })
 
-    const combinedData = itemRows.map(item => {
-      const itemObject = item.toObject();
-      const po = poMap.get(itemObject.purchase_order_id);
+    const combinedData = itemRows
+      .map((item) => {
+        const itemObject = item.toObject()
+        const po = poMap.get(itemObject.purchase_order_id)
 
-      if (!po) return null;
+        if (!po) return null
 
-      return {
-        ...itemObject,
-        customer_name: po.project_name,
-        po_date: po.created_at,
-      };
-    }).filter(Boolean);
+        return {
+          ...itemObject,
+          customer_name: po.project_name,
+          po_date: po.created_at
+        }
+      })
+      .filter(Boolean)
 
-    return combinedData;
+    return combinedData
   } catch (err) {
-    console.error('❌ Gagal mengambil data item penjualan:', err.message);
-    return [];
+    console.error('❌ Gagal mengambil data item penjualan:', err.message)
+    return []
   }
 }
