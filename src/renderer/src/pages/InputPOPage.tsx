@@ -1,9 +1,14 @@
+// file: src/renderer/pages/InputPOPage.tsx
+
 import React, { useState, useEffect } from 'react'
 import { Card } from '../components/Card'
 import { Input } from '../components/Input'
 import { Textarea } from '../components/textarea'
 import { Button } from '../components/Button'
 import { POHeader, POItem } from '../types'
+
+// Impor semua fungsi dari apiService
+import * as apiService from '../apiService'
 
 interface InputPOPageProps {
   onSaveSuccess: () => void
@@ -12,100 +17,91 @@ interface InputPOPageProps {
 
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
+
   const [productList, setProductList] = useState<any[]>([])
   const [poData, setPoData] = useState({
-    nomorPo: editingPO?.po_number || '',
-    namaCustomer: editingPO?.project_name || '',
-    tanggalMasuk: editingPO?.created_at ? editingPO.created_at.split('T')[0] : today,
-    tanggalKirim: editingPO?.deadline || '',
-    prioritas: editingPO?.priority || 'Normal',
-    alamatKirim: '',
-    catatan: editingPO?.notes || ''
+    nomorPo: '',
+    namaCustomer: '',
+    tanggalMasuk: today,
+    tanggalKirim: '',
+    prioritas: 'Normal',
+    catatan: ''
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
+
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
+  const [poPhotoBase64, setPoPhotoBase64] = useState<string | null>(null)
 
   useEffect(() => {
-    // ... (useEffect Anda yang lain tidak perlu diubah)
-    if (editingPO) {
-      // ... (logika untuk mode edit)
-      // [BARU] Jika mode edit, set juga path foto jika ada
-      setPoPhotoPath(editingPO.photo_url || null);
-    } else {
-      // ... (logika untuk mode baru)
-      setPoPhotoPath(null); // Pastikan path foto di-reset saat membuat PO baru
-    }
-  }, [editingPO])
+    const initialize = async () => {
+      if (editingPO) {
+        setPoData({
+          nomorPo: editingPO.po_number,
+          namaCustomer: editingPO.project_name,
+          tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
+          tanggalKirim: editingPO.deadline || '',
+          prioritas: editingPO.priority || 'Normal',
+          catatan: editingPO.notes || ''
+        })
 
-  // [BARU] Fungsi untuk memilih foto PO
-  const handleSelectPoPhoto = async () => {
-    // @ts-ignore
-    const selectedPath = await window.api.openFileDialog();
-    if (selectedPath) {
-      setPoPhotoPath(selectedPath);
-    }
-  };
+        if (editingPO.photo_url) {
+          setPoPhotoPath('Foto referensi sudah terunggah di revisi sebelumnya.')
+        }
 
-  // [BARU] Fungsi untuk membatalkan pilihan foto PO
-  const handleCancelPoPhoto = () => {
-    setPoPhotoPath(null);
-  };
-
-  const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
-    return productList
-      .map((p) => p[field])
-      .filter(Boolean)
-      .filter((v, i, a) => a.indexOf(v) === i)
-  }
-
-  useEffect(() => {
-    if (editingPO) {
-      setPoData({
-        nomorPo: editingPO.po_number,
-        namaCustomer: editingPO.project_name,
-        tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
-        tanggalKirim: editingPO.deadline || '',
-        prioritas: editingPO.priority || 'Normal',
-        alamatKirim: '',
-        catatan: editingPO.notes || ''
-      })
-
-      const fetchPOItems = async () => {
         try {
-          // @ts-ignore
-          const poItems = await window.api.listPOItems(editingPO.id)
+          const poItems = await apiService.listPOItems(editingPO.id)
           setItems(poItems)
         } catch (error) {
           console.error('❌ Gagal memuat item PO:', error)
         }
+      } else {
+        setPoData({
+          nomorPo: '',
+          namaCustomer: '',
+          tanggalMasuk: today,
+          tanggalKirim: '',
+          prioritas: 'Normal',
+          catatan: ''
+        })
+        setItems([])
+        setPoPhotoPath(null)
+        setPoPhotoBase64(null)
       }
-      fetchPOItems()
-    } else {
-      setPoData({
-        nomorPo: '',
-        namaCustomer: '',
-        tanggalMasuk: today,
-        tanggalKirim: '',
-        prioritas: 'Normal',
-        alamatKirim: '',
-        catatan: ''
-      })
-      setItems([])
-    }
 
-    const fetchProducts = async () => {
       try {
-        // @ts-ignore
-        const products = await window.api.getProducts()
+        const products = await apiService.getProducts()
         setProductList(products)
       } catch (error) {
         console.error('❌ Gagal memuat daftar produk:', error)
       }
     }
-    fetchProducts()
+    initialize()
   }, [editingPO])
+
+  const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
+    return [...new Set(productList.map((p) => p[field]).filter(Boolean))]
+  }
+
+  const handleSelectPoPhoto = async () => {
+    if (window.api) {
+      // Hanya jalankan jika di Electron
+      const selectedPath = await window.api.openFileDialog()
+      if (selectedPath) {
+        setPoPhotoPath(selectedPath)
+        const base64Data = await window.api.readFileAsBase64(selectedPath)
+        setPoPhotoBase64(base64Data)
+      }
+    } else {
+      alert('Fungsi pilih file hanya tersedia di aplikasi desktop.')
+    }
+  }
+
+  const handleCancelPoPhoto = () => {
+    setPoPhotoPath(null)
+    setPoPhotoBase64(null)
+  }
 
   const handleDataChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -140,56 +136,52 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handleItemChange = (id: number, field: keyof POItem, value: string | number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, [field]: value, kubikasi: calculateKubikasi({ ...item, [field]: value }) } : item
-      )
-    )
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
   }
 
   const handleRemoveItem = (id: number) => {
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const handleSaveOrUpdatePO = async () => {
-    if (!poData.nomorPo || !poData.namaCustomer) {
-      return alert('Nomor PO dan Nama Customer harus diisi!')
-    }
-    if (items.length === 0) {
-      return alert('Tambahkan minimal satu item.')
-    }
+  const calculateKubikasi = (item: POItem) => {
+    const tebal = item.thickness_mm || 0,
+      lebar = item.width_mm || 0,
+      panjang = item.length_mm || 0,
+      qty = item.quantity || 0
+    if (item.satuan === 'pcs') return (tebal * lebar * panjang * qty) / 1_000_000_000
+    if (item.satuan === 'm1') return (tebal * lebar * qty) / 1_000_000
+    if (item.satuan === 'm2') return (tebal * qty) / 1000
+    return 0
+  }
 
+  const constructPayload = () => {
+    const itemsWithKubikasi = items.map((item) => ({ ...item, kubikasi: calculateKubikasi(item) }))
+    const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
+    return {
+      ...poData,
+      items: itemsWithKubikasi,
+      kubikasi_total: kubikasiTotal,
+      poId: editingPO?.id,
+      poPhotoBase64: poPhotoBase64
+    }
+  }
+
+  const handleSaveOrUpdatePO = async () => {
+    if (!poData.nomorPo || !poData.namaCustomer)
+      return alert('Nomor PO dan Nama Customer harus diisi!')
+    if (items.length === 0) return alert('Tambahkan minimal satu item.')
     setIsSaving(true)
     try {
-      const itemsWithKubikasi = items.map((item) => ({
-        ...item,
-        kubikasi: calculateKubikasi(item),
-      }))
-
-      const kubikasiTotal = itemsWithKubikasi.reduce(
-        (acc, item) => acc + (item.kubikasi || 0),
-        0
-      )
-
-      const payload = {
-        ...poData,
-        items: itemsWithKubikasi,
-        kubikasi_total: kubikasiTotal,
-        poId: editingPO?.id,
-        poPhotoPath: poPhotoPath
-      }
-      console.log('TITIK A (Frontend): Mengirim payload:', payload);
+      const payload = constructPayload()
       const result = editingPO
-        ? await window.api.updatePO(payload)
-        : await window.api.saveNewPO(payload)
-
+        ? await apiService.updatePO(payload)
+        : await apiService.saveNewPO(payload)
       if (result.success) {
-        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan PDF telah diunggah!`)
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
         onSaveSuccess()
       } else {
-        throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
+        throw new Error(result.error || 'Terjadi kesalahan di backend.')
       }
-
     } catch (error) {
       alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
     } finally {
@@ -198,38 +190,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handlePreviewPO = async () => {
-    if (items.length === 0) {
-      return alert('Tambahkan minimal satu item untuk preview.')
-    }
+    if (items.length === 0) return alert('Tambahkan minimal satu item untuk preview.')
     setIsPreviewing(true)
     try {
-      const itemsWithKubikasi = items.map((item) => ({
-        ...item,
-        kubikasi: calculateKubikasi(item),
-      }))
-
-      const kubikasiTotal = itemsWithKubikasi.reduce(
-        (acc, item) => acc + (item.kubikasi || 0),
-        0
-      )
-
-      const payload = {
-        ...poData,
-        items: itemsWithKubikasi,
-        kubikasi_total: kubikasiTotal,
-        poPhotoPath: poPhotoPath
-      }
-
-      // @ts-ignore
-      const result = await window.api.previewPO(payload)
-
+      const payload = constructPayload()
+      const result = await apiService.previewPO(payload)
       if (result.success) {
         const imageWindow = window.open()
-        if (imageWindow) {
+        if (imageWindow)
           imageWindow.document.write(
             `<title>PO Preview</title><style>body{margin:0;}</style><img src="data:image/jpeg;base64,${result.base64Data}" style="width:100%;">`
           )
-        }
       } else {
         throw new Error(result.error || 'Gagal menghasilkan data preview.')
       }
@@ -240,33 +211,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     }
   }
 
-  const calculateKubikasi = (item: POItem) => {
-    const tebal = item.thickness_mm || 0;
-    const lebar = item.width_mm || 0;
-    const panjang = item.length_mm || 0;
-    const qty = item.quantity || 0;
-
-    // Rumus untuk satuan 'pcs' (Potongan)
-    // Volume = (Tebal(mm) * Lebar(mm) * Panjang(mm) * Jumlah Pcs) / 1 Miliar
-    if (item.satuan === 'pcs') {
-      return (tebal * lebar * panjang * qty) / 1_000_000_000;
-    }
-
-    // Rumus untuk satuan 'm1' (Meter Lari)
-    // Volume = (Tebal(mm) * Lebar(mm) * Kuantitas(meter)) / 1 Juta
-    if (item.satuan === 'm1') {
-      return (tebal * lebar * qty) / 1_000_000;
-    }
-
-    // [BARU] Rumus untuk satuan 'm2' (Meter Persegi)
-    // Volume = (Tebal(mm) * Kuantitas(meter persegi)) / 1000
-    if (item.satuan === 'm2') {
-      return (tebal * qty) / 1000;
-    }
-
-    return 0;
-  };
-
   const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
 
   return (
@@ -274,20 +218,20 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       <div className="page-header">
         <div>
           <h1>{editingPO ? 'Revisi Purchase Order' : 'Input Purchase Order'}</h1>
-          <p>{editingPO ? 'Perbarui data PO dan itemnya' : 'Buat PO baru dengan spesifikasi detail'}</p>
+          <p>
+            {editingPO ? 'Perbarui data PO dan itemnya' : 'Buat PO baru dengan spesifikasi detail'}
+          </p>
         </div>
         <div className="header-actions">
           <Button onClick={onSaveSuccess}>Kembali</Button>
           <Button variant="secondary" onClick={handlePreviewPO} disabled={isPreviewing}>
-            {isPreviewing ? 'Membuka Preview...' : '◎ Preview'}
+            {isPreviewing ? 'Membuka...' : '◎ Preview'}
           </Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
             {isSaving ? 'Menyimpan...' : editingPO ? 'Simpan Revisi' : 'Simpan PO Baru'}
           </Button>
         </div>
       </div>
-
-      {/* Informasi Dasar */}
       <Card>
         <h2>Informasi Dasar PO</h2>
         <div className="form-grid">
@@ -296,7 +240,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             name="nomorPo"
             value={poData.nomorPo}
             onChange={handleDataChange}
-            placeholder="e.g., 2505.1127"
             disabled={!!editingPO}
           />
           <Input
@@ -304,7 +247,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             name="namaCustomer"
             value={poData.namaCustomer}
             onChange={handleDataChange}
-            placeholder="e.g., ELIE MAGDA SBY"
           />
           <Input
             label="Tanggal Masuk"
@@ -335,10 +277,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           name="catatan"
           value={poData.catatan}
           onChange={handleDataChange}
-          placeholder="Catatan khusus untuk PO ini..."
           rows={3}
         />
-        {/* [BARU] Tambahkan bagian untuk pilih foto di sini */}
         <div className="form-group" style={{ marginTop: '1rem' }}>
           <label>Foto Referensi PO (Opsional)</label>
           <div className="file-input-container">
@@ -347,23 +287,30 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 <span className="file-name" title={poPhotoPath}>
                   {poPhotoPath.split(/[/\\]/).pop()}
                 </span>
-                <Button variant="secondary" onClick={handleCancelPoPhoto} className="cancel-photo-btn">
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelPoPhoto}
+                  disabled={!!(editingPO && editingPO.photo_url)}
+                >
                   Batal
                 </Button>
               </div>
             ) : (
-              <Button variant="secondary" onClick={handleSelectPoPhoto}>Pilih Foto</Button>
+              <Button
+                variant="secondary"
+                onClick={handleSelectPoPhoto}
+                disabled={!!(editingPO && editingPO.photo_url)}
+              >
+                Pilih Foto
+              </Button>
             )}
           </div>
         </div>
       </Card>
-
-      {/* Daftar Item */}
       <div className="item-section-header">
         <h2>Daftar Item</h2>
         <Button onClick={handleAddItem}>+ Tambah Item</Button>
       </div>
-
       {items.map((item, index) => (
         <Card key={item.id} className="item-card">
           <div className="item-card-header">
@@ -373,7 +320,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             </Button>
           </div>
           <div className="form-grid">
-            {/* Fields Produk & Spesifikasi */}
             <Input
               label="Product ID"
               value={item.product_id}
@@ -387,11 +333,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Produk</option>
                 {getUniqueOptions('product_name').map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Wood Type</label>
               <select
@@ -400,7 +347,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Tipe Kayu</option>
                 {getUniqueOptions('wood_type').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
@@ -412,7 +361,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Profil</option>
                 {getUniqueOptions('profile').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
@@ -424,7 +375,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Warna</option>
                 {getUniqueOptions('color').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
@@ -436,11 +389,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Finishing</option>
                 {getUniqueOptions('finishing').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Sample</label>
               <select
@@ -449,7 +403,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Sample</option>
                 {getUniqueOptions('sample').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
@@ -461,11 +417,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="">Pilih Marketing</option>
                 {getUniqueOptions('marketing').map((val) => (
-                  <option key={val} value={val}>{val}</option>
+                  <option key={val} value={val}>
+                    {val}
+                  </option>
                 ))}
               </select>
             </div>
-
             <Input
               label="Thickness (mm)"
               type="number"
@@ -488,7 +445,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               label="Length Type"
               value={item.length_type}
               onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
-              placeholder="e.g., RL, Fix"
             />
             <Input
               label="Quantity"
@@ -504,14 +460,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="pcs">pcs</option>
                 <option value="m1">m1</option>
-                <option value="m1">m2</option>
+                <option value="m2">m2</option>
               </select>
             </div>
             <Input
               label="Location"
               value={item.location}
               onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
-              placeholder="e.g., Gudang A"
             />
             <Input
               label="Catatan Item"
@@ -521,15 +476,16 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </div>
           <div className="form-group">
             <label>Kubikasi Item</label>
-            <p><b>{calculateKubikasi(item).toFixed(3)} m³</b></p>
+            <p>
+              <b>{calculateKubikasi(item).toFixed(4)} m³</b>
+            </p>
           </div>
         </Card>
       ))}
-
       <Card>
         <h2>Kubikasi Total</h2>
         <p>
-          <b>{totalKubikasi.toFixed(3)} m³</b>
+          <b>{totalKubikasi.toFixed(4)} m³</b>
         </p>
       </Card>
     </div>

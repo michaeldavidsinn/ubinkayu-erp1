@@ -24,6 +24,8 @@ interface ICustomAPI {
   getAttentionData: () => Promise<any>;
   getProductSalesAnalysis: () => Promise<any>;
   getSalesItemData: () => Promise<any[]>;
+  openFileDialog: () => Promise<string | null>;
+  readFileAsBase64: (filePath: string) => Promise<string | null>;
 }
 
 declare global {
