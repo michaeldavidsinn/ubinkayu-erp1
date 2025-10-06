@@ -1,5 +1,10 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useEffect } from 'react'
+import * as apiService from './services/apiService';
 import { POHeader } from './types'
+
+// Impor Komponen dan Halaman
 import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
 import InputPOPage from './pages/InputPOPage'
@@ -16,13 +21,13 @@ function App() {
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-
-  const [trackingPO, setTrackingPO] = useState<POHeader | null>(null)
+  const [trackingPO, setTrackingPO] = useState<POHeader | null>(null);
 
   const fetchPOs = async () => {
     setIsLoading(true)
     try {
-      const pos: POHeader[] = await window.api.listPOs()
+      // @ts-ignore
+      const pos = await apiService.listPOs();
       setPurchaseOrders(pos)
     } catch (error) {
       console.error('Gagal mengambil daftar PO:', error)
@@ -33,58 +38,23 @@ function App() {
 
   useEffect(() => {
     if (['dashboard', 'list', 'detail', 'history', 'input'].includes(view)) {
-      fetchPOs()
+        fetchPOs()
     }
   }, [view])
 
   const handleDeletePO = async (poId: string) => {
-    const poToDelete = purchaseOrders.find(po => po.id === poId)
-    const poInfo = poToDelete ? `${poToDelete.po_number} - ${poToDelete.project_name}` : poId
-
-    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN\n\n` +
-      `PO: ${poInfo}\n\n` +
-      `Data yang akan dihapus PERMANEN:\n` +
-      `• Semua revisi PO dari spreadsheet\n` +
-      `• Semua item dan progress tracking\n` +
-      `• File PDF dari Google Drive\n` +
-      `• Foto progress dari Google Drive\n\n` +
-      `Tindakan ini TIDAK DAPAT DIBATALKAN!\n\n` +
-      `Apakah Anda yakin ingin melanjutkan?`
-
-    if (window.confirm(confirmMessage)) {
-      setIsLoading(true)
-
-      const progressMessage = `🗜️ Menghapus PO ${poInfo}...\n\n` +
-        `Sedang memproses:\n` +
-        `• Menghapus file dari Google Drive\n` +
-        `• Membersihkan data spreadsheet\n\n` +
-        `Mohon tunggu, jangan tutup aplikasi...`
-
-      const progressAlert = setTimeout(() => {
-      }, 100)
-
+    if (window.confirm(`Yakin ingin menghapus PO ini? Semua data terkait akan hilang permanen.`)) {
       try {
-        const result = await window.api.deletePO(poId)
-        clearTimeout(progressAlert)
-
+        // @ts-ignore
+        const result = await window.api.deletePO(poId);
         if (result.success) {
-          const duration = result.summary?.duration || 'beberapa detik'
-          let successMessage = `${result.message}\n\nWaktu pemrosesan: ${duration}`
-
-          if (result.summary?.failedFileDeletes > 0) {
-            successMessage += `\n\n⚠️ Catatan: ${result.summary.failedFileDeletes} file tidak dapat dihapus dari Drive (mungkin sudah dihapus atau tidak memiliki akses)`
-          }
-
-          alert(`✅ PENGHAPUSAN BERHASIL\n\n${successMessage}`)
-          await fetchPOs()
+            alert(result.message || 'PO berhasil dihapus.');
+            fetchPOs();
         } else {
-          throw new Error(result.error)
+            throw new Error(result.error);
         }
       } catch (error) {
-        clearTimeout(progressAlert)
-        alert(`❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi atau hubungi administrator.`)
-      } finally {
-        setIsLoading(false)
+        alert(`Gagal menghapus PO: ${(error as Error).message}`);
       }
     }
   }
@@ -104,13 +74,18 @@ function App() {
     setView('detail')
   }
 
+  const handleShowProgress = (po: POHeader) => {
+    setTrackingPO(po);
+    setView('updateProgress');
+  };
+
   const handleShowHistory = () => {
     if (selectedPoId) {
       setView('history')
     }
   }
 
-  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking' | 'analysis') => {
     setSelectedPoId(null)
     setTrackingPO(null)
     setView(targetView)
@@ -121,16 +96,6 @@ function App() {
     setSelectedPoId(null)
     fetchPOs()
     handleNavigate('list')
-  }
-
-  const handleSelectPOForTracking = (po: POHeader) => {
-    setTrackingPO(po)
-    setView('updateProgress')
-  }
-
-  const handleShowProgress = (po: POHeader) => {
-    setTrackingPO(po)
-    setView('updateProgress')
   }
 
   const getCurrentPO = () => {
@@ -147,40 +112,18 @@ function App() {
       case 'input':
         return <InputPOPage onSaveSuccess={handleBackToList} editingPO={editingPO} />
       case 'detail':
-        return (
-          <PODetailPage
-            po={currentPO}
-            onBackToList={handleBackToList}
-            onShowHistory={handleShowHistory}
-          />
-        )
+        return <PODetailPage po={currentPO} onBackToList={handleBackToList} onShowHistory={handleShowHistory} />
       case 'tracking':
-        return <ProgressTrackingPage onSelectPO={handleSelectPOForTracking} />
+        return <ProgressTrackingPage onSelectPO={handleShowProgress} />
       case 'history':
-        return (
-          <RevisionHistoryPage
-            poId={currentPO?.id || null}
-            poNumber={currentPO?.po_number || null}
-            onBack={() => setView('detail')}
-          />
-        )
+        return <RevisionHistoryPage poId={currentPO?.id || null} poNumber={currentPO?.po_number || null} onBack={() => setView('detail')} />
       case 'updateProgress':
-        return <UpdateProgressPage po={trackingPO} onBack={() => setView('tracking')} />
+        return <UpdateProgressPage po={trackingPO} onBack={() => setView('tracking')} />;
       case 'analysis':
-        return <AnalysisPage />
+        return <AnalysisPage />;
       case 'list':
       default:
-        return (
-          <POListPage
-            poList={purchaseOrders}
-            onAddPO={handleShowInputForm}
-            onDeletePO={handleDeletePO}
-            onEditPO={handleEditPO}
-            onShowDetail={handleShowDetail}
-            onShowProgress={handleShowProgress}
-            isLoading={isLoading}
-          />
-        )
+        return <POListPage poList={purchaseOrders} onAddPO={handleShowInputForm} onDeletePO={handleDeletePO} onEditPO={handleEditPO} onShowDetail={handleShowDetail} onShowProgress={handleShowProgress} isLoading={isLoading} />
     }
   }
 

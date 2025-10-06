@@ -4,7 +4,6 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { app, shell } from 'electron'
 import { google } from 'googleapis'
-import { generatePOJpeg } from './jpegGenerator.js'
 
 const SPREADSHEET_ID = '1Bp5rETvaAe9nT4DrNpm-WsQqQlPNaau4gIzw1nA5Khk'
 const PO_ARCHIVE_FOLDER_ID = '1-1Gw1ay4iQoFNFe2KcKDgCwOIi353QEC'

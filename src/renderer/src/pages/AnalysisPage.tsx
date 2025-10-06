@@ -125,7 +125,7 @@ const AnalysisPage: React.FC = () => {
           <h4>{'📊 Distribusi Jenis Kayu Terlaris'}</h4>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={analysisData.woodTypeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label={(props) => `${props.name} (${props.percent.toFixed(0)}%)`}>
+              <Pie data={analysisData.woodTypeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label={(props) => `${props.name} (${(props.percent * 100).toFixed(0)}%)`}>
                 {analysisData.woodTypeDistribution.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(value) => `${value} unit`} /><Legend />
