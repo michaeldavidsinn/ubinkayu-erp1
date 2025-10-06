@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useEffect } from 'react'
-import * as apiService from './services/apiService';
+import * as apiService from '@renderer/services/apiService';
 import { POHeader } from './types'
 
 // Impor Komponen dan Halaman
