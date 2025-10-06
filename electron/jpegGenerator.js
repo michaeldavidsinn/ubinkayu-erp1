@@ -1,16 +1,17 @@
+// jpegGenerator.js
+
 import { createCanvas, loadImage } from 'canvas'
 import fs from 'fs'
 import path from 'path'
 import { app, shell } from 'electron'
 
-// Fungsi helper untuk memastikan direktori ada
+// ✨ [PERBAIKAN] Pastikan fungsi-fungsi ini ada di bagian atas file Anda
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true })
   }
 }
 
-// Fungsi helper untuk word-wrapping teks
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
@@ -38,7 +39,6 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
   return lineCount
 }
 
-// Fungsi helper untuk MENGHITUNG jumlah baris yang dibutuhkan oleh wrapText
 function calculateLineCount(context, text, maxWidth) {
   if (!text || text.trim() === '') {
     return 1
@@ -62,19 +62,13 @@ function calculateLineCount(context, text, maxWidth) {
 
 export async function generatePOJpeg(poData, revisionNumber = 0) {
   try {
-    if (!app.isReady()) {
-      await app.whenReady()
-    }
-
-    // --- PENGATURAN PATH FILE ---
     const baseDir = path.resolve(app.getPath('documents'), 'UbinkayuERP', 'PO')
     const poFolderName = `${poData.po_number}-${poData.project_name}`.replace(/[/\\?%*:|"<>]/g, '-')
     const poDir = path.join(baseDir, poFolderName)
-    ensureDirSync(poDir)
+    ensureDirSync(poDir) // Fungsi ini sekarang akan ditemukan
     const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-Rev${revisionNumber}.jpeg`
     const filePath = path.join(poDir, fileName)
 
-    // --- PENGATURAN KANVAS & WARNA ---
     const width = 1200
     const redColor = '#D92121'
     const blueColor = '#0000FF'
@@ -84,53 +78,48 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     const totalBgColor = '#FFE6E6'
     const borderColor = '#AAAAAA'
 
-    // --- PENGATURAN FONT & KONSTANTA LAYOUT ---
     const baseFont = 'Calibri'
     const tableLeft = 30
     const tableWidth = width - 60
     const rowPadding = 8
     const itemLineHeight = 14
 
-    // --- [LANGKAH 1] HITUNG TOTAL TINGGI KANVAS SECARA DINAMIS ---
     const tempCanvas = createCanvas(width, 100)
     const ctx = tempCanvas.getContext('2d')
 
     let totalHeight = 0
 
-    totalHeight += 70 // Tinggi Header
-    totalHeight += 60 // Tinggi Header Tabel
+    totalHeight += 70
+    totalHeight += 60
 
-    // Tinggi Semua Item
     const items = poData.items || []
     items.forEach((item) => {
       ctx.font = `10px ${baseFont}`
       const poLines = calculateLineCount(
         ctx,
         `${poData.po_number || 'N/A'}\n${poData.project_name || 'N/A'}`,
-        140 - rowPadding * 2
+        130 - rowPadding * 2
       )
       const produkText = `${item.product_name || ''}\n${item.wood_type || ''} ${item.profile || ''}`
-      const produkLines = calculateLineCount(ctx, produkText, 200 - rowPadding * 2)
+      const produkLines = calculateLineCount(ctx, produkText, 180 - rowPadding * 2)
       const finishingText = `${item.finishing || ''}\n${item.sample || ''}`
-      const finishingLines = calculateLineCount(ctx, finishingText, 180 - rowPadding * 2)
-      const lokasiLines = calculateLineCount(ctx, item.location || '-', 170 - rowPadding * 2)
+      const finishingLines = calculateLineCount(ctx, finishingText, 170 - rowPadding * 2)
+      const lokasiLines = calculateLineCount(ctx, item.location || '-', 140 - rowPadding * 2)
 
       const maxLines = Math.max(poLines, produkLines, finishingLines, lokasiLines, 2)
       const rowHeight = maxLines * itemLineHeight + rowPadding * 2
       totalHeight += rowHeight
     })
 
-    totalHeight += 30 // Tinggi Baris Total
+    totalHeight += 30
 
-    // Tinggi Bagian Catatan
     ctx.font = `10px ${baseFont}`
     const notesText = poData.notes || '-'
     const noteLineCount = calculateLineCount(ctx, notesText, tableWidth - 20)
     totalHeight += noteLineCount * 15 + 15 * 2 + 20 + 10
 
-    totalHeight += 80 // Tinggi Tabel Approval
+    totalHeight += 80
 
-    // Tinggi Foto Referensi (jika ada)
     let photoDrawHeight = 0
     if (poData.poPhotoPath && fs.existsSync(poData.poPhotoPath)) {
       try {
@@ -146,16 +135,14 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       totalHeight += 60
     }
 
-    totalHeight += 30 // Margin bawah final
+    totalHeight += 30
 
-    // --- [LANGKAH 2] BUAT KANVAS FINAL & GAMBAR SEMUA ELEMEN ---
     const canvas = createCanvas(width, totalHeight)
     const finalCtx = canvas.getContext('2d')
 
     finalCtx.fillStyle = '#FFFFFF'
     finalCtx.fillRect(0, 0, width, totalHeight)
 
-    // --- GAMBAR HEADER ---
     let currentY = 40
     finalCtx.font = `bold 24px ${baseFont}`
     finalCtx.fillStyle = redColor
@@ -176,20 +163,19 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     finalCtx.fillText(dateText, width - 30, currentY + 10)
     finalCtx.textAlign = 'left'
 
-    // --- GAMBAR TABEL ---
     currentY += 30
+
     const cols = {
       rencKirim: { x: 0, width: 90 },
-      noPo: { x: 90, width: 140 },
-      produk: { x: 230, width: 200 },
-      finishing: { x: 430, width: 180 },
-      ukuran: { x: 610, width: 150 },
-      kuantiti: { x: 760, width: 120 },
-      kubikasi: { x: 880, width: 110 },
-      lokasi: { x: 990, width: 180 }
+      noPo: { x: 90, width: 130 },
+      produk: { x: 220, width: 180 },
+      finishing: { x: 400, width: 170 },
+      ukuran: { x: 570, width: 200 },
+      kuantiti: { x: 770, width: 120 },
+      kubikasi: { x: 890, width: 110 },
+      lokasi: { x: 1000, width: 140 }
     }
 
-    // Header Tabel
     finalCtx.fillStyle = headerBgColor
     finalCtx.fillRect(tableLeft, currentY, tableWidth, 60)
     finalCtx.strokeStyle = borderColor
@@ -216,7 +202,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     drawHeader('Lokasi & Keterangan lain', cols.lokasi, 35, 0)
 
     const ukuranStartX = tableLeft + cols.ukuran.x
-    const ukuranSubWidth = cols.ukuran.width / 3
+    const ukuranSubWidth = cols.ukuran.width / 4
     finalCtx.fillText('UKURAN', ukuranStartX + cols.ukuran.width / 2, currentY + 20)
     finalCtx.beginPath()
     finalCtx.moveTo(ukuranStartX, currentY + 30)
@@ -232,16 +218,21 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       ukuranStartX + ukuranSubWidth * 2 + ukuranSubWidth / 2,
       currentY + 48
     )
+    finalCtx.fillText(
+      'Tipe Pjg',
+      ukuranStartX + ukuranSubWidth * 3 + ukuranSubWidth / 2,
+      currentY + 48
+    )
 
     Object.values(cols).forEach((col) =>
       finalCtx.strokeRect(tableLeft + col.x, currentY, col.width, 60)
     )
     finalCtx.strokeRect(ukuranStartX + ukuranSubWidth, currentY + 30, 0, 30)
     finalCtx.strokeRect(ukuranStartX + ukuranSubWidth * 2, currentY + 30, 0, 30)
+    finalCtx.strokeRect(ukuranStartX + ukuranSubWidth * 3, currentY + 30, 0, 30)
 
     currentY += 60
 
-    // Baris Item
     items.forEach((item) => {
       finalCtx.font = `10px ${baseFont}`
       const poLines = calculateLineCount(
@@ -340,6 +331,12 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         tableLeft + cols.ukuran.x + ukuranSubWidth * 2 + ukuranSubWidth / 2,
         currentY + rowHeight / 2
       )
+      finalCtx.fillText(
+        (item.length_type || '-').toString(),
+        tableLeft + cols.ukuran.x + ukuranSubWidth * 3 + ukuranSubWidth / 2,
+        currentY + rowHeight / 2
+      )
+
       const quantity = `${item.quantity || 0} ${item.satuan || 'pcs'}`
       finalCtx.fillText(
         quantity,
@@ -353,14 +350,10 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         currentY + rowHeight / 2
       )
 
-      // --- [PERUBAHAN] Logika menggambar border agar rapi ---
-      // 1. Gambar border luar untuk seluruh baris
       finalCtx.strokeRect(tableLeft, currentY, tableWidth, rowHeight)
 
-      // 2. Gambar garis vertikal pemisah kolom (satu per satu)
       Object.values(cols).forEach((col) => {
         if (col.x > 0) {
-          // Jangan gambar garis di paling kiri
           finalCtx.beginPath()
           finalCtx.moveTo(tableLeft + col.x, currentY)
           finalCtx.lineTo(tableLeft + col.x, currentY + rowHeight)
@@ -368,7 +361,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         }
       })
 
-      // 3. Gambar garis vertikal sub-kolom Ukuran
       finalCtx.beginPath()
       finalCtx.moveTo(ukuranStartX + ukuranSubWidth, currentY)
       finalCtx.lineTo(ukuranStartX + ukuranSubWidth, currentY + rowHeight)
@@ -378,7 +370,11 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       finalCtx.moveTo(ukuranStartX + ukuranSubWidth * 2, currentY)
       finalCtx.lineTo(ukuranStartX + ukuranSubWidth * 2, currentY + rowHeight)
       finalCtx.stroke()
-      // --- Akhir Perubahan ---
+
+      finalCtx.beginPath()
+      finalCtx.moveTo(ukuranStartX + ukuranSubWidth * 3, currentY)
+      finalCtx.lineTo(ukuranStartX + ukuranSubWidth * 3, currentY + rowHeight)
+      finalCtx.stroke()
 
       currentY += rowHeight
     })
@@ -494,7 +490,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       finalCtx.fillText('Tidak ada foto referensi yang dilampirkan.', tableLeft, currentY)
     }
 
-    // --- [LANGKAH 3] SIMPAN FILE ---
     const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 })
     fs.writeFileSync(filePath, buffer)
     shell.openPath(filePath)

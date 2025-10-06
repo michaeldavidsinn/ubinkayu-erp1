@@ -414,7 +414,7 @@ export async function saveNewPO(data) {
       await itemSheet.addRows(itemsToAdd)
     }
 
-    const poDataForPdf = {
+    const poDataForJpeg = {
       po_number: data.nomorPo,
       project_name: data.namaCustomer,
       deadline: data.tanggalKirim,
@@ -425,8 +425,8 @@ export async function saveNewPO(data) {
       kubikasi_total: data.kubikasi_total || 0,
       poPhotoPath: data.poPhotoPath
     }
-    console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForPdf)
-    const uploadResult = await generateAndUploadPO(poDataForPdf, 0)
+    console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForJpeg)
+    const uploadResult = await generateAndUploadPO(poDataForJpeg, 0)
 
     if (uploadResult.success) {
       newPoRow.set('pdf_link', uploadResult.link)
@@ -491,7 +491,7 @@ export async function updatePO(data) {
       await itemSheet.addRows(itemsToAdd)
     }
 
-    const poDataForPdf = {
+    const poDataForJpeg = {
       po_number: data.nomorPo ?? prev.po_number,
       project_name: data.namaCustomer ?? prev.project_name,
       deadline: data.tanggalKirim ?? prev.deadline,
@@ -499,10 +499,11 @@ export async function updatePO(data) {
       items: itemsWithIds,
       notes: data.catatan ?? prev.notes,
       created_at: now,
+      kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
       poPhotoPath: data.poPhotoPath
     }
 
-    const uploadResult = await generateAndUploadPO(poDataForPdf, newRev)
+    const uploadResult = await generateAndUploadPO(poDataForJpeg, newRev)
 
     if (uploadResult.success) {
       newRevisionRow.set('pdf_link', uploadResult.link)
