@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { POItem, RevisionHistoryItem } from '../types';
+import { RevisionHistoryItem } from '../types';
 
 interface RevisionHistoryPageProps {
   poId: string | null;
@@ -67,7 +67,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
                 <span>Dibuat pada: {formatDate(revItem.revision.created_at)}</span>
                 {/* [BARU] Tombol Buka PDF hanya muncul jika link ada */}
                 {revItem.revision.pdf_link && revItem.revision.pdf_link.startsWith('http') && (
-                  <Button onClick={() => handleOpenPdf(revItem.revision.pdf_link)}>
+                  <Button onClick={() => handleOpenPdf(revItem.revision.pdf_link!)}>
                     📄 Buka PDF Revisi Ini
                   </Button>
                 )}

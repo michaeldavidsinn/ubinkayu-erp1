@@ -4,7 +4,7 @@ import { POHeader } from '../types';
 import { Card } from '../components/Card';
 // [MODIFIKASI] Impor komponen LineChart, Line, dan CartesianGrid
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
   LineChart, Line, CartesianGrid
 } from 'recharts';
 
@@ -77,7 +77,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
         if (!po.deadline || po.status === 'Completed' || po.status === 'Cancelled') return false;
         const deadlineDate = new Date(po.deadline);
         return deadlineDate >= today && deadlineDate <= nextTwoWeeks;
-    }).sort((a,b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+      }).sort((a,b) => new Date(a.deadline || 0).getTime() - new Date(b.deadline || 0).getTime());
 
 
     return { totalPOs, activePOs, completedPOs, dailyPOData, statusPOData, nearingDeadlinePOs };
@@ -114,7 +114,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
                     <span className="customer-name"> - {po.project_name}</span>
                   </p>
                   <p className="attention-line-2">
-                    Deadline: {new Date(po.deadline).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  Deadline: {new Date(po.deadline || 0).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 {/* Di sini Anda bisa menambahkan tombol jika perlu */}
@@ -183,7 +183,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
                         <tr key={po.id}>
                             <td>{po.po_number}</td>
                             <td>{po.project_name}</td>
-                            <td>{new Date(po.deadline).toLocaleDateString('id-ID')}</td>
+                            <td>{new Date(po.deadline || 0).toLocaleDateString('id-ID')}</td>
                             <td><span className={`status-badge status-${(po.status || 'open').toLowerCase().replace(' ', '-')}`}>{po.status}</span></td>
                         </tr>
                     ))}

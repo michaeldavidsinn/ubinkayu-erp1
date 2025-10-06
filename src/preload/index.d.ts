@@ -6,7 +6,7 @@ interface ICustomAPI {
   saveNewPO: (data: any) => Promise<{ success: boolean; poId?: string; error?: string }>;
   listPOs: () => Promise<any[]>;
   ping: () => Promise<string>;
-  deletePO: (poId: string) => Promise<void>;
+  deletePO: (poId: string) => Promise<any>;
   updatePO: (data: any) => Promise<{ success: boolean; error?: string }>;
   listPOItems: (poId: string) => Promise<any[]>;
   listPORevisions: (poId: string) => Promise<any[]>;
@@ -29,6 +29,7 @@ interface ICustomAPI {
 declare global {
   interface Window {
     api: ICustomAPI
+    electron: any;
   }
 }
 

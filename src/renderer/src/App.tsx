@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
+
 import { POHeader } from './types'
 import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
@@ -38,10 +39,11 @@ function App() {
   }, [view])
 
   const handleDeletePO = async (poId: string) => {
-    const poToDelete = purchaseOrders.find(po => po.id === poId)
+    const poToDelete = purchaseOrders.find((po) => po.id === poId)
     const poInfo = poToDelete ? `${poToDelete.po_number} - ${poToDelete.project_name}` : poId
 
-    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN\n\n` +
+    const confirmMessage =
+      `⚠️ PERINGATAN PENGHAPUSAN\n\n` +
       `PO: ${poInfo}\n\n` +
       `Data yang akan dihapus PERMANEN:\n` +
       `• Semua revisi PO dari spreadsheet\n` +
@@ -54,14 +56,7 @@ function App() {
     if (window.confirm(confirmMessage)) {
       setIsLoading(true)
 
-      const progressMessage = `🗜️ Menghapus PO ${poInfo}...\n\n` +
-        `Sedang memproses:\n` +
-        `• Menghapus file dari Google Drive\n` +
-        `• Membersihkan data spreadsheet\n\n` +
-        `Mohon tunggu, jangan tutup aplikasi...`
-
-      const progressAlert = setTimeout(() => {
-      }, 100)
+      const progressAlert = setTimeout(() => {}, 100)
 
       try {
         const result = await window.api.deletePO(poId)
@@ -82,7 +77,9 @@ function App() {
         }
       } catch (error) {
         clearTimeout(progressAlert)
-        alert(`❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi atau hubungi administrator.`)
+        alert(
+          `❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi atau hubungi administrator.`
+        )
       } finally {
         setIsLoading(false)
       }
@@ -110,7 +107,8 @@ function App() {
     }
   }
 
-  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking' | 'analysis') => {
+    // [+] Tambahkan | 'analysis'
     setSelectedPoId(null)
     setTrackingPO(null)
     setView(targetView)
