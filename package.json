@@ -14,7 +14,12 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
 <<<<<<< HEAD
+<<<<<<< HEAD
     "build": "tsc && vite build",
+=======
+    "build": "npm run typecheck && electron-vite build",
+    "postinstall": "electron-builder install-app-deps",
+>>>>>>> parent of fa458c0 (Configure build script for Vercel)
 =======
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
