@@ -467,7 +467,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     finalCtx.fillText(new Date().toLocaleDateString('id-ID'), width - 30, currentY + 45)
     currentY += approvalTableHeight
 
-    // Lampiran Foto Referensi
     currentY += 20
     finalCtx.fillStyle = blackColor
     finalCtx.font = `bold 14px ${baseFont}`
