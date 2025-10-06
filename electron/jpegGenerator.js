@@ -1,11 +1,8 @@
-// jpegGenerator.js
-
 import { createCanvas, loadImage } from 'canvas'
 import fs from 'fs'
 import path from 'path'
 import { app, shell } from 'electron'
 
-// ✨ [PERBAIKAN] Pastikan fungsi-fungsi ini ada di bagian atas file Anda
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true })
@@ -13,51 +10,53 @@ function ensureDirSync(dirPath) {
 }
 
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ')
-  let line = ''
-  let lineCount = 1
-
-  if (words.length === 0) {
-    context.fillText('', x, y)
-    return 1
-  }
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' '
-    const metrics = context.measureText(testLine)
-    const testWidth = metrics.width
-    if (testWidth > maxWidth && n > 0) {
-      context.fillText(line, x, y)
-      line = words[n] + ' '
-      y += lineHeight
-      lineCount++
-    } else {
-      line = testLine
+  if (!text) return;
+  const paragraphs = text.split('\n');
+  for (const paragraph of paragraphs) {
+    if (paragraph.length === 0) {
+      y += lineHeight;
+      continue;
     }
+    let line = '';
+    const words = paragraph.split(' ');
+    for (const word of words) {
+      const testLine = line + (line ? ' ' : '') + word;
+      if (context.measureText(testLine).width > maxWidth && line) {
+        context.fillText(line, x, y);
+        y += lineHeight;
+        line = word;
+      } else {
+        line = testLine;
+      }
+    }
+    context.fillText(line, x, y);
+    y += lineHeight;
   }
-  context.fillText(line.trim(), x, y)
-  return lineCount
 }
 
 function calculateLineCount(context, text, maxWidth) {
-  if (!text || text.trim() === '') {
-    return 1
-  }
-  const words = text.split(' ')
-  let line = ''
-  let lineCount = 1
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' '
-    const metrics = context.measureText(testLine)
-    const testWidth = metrics.width
-    if (testWidth > maxWidth && n > 0) {
-      line = words[n] + ' '
-      lineCount++
-    } else {
-      line = testLine
+  if (!text) return 1;
+  const paragraphs = text.split('\n');
+  let totalLines = 0;
+  for (const paragraph of paragraphs) {
+    if (paragraph.length === 0) {
+      totalLines++;
+      continue;
     }
+    let line = '';
+    const words = paragraph.split(' ');
+    for (const word of words) {
+      const testLine = line + (line ? ' ' : '') + word;
+      if (context.measureText(testLine).width > maxWidth && line) {
+        totalLines++;
+        line = word;
+      } else {
+        line = testLine;
+      }
+    }
+    totalLines++;
   }
-  return lineCount
+  return Math.max(1, totalLines);
 }
 
 export async function generatePOJpeg(poData, revisionNumber = 0) {
@@ -65,7 +64,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     const baseDir = path.resolve(app.getPath('documents'), 'UbinkayuERP', 'PO')
     const poFolderName = `${poData.po_number}-${poData.project_name}`.replace(/[/\\?%*:|"<>]/g, '-')
     const poDir = path.join(baseDir, poFolderName)
-    ensureDirSync(poDir) // Fungsi ini sekarang akan ditemukan
+    ensureDirSync(poDir)
     const fileName = `PO-${poData.po_number.replace(/[/\\?%*:|"<>]/g, '-')}-Rev${revisionNumber}.jpeg`
     const filePath = path.join(poDir, fileName)
 
@@ -104,7 +103,9 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       const produkLines = calculateLineCount(ctx, produkText, 180 - rowPadding * 2)
       const finishingText = `${item.finishing || ''}\n${item.sample || ''}`
       const finishingLines = calculateLineCount(ctx, finishingText, 170 - rowPadding * 2)
-      const lokasiLines = calculateLineCount(ctx, item.location || '-', 140 - rowPadding * 2)
+
+      const lokasiAndNotesText = [item.location, item.notes].filter(Boolean).join('\n') || '-'
+      const lokasiLines = calculateLineCount(ctx, lokasiAndNotesText, 140 - rowPadding * 2)
 
       const maxLines = Math.max(poLines, produkLines, finishingLines, lokasiLines, 2)
       const rowHeight = maxLines * itemLineHeight + rowPadding * 2
@@ -116,7 +117,8 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     ctx.font = `10px ${baseFont}`
     const notesText = poData.notes || '-'
     const noteLineCount = calculateLineCount(ctx, notesText, tableWidth - 20)
-    totalHeight += noteLineCount * 15 + 15 * 2 + 20 + 10
+    const notesSectionHeight = noteLineCount * 15 + 15 * 2 + 20 + 10
+    totalHeight += notesSectionHeight
 
     totalHeight += 80
 
@@ -252,9 +254,11 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         finishingText,
         cols.finishing.width - rowPadding * 2
       )
+
+      const lokasiAndNotesForDraw = [item.location, item.notes].filter(Boolean).join('\n') || '-'
       const lokasiLines = calculateLineCount(
         finalCtx,
-        item.location || '-',
+        lokasiAndNotesForDraw,
         cols.lokasi.width - rowPadding * 2
       )
 
@@ -306,9 +310,10 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         cols.finishing.width - rowPadding * 2,
         itemLineHeight
       )
+
       wrapText(
         finalCtx,
-        item.location || '-',
+        lokasiAndNotesForDraw,
         tableLeft + cols.lokasi.x + rowPadding,
         currentY + rowPadding + 10,
         cols.lokasi.width - rowPadding * 2,
@@ -379,7 +384,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       currentY += rowHeight
     })
 
-    // Baris Total
     finalCtx.fillStyle = totalBgColor
     finalCtx.fillRect(tableLeft, currentY, tableWidth, 30)
     finalCtx.strokeRect(tableLeft, currentY, tableWidth, 30)
@@ -402,7 +406,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     )
     currentY += 30
 
-    // Bagian Catatan
     const notesBoxY = currentY
     const notesLineHeight = 15
     const notesPadding = notesLineHeight * 2
@@ -416,6 +419,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     )
     finalCtx.fillStyle = blackColor
     finalCtx.font = `10px ${baseFont}`
+
     const notesBoxHeight = noteLineCount * notesLineHeight + notesPadding + 20
     wrapText(
       finalCtx,
@@ -428,7 +432,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     finalCtx.strokeRect(tableLeft, notesBoxY, tableWidth, notesBoxHeight)
     currentY += notesBoxHeight + 10
 
-    // Tabel Approval & Tanggal Cetak
     const approvalTableHeight = 80
     const approvalCols = [
       'Gambar MKT',
