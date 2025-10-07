@@ -21,21 +21,19 @@ const PRODUCTION_STAGES = [
 ]
 
 function getAuth() {
-  const credPath = path.join(app.getAppPath(), 'electron', 'credentials.json')
+  const isDev = !app.isPackaged;
+
+  const credPath = isDev
+    ? path.join(process.cwd(), 'resources', 'credentials.json')
+    : path.join(process.resourcesPath, 'credentials.json');
+
   if (!fs.existsSync(credPath)) {
-    const devCredPath = path.join(process.cwd(), 'electron', 'credentials.json')
-    if (!fs.existsSync(devCredPath)) throw new Error('File credentials.json tidak ditemukan.')
-    const creds = JSON.parse(fs.readFileSync(devCredPath, 'utf8'))
-    return new JWT({
-      email: creds.client_email,
-      key: creds.private_key,
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive.file'
-      ]
-    })
+    console.error('Lokasi file credentials.json yang dicari:', credPath);
+    throw new Error('File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".');
   }
-  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
+
+  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+
   return new JWT({
     email: creds.client_email,
     key: creds.private_key,
@@ -43,7 +41,7 @@ function getAuth() {
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive.file'
     ]
-  })
+  });
 }
 
 async function openDoc() {
@@ -1301,7 +1299,7 @@ export async function addNewProduct(productData) {
 
     // Menambahkan baris baru dengan data yang dikirim dari form
     await sheet.addRow(productData);
-    
+
     // PENTING: Jika nanti Anda sudah menerapkan sistem cache,
     // jangan lupa untuk membersihkan cache di sini agar daftar produk bisa ter-refresh.
     // Contoh: clearSheetCache(); atau getAllSheetData(true);

@@ -255,7 +255,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         cols.finishing.width - rowPadding * 2
       )
 
-      const lokasiAndNotesForDraw = [item.location, item.notes].filter(Boolean).join('\n') || '-'
+      const lokasiAndNotesForDraw = [item.location, item.notes].filter(Boolean).join(', ') || '-'
       const lokasiLines = calculateLineCount(
         finalCtx,
         lokasiAndNotesForDraw,
