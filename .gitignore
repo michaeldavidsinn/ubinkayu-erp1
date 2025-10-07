@@ -6,3 +6,4 @@ out
 *.log*
 credentials-oauth.json
 credentials.json
+.vercel
