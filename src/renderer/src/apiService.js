@@ -9,7 +9,7 @@
 
 // PENTING: Ganti dengan URL Vercel Anda setelah deploy berhasil.
 // Untuk development lokal, biarkan kosong.
-const API_BASE_URL = '';
+const API_BASE_URL = 'https://ubinkayu-erp1-git-erp1-mobile-ceab6c-michaeldavidsinns-projects.vercel.app';
 
 /**
  * Helper untuk menangani panggilan fetch API secara konsisten.
