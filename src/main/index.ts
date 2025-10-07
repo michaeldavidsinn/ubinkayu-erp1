@@ -22,6 +22,7 @@ import {
   // [BARU] Impor fungsi baru
   getAttentionData,
   getProductSalesAnalysis,
+  addNewProduct,
   getSalesItemData
 } from '../../electron/sheet.js'
 
@@ -98,7 +99,7 @@ app.whenReady().then(() => {
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
   ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
-
+ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
 
   createWindow()
   app.on('activate', () => {

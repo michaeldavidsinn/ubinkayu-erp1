@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card } from '../components/Card'
 import { Input } from '../components/Input'
 import { Textarea } from '../components/textarea'
 import { Button } from '../components/Button'
 import { POHeader, POItem } from '../types'
+import { AddProductModal } from '../components/AddProductModal'
 
 interface InputPOPageProps {
   onSaveSuccess: () => void
@@ -26,32 +27,27 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
 
   useEffect(() => {
-    // ... (useEffect Anda yang lain tidak perlu diubah)
     if (editingPO) {
-      // ... (logika untuk mode edit)
-      // [BARU] Jika mode edit, set juga path foto jika ada
-      setPoPhotoPath(editingPO.photo_url || null);
+      setPoPhotoPath(editingPO.photo_url || null)
     } else {
-      // ... (logika untuk mode baru)
-      setPoPhotoPath(null); // Pastikan path foto di-reset saat membuat PO baru
+      setPoPhotoPath(null)
     }
   }, [editingPO])
 
-  // [BARU] Fungsi untuk memilih foto PO
   const handleSelectPoPhoto = async () => {
     // @ts-ignore
-    const selectedPath = await window.api.openFileDialog();
+    const selectedPath = await window.api.openFileDialog()
     if (selectedPath) {
-      setPoPhotoPath(selectedPath);
+      setPoPhotoPath(selectedPath)
     }
-  };
+  }
 
-  // [BARU] Fungsi untuk membatalkan pilihan foto PO
   const handleCancelPoPhoto = () => {
-    setPoPhotoPath(null);
-  };
+    setPoPhotoPath(null)
+  }
 
   const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
     return productList
@@ -59,6 +55,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       .filter(Boolean)
       .filter((v, i, a) => a.indexOf(v) === i)
   }
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      // @ts-ignore
+      const products = await window.api.getProducts()
+      setProductList(products)
+      console.log('Daftar produk berhasil di-refresh.')
+    } catch (error) {
+      console.error('❌ Gagal memuat daftar produk:', error)
+    }
+  }, [])
 
   useEffect(() => {
     if (editingPO) {
@@ -95,17 +102,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       setItems([])
     }
 
-    const fetchProducts = async () => {
-      try {
-        // @ts-ignore
-        const products = await window.api.getProducts()
-        setProductList(products)
-      } catch (error) {
-        console.error('❌ Gagal memuat daftar produk:', error)
-      }
-    }
     fetchProducts()
-  }, [editingPO])
+  }, [editingPO, fetchProducts])
 
   const handleDataChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -163,7 +161,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     try {
       const itemsWithKubikasi = items.map((item) => ({
         ...item,
-        kubikasi: calculateKubikasi(item),
+        kubikasi: calculateKubikasi(item)
       }))
 
       const kubikasiTotal = itemsWithKubikasi.reduce(
@@ -178,9 +176,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         poId: editingPO?.id,
         poPhotoPath: poPhotoPath
       }
-      console.log('TITIK A (Frontend): Mengirim payload:', payload);
+      console.log('TITIK A (Frontend): Mengirim payload:', payload)
+      // @ts-ignore
       const result = editingPO
+        // @ts-ignore
         ? await window.api.updatePO(payload)
+        // @ts-ignore
         : await window.api.saveNewPO(payload)
 
       if (result.success) {
@@ -189,7 +190,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       } else {
         throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
       }
-
     } catch (error) {
       alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
     } finally {
@@ -205,7 +205,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     try {
       const itemsWithKubikasi = items.map((item) => ({
         ...item,
-        kubikasi: calculateKubikasi(item),
+        kubikasi: calculateKubikasi(item)
       }))
 
       const kubikasiTotal = itemsWithKubikasi.reduce(
@@ -241,31 +241,22 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const calculateKubikasi = (item: POItem) => {
-    const tebal = item.thickness_mm || 0;
-    const lebar = item.width_mm || 0;
-    const panjang = item.length_mm || 0;
-    const qty = item.quantity || 0;
+    const tebal = item.thickness_mm || 0
+    const lebar = item.width_mm || 0
+    const panjang = item.length_mm || 0
+    const qty = item.quantity || 0
 
-    // Rumus untuk satuan 'pcs' (Potongan)
-    // Volume = (Tebal(mm) * Lebar(mm) * Panjang(mm) * Jumlah Pcs) / 1 Miliar
     if (item.satuan === 'pcs') {
-      return (tebal * lebar * panjang * qty) / 1_000_000_000;
+      return (tebal * lebar * panjang * qty) / 1_000_000_000
     }
-
-    // Rumus untuk satuan 'm1' (Meter Lari)
-    // Volume = (Tebal(mm) * Lebar(mm) * Kuantitas(meter)) / 1 Juta
     if (item.satuan === 'm1') {
-      return (tebal * lebar * qty) / 1_000_000;
+      return (tebal * lebar * qty) / 1_000_000
     }
-
-    // [BARU] Rumus untuk satuan 'm2' (Meter Persegi)
-    // Volume = (Tebal(mm) * Kuantitas(meter persegi)) / 1000
     if (item.satuan === 'm2') {
-      return (tebal * qty) / 1000;
+      return (tebal * qty) / 1000
     }
-
-    return 0;
-  };
+    return 0
+  }
 
   const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
 
@@ -287,7 +278,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         </div>
       </div>
 
-      {/* Informasi Dasar */}
       <Card>
         <h2>Informasi Dasar PO</h2>
         <div className="form-grid">
@@ -338,7 +328,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           placeholder="Catatan khusus untuk PO ini..."
           rows={3}
         />
-        {/* [BARU] Tambahkan bagian untuk pilih foto di sini */}
         <div className="form-group" style={{ marginTop: '1rem' }}>
           <label>Foto Referensi PO (Opsional)</label>
           <div className="file-input-container">
@@ -358,10 +347,14 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         </div>
       </Card>
 
-      {/* Daftar Item */}
       <div className="item-section-header">
         <h2>Daftar Item</h2>
-        <Button onClick={handleAddItem}>+ Tambah Item</Button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button variant="secondary" onClick={() => setIsAddProductModalOpen(true)}>
+            + Tambah Produk Master
+          </Button>
+          <Button onClick={handleAddItem}>+ Tambah Item ke PO</Button>
+        </div>
       </div>
 
       {items.map((item, index) => (
@@ -373,7 +366,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             </Button>
           </div>
           <div className="form-grid">
-            {/* Fields Produk & Spesifikasi */}
             <Input
               label="Product ID"
               value={item.product_id}
@@ -391,7 +383,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Wood Type</label>
               <select
@@ -440,7 +431,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Sample</label>
               <select
@@ -465,7 +455,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 ))}
               </select>
             </div>
-
             <Input
               label="Thickness (mm)"
               type="number"
@@ -504,7 +493,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               >
                 <option value="pcs">pcs</option>
                 <option value="m1">m1</option>
-                <option value="m1">m2</option>
+                <option value="m2">m2</option>
               </select>
             </div>
             <Input
@@ -521,7 +510,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </div>
           <div className="form-group">
             <label>Kubikasi Item</label>
-            <p><b>{calculateKubikasi(item).toFixed(3)} m³</b></p>
+            <p>
+              <b>{calculateKubikasi(item).toFixed(3)} m³</b>
+            </p>
           </div>
         </Card>
       ))}
@@ -532,6 +523,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           <b>{totalKubikasi.toFixed(3)} m³</b>
         </p>
       </Card>
+
+      <AddProductModal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        onSaveSuccess={fetchProducts}
+      />
     </div>
   )
 }
