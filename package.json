@@ -36,6 +36,7 @@
     "google-spreadsheet": "^4.1.1",
     "googleapis": "^157.0.0",
     "pdfkit-table": "^0.1.99",
+    "react-is": "^19.2.0",
     "recharts": "^3.2.0"
   },
   "devDependencies": {
