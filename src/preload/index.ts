@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge, ipcRenderer } from 'electron'
 
+console.log('✅ --- PRELOAD SCRIPT STARTED ---')
+
 const api = {
   // --- Fungsi Dasar & Test ---
   ping: () => ipcRenderer.invoke('ping'),
@@ -39,7 +41,9 @@ const api = {
 };
 
 try {
+  console.log(' bridjinggg....') // <-- TAMBAHKAN INI
   contextBridge.exposeInMainWorld('api', api)
+  console.log('✅ --- API EXPOSED TO WINDOW SUCCESSFULLY ---')
 } catch (error) {
-  console.error(error)
+  console.error('❌ --- FAILED TO EXPOSE API ---', error)
 }

@@ -43,7 +43,11 @@ function createApiEndpoint(action, params = {}) {
 // --- Fungsi CRUD untuk Purchase Order (PO) ---
 
 export function listPOs() {
-  if (window.api) return window.api.listPOs();
+  if (window.api) {
+    console.log('%cELECTRON MODE: Using window.api (IPC) for listPOs', 'color: green; font-weight: bold;'); // <-- TAMBAHKAN INI
+    return window.api.listPOs();
+  }
+  console.log('%cWEB MODE: Using fetch() for listPOs', 'color: orange; font-weight: bold;'); // <-- TAMBAHKAN INI
   return fetchAPI(createApiEndpoint('listPOs'));
 }
 

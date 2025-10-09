@@ -10,14 +10,23 @@ export default defineConfig({
         external: [
           'google-spreadsheet',
           'google-auth-library',
-          'pdfkit',       // ⬅️ tambahin ini
-          'fs-extra'      // ⬅️ kalau kamu pakai fs-extra
+          'pdfkit', // ⬅️ tambahin ini
+          'fs-extra' // ⬅️ kalau kamu pakai fs-extra
         ]
       }
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    input: resolve(__dirname, 'src/preload/index.ts'),
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js'
+        }
+      }
+    }
   },
   renderer: {
     resolve: {
