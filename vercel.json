@@ -3,6 +3,13 @@
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npm run build:vercel",
 
+
+  "functions": {
+    "api/index.js": {
+      "memory": 1024
+    }
+  },
+
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" }
   ],
