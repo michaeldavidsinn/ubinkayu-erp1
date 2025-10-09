@@ -8,11 +8,12 @@ import { Card } from '../components/Card'
 import { Input } from '../components/Input'
 import { POHeader, POItem } from '../types'
 import { ProgressBar } from '../components/ProgressBar' // [BARU] Impor ProgressBar
+import * as apiService from '../apiService'
 
 interface PODetailPageProps {
   po: POHeader | null
   onBackToList: () => void
-  onShowHistory: () => void;
+  onShowHistory: () => void
 }
 
 const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHistory }) => {
@@ -25,7 +26,7 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
         setIsLoading(true)
         try {
           // @ts-ignore
-          const poItems = await window.api.listPOItems(po.id)
+          const poItems = await apiService.listPOItems(po.id)
           setItems(poItems)
         } catch (error) {
           console.error(`Gagal memuat item untuk PO ${po.id}:`, error)
@@ -37,65 +38,99 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
     }
   }, [po])
 
-  if (!po) return (<div className="page-container"><p>Data PO tidak ditemukan.</p></div>);
+  if (!po)
+    return (
+      <div className="page-container">
+        <p>Data PO tidak ditemukan.</p>
+      </div>
+    )
 
-  const formatDate = (d: string | undefined) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
-  const getPriorityBadgeClass = (p: string | undefined) => `status-badge ${(p || 'normal').toLowerCase()}`;
-  const getStatusBadgeClass = (s: string | undefined) => `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`;
+  const formatDate = (d: string | undefined) => (d ? new Date(d).toLocaleDateString('id-ID') : '-')
+  const getPriorityBadgeClass = (p: string | undefined) =>
+    `status-badge ${(p || 'normal').toLowerCase()}`
+  const getStatusBadgeClass = (s: string | undefined) =>
+    `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`
 
   const handleOpenPdf = async () => {
-    if (!po) return;
+    if (!po) return
     // @ts-ignore
     if (po.pdf_link && po.pdf_link.startsWith('http')) {
-      alert('Membuka PDF dari Google Drive...');
+      alert('Membuka PDF dari Google Drive...')
       try {
-        // @ts-ignore
-        await window.api.openExternalLink(po.pdf_link);
+        await apiService.openExternalLink(po.pdf_link) // Gunakan apiService
       } catch (err) {
-        alert(`Gagal membuka link: ${(err as Error).message}`);
+        alert(`Gagal membuka link: ${(err as Error).message}`)
       }
     } else {
-      alert('Link PDF tidak ditemukan di database. Membuat preview lokal sementara...');
+      alert('Link PDF tidak ditemukan atau tidak valid. Membuat preview...')
       try {
         const payload = {
           nomorPo: po.po_number,
           namaCustomer: po.project_name,
-          created_at: po.created_at,
-          deadline: po.deadline,
-          priority: po.priority,
-          items: items,
-          notes: po.notes,
-        };
-        // @ts-ignore
-        await window.api.previewPO(payload);
+          // ... (sisa payload Anda)
+          items: items
+        }
+        const result = await apiService.previewPO(payload) // Gunakan apiService
+        if (result.success && result.base64Data) {
+          const imageWindow = window.open()
+          if (imageWindow) {
+            imageWindow.document.write(
+              `<img src="data:image/jpeg;base64,${result.base64Data}" style="width:100%;">`
+            )
+          }
+        } else {
+          throw new Error(result.error || 'Gagal generate preview.')
+        }
       } catch (err) {
-        console.error('Error saat preview PDF lokal:', err);
-        alert(`Gagal membuat preview PDF lokal: ${(err as Error).message}`);
+        alert(`Gagal membuat preview: ${(err as Error).message}`)
       }
     }
-  };
-
+  }
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <div><h1>Detail Purchase Order: {po.po_number}</h1><p>Menampilkan informasi dan item versi terbaru.</p></div>
+        <div>
+          <h1>Detail Purchase Order: {po.po_number}</h1>
+          <p>Menampilkan informasi dan item versi terbaru.</p>
+        </div>
         <div className="header-actions">
           <Button onClick={onBackToList}>Kembali ke Daftar</Button>
-          <Button variant="secondary" onClick={onShowHistory}>📜 Lihat Riwayat Revisi</Button>
+          <Button variant="secondary" onClick={onShowHistory}>
+            📜 Lihat Riwayat Revisi
+          </Button>
           <Button onClick={handleOpenPdf}>📄 Buka PDF</Button>
         </div>
       </div>
 
       <div className="detail-po-info">
         <Card className="po-summary-card">
-          <div className="po-summary-header"><h3 className="po-summary-po-number">PO: {po.po_number}</h3><span className={getStatusBadgeClass(po.status)}>{po.status || 'Open'}</span></div>
-          <p className="po-summary-customer"><strong>Customer:</strong> {po.project_name}</p>
+          <div className="po-summary-header">
+            <h3 className="po-summary-po-number">PO: {po.po_number}</h3>
+            <span className={getStatusBadgeClass(po.status)}>{po.status || 'Open'}</span>
+          </div>
+          <p className="po-summary-customer">
+            <strong>Customer:</strong> {po.project_name}
+          </p>
           <div className="po-summary-grid">
-            <div className="info-item"><label>Tanggal Input PO</label><span>{formatDate(po.created_at)}</span></div>
-            <div className="info-item"><label>Target Kirim</label><span>{formatDate(po.deadline)}</span></div>
-            <div className="info-item"><label>Prioritas</label><span className={getPriorityBadgeClass(po.priority)}>{po.priority || '-'}</span></div>
-            <div className="info-item"><label>Total Kubikasi</label><span>{po.kubikasi_total ? `${Number(po.kubikasi_total).toFixed(3)} m³` : '0.000 m³'}</span></div>
+            <div className="info-item">
+              <label>Tanggal Input PO</label>
+              <span>{formatDate(po.created_at)}</span>
+            </div>
+            <div className="info-item">
+              <label>Target Kirim</label>
+              <span>{formatDate(po.deadline)}</span>
+            </div>
+            <div className="info-item">
+              <label>Prioritas</label>
+              <span className={getPriorityBadgeClass(po.priority)}>{po.priority || '-'}</span>
+            </div>
+            <div className="info-item">
+              <label>Total Kubikasi</label>
+              <span>
+                {po.kubikasi_total ? `${Number(po.kubikasi_total).toFixed(3)} m³` : '0.000 m³'}
+              </span>
+            </div>
           </div>
 
           {/* --- [BARU] Bagian Progress Bar --- */}
@@ -107,19 +142,56 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
             <ProgressBar value={po.progress || 0} />
           </div>
           {/* --- Akhir Bagian Baru --- */}
-
         </Card>
-        {po.notes && (<Card className="notes-card"><h4>Catatan PO</h4><p>{po.notes}</p></Card>)}
+        {po.notes && (
+          <Card className="notes-card">
+            <h4>Catatan PO</h4>
+            <p>{po.notes}</p>
+          </Card>
+        )}
       </div>
       <div className="item-section-header">
         <h2>Daftar Item (Versi Terbaru)</h2>
       </div>
-      {isLoading ? (<p>⏳ Loading data item...</p>) : items.length === 0 ? (<Card><p>Tidak ada item terdaftar untuk PO ini.</p></Card>) : (
+      {isLoading ? (
+        <p>⏳ Loading data item...</p>
+      ) : items.length === 0 ? (
+        <Card>
+          <p>Tidak ada item terdaftar untuk PO ini.</p>
+        </Card>
+      ) : (
         items.map((item, index) => (
           <Card key={item.id || index} className="item-card">
-            <div className="item-card-header"><h4>Item #{index + 1}: {item.product_name}</h4></div>
+            <div className="item-card-header">
+              <h4>
+                Item #{index + 1}: {item.product_name}
+              </h4>
+            </div>
             <div className="form-grid">
-              {Object.entries({'Produk ID': item.product_id, 'Jenis Kayu': item.wood_type, 'Profil': item.profile, 'Warna': item.color,'Finishing': item.finishing, 'Sample': item.sample, 'Marketing': item.marketing, 'Tebal (mm)': item.thickness_mm,'Lebar (mm)': item.width_mm, 'Panjang (mm)': item.length_mm, 'Qty': `${item.quantity || 0} ${item.satuan || ''}`,'Catatan Item': item.notes, 'Length Type': item.length_type, 'Lokasi': item.location,'Kubikasi (m³)': (Number(item.kubikasi) || 0).toFixed(3)}).map(([label, value]) => <Input key={label} label={label} value={value || (label.includes('mm') || label.includes('Qty') ? 0 : '-')} disabled />)}
+              {Object.entries({
+                'Produk ID': item.product_id,
+                'Jenis Kayu': item.wood_type,
+                Profil: item.profile,
+                Warna: item.color,
+                Finishing: item.finishing,
+                Sample: item.sample,
+                Marketing: item.marketing,
+                'Tebal (mm)': item.thickness_mm,
+                'Lebar (mm)': item.width_mm,
+                'Panjang (mm)': item.length_mm,
+                Qty: `${item.quantity || 0} ${item.satuan || ''}`,
+                'Catatan Item': item.notes,
+                'Length Type': item.length_type,
+                Lokasi: item.location,
+                'Kubikasi (m³)': (Number(item.kubikasi) || 0).toFixed(3)
+              }).map(([label, value]) => (
+                <Input
+                  key={label}
+                  label={label}
+                  value={value || (label.includes('mm') || label.includes('Qty') ? 0 : '-')}
+                  disabled
+                />
+              ))}
             </div>
           </Card>
         ))
@@ -128,4 +200,4 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
   )
 }
 
-export default PODetailPage;
+export default PODetailPage

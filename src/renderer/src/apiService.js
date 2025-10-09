@@ -153,3 +153,12 @@ export function getSalesItemData() {
   if (window.api) return window.api.getSalesItemData()
   return fetchAPI(createApiEndpoint('getSalesItemData'))
 }
+
+export function openExternalLink(url) {
+  if (window.api) {
+    return window.api.openExternalLink(url);
+  }
+  // Implementasi untuk web: buka di tab baru
+  window.open(url, '_blank');
+  return Promise.resolve({ success: true });
+}

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { RevisionHistoryItem } from '../types';
+import * as apiService from '../apiService'
 
 interface RevisionHistoryPageProps {
   poId: string | null;
@@ -22,7 +23,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
         setIsLoading(true);
         try {
           // @ts-ignore
-          const data = await window.api.getRevisionHistory(poId);
+          const data = await apiService.getRevisionHistory(poId);
           setHistory(data);
         } catch (error) {
           console.error(`Gagal memuat histori untuk PO ID ${poId}:`, error);
@@ -39,7 +40,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
   // [BARU] Fungsi untuk membuka link PDF
   const handleOpenPdf = (url: string) => {
     // @ts-ignore
-    window.api.openExternalLink(url);
+    apiService.openExternalLink(url);
   };
 
   return (

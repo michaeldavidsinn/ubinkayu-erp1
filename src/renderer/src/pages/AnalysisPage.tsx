@@ -18,6 +18,8 @@ import {
   Cell
 } from 'recharts'
 
+import * as apiService from '../apiService'
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
 
 // Helper untuk menghitung kesimpulan dari data yang difilter
@@ -66,8 +68,8 @@ const AnalysisPage: React.FC = () => {
       try {
         // @ts-ignore
         const [summaryData, itemData] = await Promise.all([
-          window.api.getProductSalesAnalysis(),
-          window.api.getSalesItemData()
+          apiService.getProductSalesAnalysis(),
+          apiService.getSalesItemData()
         ])
         setAnalysisData(summaryData)
         setAllItems(itemData)

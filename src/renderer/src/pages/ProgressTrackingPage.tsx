@@ -7,6 +7,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { POHeader } from '../types'
 import { formatDistanceToNow } from 'date-fns'
 import { id } from 'date-fns/locale'
+import * as apiService from '../apiService'
 
 // Helper untuk format waktu "5 menit yang lalu"
 const formatTimeAgo = (dateString: string) => {
@@ -89,9 +90,9 @@ const ProgressTrackingPage: React.FC<ProgressTrackingPageProps> = ({ onSelectPO 
         // [DIKEMBALIKAN] Panggil ketiga API secara bersamaan
         // @ts-ignore
         const [poData, attention, updates] = await Promise.all([
-            window.api.getActivePOs(),
-            window.api.getAttentionData(),
-            window.api.getRecentUpdates()
+            apiService.getActivePOs(),
+            apiService.getAttentionData(),
+            apiService.getRecentUpdates()
         ]);
         setPoList(poData)
         setAttentionData(attention)

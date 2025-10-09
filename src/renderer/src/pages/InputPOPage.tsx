@@ -85,12 +85,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handleSelectPoPhoto = async () => {
-    if (window.api) {
+    if (apiService) {
       // Hanya jalankan jika di Electron
-      const selectedPath = await window.api.openFileDialog()
+      const selectedPath = await apiService.openFileDialog()
       if (selectedPath) {
         setPoPhotoPath(selectedPath)
-        const base64Data = await window.api.readFileAsBase64(selectedPath)
+        const base64Data = await apiService.readFileAsBase64(selectedPath)
         setPoPhotoBase64(base64Data)
       }
     } else {

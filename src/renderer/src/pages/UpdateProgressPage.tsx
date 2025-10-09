@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { POHeader, POItem, ProductionStage } from '../types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import * as apiService from '../apiService'
 
 const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
 const formatDeadline = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
@@ -32,7 +33,7 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         photoPath: (photoFile as any)?.path
       };
       // @ts-ignore
-      await window.api.updateItemProgress(payload);
+      await apiService.updateItemProgress(payload);
       alert(`Progress item ${item.product_name} berhasil diupdate!`);
       onUpdate();
       setNotes('');
@@ -105,7 +106,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       setIsLoading(true)
       try {
         // @ts-ignore
-        const fetchedItems = await window.api.getPOItemsDetails(po.id)
+        const fetchedItems = await apiService.getPOItemsDetails(po.id)
         setItems(fetchedItems)
       } catch (err) {
         console.error('Gagal memuat item:', err)
