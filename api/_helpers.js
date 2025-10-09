@@ -29,9 +29,15 @@ export const PRODUCTION_STAGES = [
 
 // Fungsi untuk otentikasi
 export function getAuth() {
+  // 1. Decode dulu dari Base64 untuk mendapatkan kembali string asli dengan \n
+  const decodedKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY, 'base64').toString('utf8')
+
+  // 2. Baru ganti \n dengan karakter baris baru asli
+  const formattedKey = decodedKey.replace(/\\n/g, '\n')
+
   return new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    key: formattedKey, // <-- Gunakan kunci yang sudah diformat
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive.file'
@@ -636,20 +642,20 @@ export async function generateAndUploadPO(poData, revisionNumber) {
 }
 
 export async function processBatch(items, processor, batchSize = 5) {
-  const results = [];
+  const results = []
   for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(batch.map(processor));
+    const batch = items.slice(i, i + batchSize)
+    const batchResults = await Promise.allSettled(batch.map(processor))
     results.push(
       ...batchResults.map((result) =>
         result.status === 'fulfilled'
           ? result.value
           : { success: false, error: result.reason?.message || 'Unknown error' }
       )
-    );
+    )
     if (i + batchSize < items.length) {
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Jeda singkat antar batch
+      await new Promise((resolve) => setTimeout(resolve, 100)) // Jeda singkat antar batch
     }
   }
-  return results;
+  return results
 }
