@@ -27,10 +27,10 @@ const api = {
   openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
   // --- Fungsi untuk Progress Tracking ---
-  getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
-  getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
-  getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
+  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'), // Ganti dari getActivePOs
+  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId), // Ganti dari getPOItemsDetails
+  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'), // Ganti dari getRecentUpdates
   // [BARU] Tambahkan fungsi baru di sini
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
 
