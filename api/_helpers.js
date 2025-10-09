@@ -121,57 +121,69 @@ export async function deleteGoogleDriveFile(fileId) {
 // GENERATOR JPEG (Disalin dari jpegGenerator.js)
 // =================================================================
 
-function wrapText(context, text, x, y, maxWidth, lineHeight) {
-  if (!text) return
-  const paragraphs = text.split('\n')
-  for (const paragraph of paragraphs) {
-    if (paragraph.length === 0) {
-      y += lineHeight
-      continue
-    }
-    let line = ''
-    const words = paragraph.split(' ')
-    for (const word of words) {
-      const testLine = line + (line ? ' ' : '') + word
-      if (context.measureText(testLine).width > maxWidth && line) {
-        context.fillText(line, x, y)
-        y += lineHeight
-        line = word
-      } else {
-        line = testLine
-      }
-    }
-    context.fillText(line, x, y)
-    y += lineHeight
-  }
-}
-function calculateLineCount(context, text, maxWidth) {
-  if (!text) return 1
-  const paragraphs = text.split('\n')
-  let totalLines = 0
-  for (const paragraph of paragraphs) {
-    if (paragraph.length === 0) {
-      totalLines++
-      continue
-    }
-    let line = ''
-    const words = paragraph.split(' ')
-    for (const word of words) {
-      const testLine = line + (line ? ' ' : '') + word
-      if (context.measureText(testLine).width > maxWidth && line) {
-        totalLines++
-        line = word
-      } else {
-        line = testLine
-      }
-    }
-    totalLines++
-  }
-  return Math.max(1, totalLines)
-}
-
 export async function generatePOJpeg(poData, revisionNumber = 0) {
   try {
+    // --- 1. DYNAMIC IMPORT AGAR CANVAS BISA DIPAKAI DI SERVERLESS ---
+    // Baris ini harus selalu menjadi baris pertama yang memanggil fungsi atau properti dari 'canvas'
+    const { createCanvas, loadImage } = await import('canvas')
+
+    // --- 2. FUNGSI HELPER SINKRON (DIPINDAHKAN KE SINI) ---
+    // Fungsi-fungsi ini harus berada di dalam scope generatePOJpeg karena menggunakan
+    // fungsi di dalamnya, atau untuk mempermudah pemindahan.
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+      if (!text) return
+      const paragraphs = text.split('\n')
+      for (const paragraph of paragraphs) {
+        if (paragraph.length === 0) {
+          y += lineHeight
+          continue
+        }
+        let line = ''
+        const words = paragraph.split(' ')
+        for (const word of words) {
+          const testLine = line + (line ? ' ' : '') + word
+          if (context.measureText(testLine).width > maxWidth && line) {
+            context.fillText(line, x, y)
+            y += lineHeight
+            line = word
+          } else {
+            line = testLine
+          }
+        }
+        context.fillText(line, x, y)
+        y += lineHeight
+      }
+    }
+    function calculateLineCount(context, text, maxWidth) {
+      if (!text) return 1
+      const paragraphs = text.split('\n')
+      let totalLines = 0
+      for (const paragraph of paragraphs) {
+        if (paragraph.length === 0) {
+          totalLines++
+          continue
+        }
+        let line = ''
+        const words = paragraph.split(' ')
+        for (const word of words) {
+          const testLine = line + (line ? ' ' : '') + word
+          if (context.measureText(testLine).width > maxWidth && line) {
+            totalLines++
+            line = word
+          } else {
+            line = testLine
+          }
+        }
+        totalLines++
+      }
+      return Math.max(1, totalLines)
+    }
+    // --- AKHIR FUNGSI HELPER ---
+
+
+    // --- 3. LOGIKA UTAMA DIMULAI SETELAH IMPORT ---
+
     const width = 1200
     const redColor = '#D92121'
     const blueColor = '#0000FF'
@@ -187,10 +199,9 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     const rowPadding = 8
     const itemLineHeight = 14
 
+    // PERBAIKAN: tempCanvas dan ctx sekarang dideklarasikan di sini.
     const tempCanvas = createCanvas(width, 100)
     const ctx = tempCanvas.getContext('2d')
-
-    const { createCanvas, loadImage } = await import('canvas');
 
     let totalHeight = 0
 
