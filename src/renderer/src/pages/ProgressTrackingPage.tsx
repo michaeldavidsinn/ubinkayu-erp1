@@ -90,9 +90,9 @@ const ProgressTrackingPage: React.FC<ProgressTrackingPageProps> = ({ onSelectPO 
         // [DIKEMBALIKAN] Panggil ketiga API secara bersamaan
         // @ts-ignore
         const [poData, attention, updates] = await Promise.all([
-            apiService.getActivePOs(),
+            apiService.getActivePOsWithProgress(),
             apiService.getAttentionData(),
-            apiService.getRecentUpdates()
+            apiService.getRecentProgressUpdates()
         ]);
         setPoList(poData)
         setAttentionData(attention)

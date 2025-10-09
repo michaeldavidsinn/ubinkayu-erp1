@@ -34,6 +34,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
   const [poPhotoBase64, setPoPhotoBase64] = useState<string | null>(null)
 
+  const isElectron = !!window.api; // <-- TAMBAHKAN VARIABEL INI
+
   useEffect(() => {
     const initialize = async () => {
       if (editingPO) {
@@ -299,7 +301,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               <Button
                 variant="secondary"
                 onClick={handleSelectPoPhoto}
-                disabled={!!(editingPO && editingPO.photo_url)}
+                disabled={!isElectron || (editingPO && editingPO.photo_url)}
+                title={!isElectron ? 'Fitur ini hanya tersedia di aplikasi desktop' : ''}
               >
                 Pilih Foto
               </Button>

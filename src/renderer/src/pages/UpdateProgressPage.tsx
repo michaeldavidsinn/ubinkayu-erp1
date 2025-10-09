@@ -106,7 +106,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       setIsLoading(true)
       try {
         // @ts-ignore
-        const fetchedItems = await apiService.getPOItemsDetails(po.id)
+        const fetchedItems = await apiService.getPOItemsWithDetails(po.id)
         setItems(fetchedItems)
       } catch (err) {
         console.error('Gagal memuat item:', err)

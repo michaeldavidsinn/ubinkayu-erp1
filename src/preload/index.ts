@@ -38,7 +38,7 @@ const api = {
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
   getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData'),
   readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath)
-};
+}
 
 try {
   console.log(' bridjinggg....') // <-- TAMBAHKAN INI

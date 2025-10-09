@@ -162,3 +162,20 @@ export function openExternalLink(url) {
   window.open(url, '_blank');
   return Promise.resolve({ success: true });
 }
+
+export function openFileDialog() {
+  if (window.api) {
+    return window.api.openFileDialog();
+  }
+  // Di web, kita tidak bisa melakukan ini. Beri peringatan dan kembalikan null.
+  console.warn('Fungsi pilih file hanya tersedia di aplikasi desktop.');
+  return Promise.resolve(null);
+}
+
+export function readFileAsBase64(filePath) {
+  if (window.api) {
+    return window.api.readFileAsBase64(filePath);
+  }
+  console.warn('Fungsi baca file hanya tersedia di aplikasi desktop.');
+  return Promise.resolve(null);
+}
