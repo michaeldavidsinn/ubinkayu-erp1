@@ -1,6 +1,7 @@
 {
   "outputDirectory": "out/renderer",
   "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build:vercel",
   "headers": [
     {
       "source": "/api/(.*)",
