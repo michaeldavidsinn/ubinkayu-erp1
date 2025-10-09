@@ -3,7 +3,6 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 import { google } from 'googleapis'
-import { createCanvas, loadImage } from 'canvas'
 import stream from 'stream'
 import { promisify } from 'util'
 
@@ -190,6 +189,8 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
 
     const tempCanvas = createCanvas(width, 100)
     const ctx = tempCanvas.getContext('2d')
+
+    const { createCanvas, loadImage } = await import('canvas');
 
     let totalHeight = 0
 
