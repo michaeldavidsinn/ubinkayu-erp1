@@ -417,6 +417,7 @@ export async function handleUpdateItemProgress(req, res) {
 
 // --- LOGIC FOR: getActivePOsWithProgress ---
 export async function handleGetActivePOsWithProgress(req, res) {
+  console.log('--- 🏃‍♂️ EXECUTING handleGetActivePOsWithProgress ---');
   const doc = await openDoc()
   const [poSheet, itemSheet, progressSheet] = await Promise.all([
     getSheet(doc, 'purchase_orders'),
@@ -535,6 +536,7 @@ export async function handleGetPOItemsWithDetails(req, res) {
 
 // --- LOGIC FOR: getRecentProgressUpdates ---
 export async function handleGetRecentProgressUpdates(req, res) {
+  console.log('--- ✨ EXECUTING handleGetRecentProgressUpdates ---');
   const doc = await openDoc()
   const [progressSheet, itemSheet, poSheet] = await Promise.all([
     getSheet(doc, 'progress_tracking'),
@@ -571,6 +573,7 @@ export async function handleGetRecentProgressUpdates(req, res) {
 
 // --- LOGIC FOR: getAttentionData ---
 export async function handleGetAttentionData(req, res) {
+  console.log('--- 🎯 EXECUTING handleGetAttentionData ---');
   const doc = await openDoc()
   const [poSheet, itemSheet, progressSheet] = await Promise.all([
     getSheet(doc, 'purchase_orders'),
