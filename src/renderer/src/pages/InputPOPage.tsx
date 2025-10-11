@@ -301,7 +301,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               <Button
                 variant="secondary"
                 onClick={handleSelectPoPhoto}
-                disabled={!isElectron || (editingPO && editingPO.photo_url)}
+                disabled={!isElectron || !!(editingPO && editingPO.photo_url)}
                 title={!isElectron ? 'Fitur ini hanya tersedia di aplikasi desktop' : ''}
               >
                 Pilih Foto
