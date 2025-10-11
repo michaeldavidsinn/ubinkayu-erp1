@@ -126,7 +126,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
   try {
     // --- 1. DYNAMIC IMPORT AGAR CANVAS BISA DIPAKAI DI SERVERLESS ---
     // Baris ini harus selalu menjadi baris pertama yang memanggil fungsi atau properti dari 'canvas'
-    const { createCanvas, loadImage } = await import('canvas')
+    const { createCanvas, loadImage, registerFont } = await import('canvas')
     const fontPath = path.join(process.cwd(), 'api/fonts/Roboto-Regular.ttf');
     registerFont(fontPath, { family: 'Roboto' }); // Daftarkan dengan nama 'Roboto'
 
