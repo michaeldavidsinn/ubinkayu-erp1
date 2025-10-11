@@ -5,6 +5,7 @@ import { JWT } from 'google-auth-library'
 import { google } from 'googleapis'
 import stream from 'stream'
 import { promisify } from 'util'
+import path from 'path'
 
 const pipeline = promisify(stream.pipeline)
 
@@ -126,6 +127,8 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     // --- 1. DYNAMIC IMPORT AGAR CANVAS BISA DIPAKAI DI SERVERLESS ---
     // Baris ini harus selalu menjadi baris pertama yang memanggil fungsi atau properti dari 'canvas'
     const { createCanvas, loadImage } = await import('canvas')
+    const fontPath = path.join(process.cwd(), 'api/fonts/Roboto-Regular.ttf');
+    registerFont(fontPath, { family: 'Roboto' }); // Daftarkan dengan nama 'Roboto'
 
     // --- 2. FUNGSI HELPER SINKRON (DIPINDAHKAN KE SINI) ---
     // Fungsi-fungsi ini harus berada di dalam scope generatePOJpeg karena menggunakan
@@ -193,7 +196,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     const totalBgColor = '#FFE6E6'
     const borderColor = '#AAAAAA'
 
-    const baseFont = 'Calibri'
+    const baseFont = 'Roboto'
     const tableLeft = 30
     const tableWidth = width - 60
     const rowPadding = 8
