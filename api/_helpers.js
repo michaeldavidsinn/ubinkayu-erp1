@@ -467,7 +467,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
         tableLeft + cols.kuantiti.x + cols.kuantiti.width / 2,
         currentY + rowHeight / 2
       )
-      const kubikasi = item.kubikasi ? item.kubikasi.toFixed(4) : '0.0000'
+      const kubikasi = toNum(item.kubikasi, 0).toFixed(4)
       finalCtx.fillText(
         kubikasi,
         tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2,
@@ -515,9 +515,7 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       currentY + 20
     )
     finalCtx.textAlign = 'center'
-    const totalKubikasi = poData.kubikasi_total
-      ? poData.kubikasi_total.toFixed(4) + ' m³'
-      : '0.0000 m³'
+    const totalKubikasi = toNum(poData.kubikasi_total, 0).toFixed(4) + ' m³'
     finalCtx.fillText(
       totalKubikasi,
       tableLeft + cols.kubikasi.x + cols.kubikasi.width / 2,
