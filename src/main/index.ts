@@ -42,11 +42,11 @@ async function createWindow() {
     }
   })
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    await win.loadURL(process.env.VITE_DEV_SERVER_URL)
+  if (process.env['ELECTRON_RENDERER_URL']) { // <-- GUNAKAN NAMA YANG BARU
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
     win.webContents.openDevTools()
   } else {
-    await win.loadFile(path.join(__dirname, '../renderer/index.html'))
+    win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 }
 

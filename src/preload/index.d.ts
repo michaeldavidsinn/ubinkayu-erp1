@@ -15,15 +15,16 @@ interface ICustomAPI {
   getRevisionHistory: (poId: string) => Promise<any[]>;
   openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
 
-  // Definisi tipe untuk fungsi progress tracking
-  getActivePOs: () => Promise<any[]>;
-  getPOItemsDetails: (poId: string) => Promise<any[]>;
+  // --- NAMA-NAMA FUNGSI INI SUDAH DIPERBAIKI ---
+  getActivePOsWithProgress: () => Promise<any[]>;
+  getPOItemsWithDetails: (poId: string) => Promise<any[]>;
   updateItemProgress: (data: any) => Promise<{ success: boolean; error?: string }>;
-  getRecentUpdates: () => Promise<any[]>;
-  // [BARU] Tambahkan definisi tipe baru di sini
+  getRecentProgressUpdates: () => Promise<any[]>;
   getAttentionData: () => Promise<any>;
   getProductSalesAnalysis: () => Promise<any>;
   getSalesItemData: () => Promise<any[]>;
+
+  // --- Fungsi File ---
   openFileDialog: () => Promise<string | null>;
   readFileAsBase64: (filePath: string) => Promise<string | null>;
 }

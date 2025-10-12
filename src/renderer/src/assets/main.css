@@ -1400,3 +1400,59 @@ label {
     width: 100%;
   }
 }
+
+/* =============================================== */
+/* == CSS RESPONSIVE UNTUK PROGRESS TRACKING PAGE == */
+/* =============================================== */
+
+/* Default (Mobile First):
+  Tata letak utama kita buat menjadi satu kolom vertikal.
+*/
+.tracking-layout {
+  display: flex;
+  flex-direction: column; /* Semua item ditumpuk ke bawah */
+  gap: 1.5rem; /* Beri jarak antar tumpukan kartu */
+}
+
+/* Aturan untuk layar yang lebih lebar (Tablet & Desktop):
+  Gunakan media query. Jika lebar layar 768px atau lebih,
+  kita ubah tata letaknya menjadi dua kolom.
+*/
+@media (min-width: 768px) {
+  .tracking-layout {
+    display: grid;
+    /* Kolom kiri 2x lebih lebar dari kolom kanan */
+    grid-template-columns: 2fr 1fr;
+    align-items: start; /* Mencegah kolom kanan meregang ke bawah */
+  }
+}
+
+
+/* --- Penyesuaian Kecil Lainnya --- */
+
+/* Pastikan header halaman bisa "turun" di layar sempit */
+.page-header {
+  flex-wrap: wrap;
+}
+
+/* Di panel "Perlu Perhatian", beri jarak antar bagian */
+.attention-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Beri sedikit padding pada item di panel "Perlu Perhatian" */
+.attention-item-small {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+.attention-item-small:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Pastikan input pencarian tidak keluar dari layar */
+.search-input-full {
+  box-sizing: border-box; /* Penting agar padding tidak menambah lebar */
+}

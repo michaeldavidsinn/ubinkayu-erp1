@@ -26,19 +26,19 @@ const api = {
   previewPO: (data) => ipcRenderer.invoke('po:preview', data),
   openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
-  // --- Fungsi untuk Progress Tracking ---
+  // --- Fungsi untuk Progress, Analisis & Lainnya ---
+  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'),
+  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
-  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'), // Ganti dari getActivePOs
-  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId), // Ganti dari getPOItemsDetails
-  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'), // Ganti dari getRecentUpdates
-  // [BARU] Tambahkan fungsi baru di sini
+  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
-
-  openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
   getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData'),
+
+  // --- Fungsi untuk File ---
+  openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
   readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath)
-}
+};
 
 try {
   console.log(' bridjinggg....') // <-- TAMBAHKAN INI
