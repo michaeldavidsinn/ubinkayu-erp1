@@ -2,6 +2,6 @@
 <network-security-config>
   <domain-config cleartextTrafficPermitted="true">
     <domain includeSubdomains="true">localhost</domain>
-    <domain includeSubdomains="true">ubinkayu-erp1-git-erp1-mobile-cea6e7-michaeldavidsinns-projects.vercel.app</domain>
+    <domain includeSubdomains="true">ubinkayu-erp1.vercel.app</domain>
   </domain-config>
 </network-security-config>
