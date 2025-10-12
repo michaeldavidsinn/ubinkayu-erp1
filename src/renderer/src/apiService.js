@@ -9,7 +9,7 @@
 
 // PENTING: Ganti dengan URL Vercel Anda setelah deploy berhasil.
 // Untuk development lokal, biarkan kosong.
-const API_BASE_URL = window.api ? '' : (import.meta.env.VITE_API_BASE_URL || '');
+const API_BASE_URL = window.api ? '' : ''
 
 /**
  * Helper untuk menangani panggilan fetch API secara konsisten.
