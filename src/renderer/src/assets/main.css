@@ -45,6 +45,7 @@ body {
   padding: 1rem 2rem;
   background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
+  padding-top: env(safe-area-inset-top);
 }
 
 .navbar-brand {
