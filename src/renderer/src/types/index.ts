@@ -38,6 +38,7 @@ export interface POItem {
   kubikasi?: number
   progressHistory?: ProgressUpdate[]; // Riwayat progress untuk item ini
   stageDeadlines?: { stageName: string; deadline: string }[];
+  customer_name?: string; // [+] TAMBAHKAN INI
 }
 
 // [MODIFIKASI] POHeader ditambahkan progress
@@ -53,6 +54,8 @@ export interface POHeader {
   kubikasi_total?: number
   pdf_link?: string | null
   progress?: number; // Progress keseluruhan PO
+  items?: POItem[]; // [+] TAMBAHKAN INI
+  photo_url?: string | null; // [+] TAMBAHKAN INI
 }
 
 // Tipe ini tidak diubah

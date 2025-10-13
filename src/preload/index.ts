@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge, ipcRenderer } from 'electron'
 
+console.log('✅ --- PRELOAD SCRIPT STARTED ---')
+
 const api = {
   // --- Fungsi Dasar & Test ---
   ping: () => ipcRenderer.invoke('ping'),
 
   // --- Fungsi untuk Products ---
   getProducts: () => ipcRenderer.invoke('product:get'),
-  addNewProduct: (data) => ipcRenderer.invoke('product:add', data),
 
   // --- Fungsi CRUD untuk Purchase Order (PO) ---
   saveNewPO: (data) => ipcRenderer.invoke('po:save', data),
@@ -25,21 +26,24 @@ const api = {
   previewPO: (data) => ipcRenderer.invoke('po:preview', data),
   openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
-  // --- Fungsi untuk Progress Tracking ---
-  getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
-  getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
+  // --- Fungsi untuk Progress, Analisis & Lainnya ---
+  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'),
+  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
-  getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
-  // [BARU] Tambahkan fungsi baru di sini
+  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
-
-  openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
-  getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData')
-};
+  getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData'),
+
+  // --- Fungsi untuk File ---
+  openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath)
+}
 
 try {
+  console.log(' bridjinggg....') // <-- TAMBAHKAN INI
   contextBridge.exposeInMainWorld('api', api)
+  console.log('✅ --- API EXPOSED TO WINDOW SUCCESSFULLY ---')
 } catch (error) {
-  console.error(error)
+  console.error('❌ --- FAILED TO EXPOSE API ---', error)
 }

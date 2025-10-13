@@ -5,23 +5,43 @@ import React, { useState, useEffect } from 'react'
 import { POHeader, POItem, ProductionStage } from '../types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import * as apiService from '../apiService'
 
-const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
-const formatDeadline = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+const formatDate = (d: string) => new Date(d).toLocaleString('id-ID')
+const formatDeadline = (d: string) =>
+  new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
 
-const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: string, poNumber: string, onUpdate: () => void }) => {
-  const stages: ProductionStage[] = ['Cari Bahan Baku', 'Sawmill', 'KD', 'Pembahanan', 'Moulding', 'Coating', 'Siap Kirim'];
+const ProgressItem = ({
+  item,
+  poId,
+  poNumber,
+  onUpdate
+}: {
+  item: POItem
+  poId: string
+  poNumber: string
+  onUpdate: () => void
+}) => {
+  const stages: ProductionStage[] = [
+    'Cari Bahan Baku',
+    'Sawmill',
+    'KD',
+    'Pembahanan',
+    'Moulding',
+    'Coating',
+    'Siap Kirim'
+  ]
 
-  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage;
-  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1;
+  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage
+  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1
 
-  const [notes, setNotes] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [notes, setNotes] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const handleUpdate = async (nextStage: string) => {
-    if (!notes && !photoFile) return alert('Harap isi catatan atau unggah foto.');
-    setIsUpdating(true);
+    if (!notes && !photoFile) return alert('Harap isi catatan atau unggah foto.')
+    setIsUpdating(true)
     try {
       const payload = {
         poId: poId,
@@ -30,62 +50,89 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         stage: nextStage,
         notes: notes,
         photoPath: (photoFile as any)?.path
-      };
+      }
       // @ts-ignore
-      await window.api.updateItemProgress(payload);
-      alert(`Progress item ${item.product_name} berhasil diupdate!`);
-      onUpdate();
-      setNotes('');
-      setPhotoFile(null);
+      await apiService.updateItemProgress(payload)
+      alert(`Progress item ${item.product_name} berhasil diupdate!`)
+      onUpdate()
+      setNotes('')
+      setPhotoFile(null)
     } catch (err) {
-      alert(`Gagal update progress: ${(err as Error).message}`);
+      alert(`Gagal update progress: ${(err as Error).message}`)
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(false)
     }
-  };
+  }
 
   return (
     <Card className="item-card">
       <div className="item-card-header">
-        <h4>{item.product_name} ({item.wood_type})</h4>
-        <span>Qty: {item.quantity} {item.satuan}</span>
+        <h4>
+          {item.product_name} ({item.wood_type})
+        </h4>
+        <span>
+          Qty: {item.quantity} {item.satuan}
+        </span>
       </div>
       <div className="progress-timeline">
         {stages.map((stage, index) => {
-            const deadlineInfo = item.stageDeadlines?.find(d => d.stageName === stage);
-            const isCompleted = index <= currentStageIndex;
-            const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted;
+          const deadlineInfo = item.stageDeadlines?.find((d) => d.stageName === stage)
+          const isCompleted = index <= currentStageIndex
+          const isOverdue =
+            deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted
 
-            return (
-              <div key={stage} className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
-                <div className="stage-dot"></div>
-                <div className="stage-name">{stage}</div>
-                {deadlineInfo && <div className="stage-deadline">Target: {formatDeadline(deadlineInfo.deadline)}</div>}
-              </div>
-            )
+          return (
+            <div
+              key={stage}
+              className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}
+            >
+              <div className="stage-dot"></div>
+              <div className="stage-name">{stage}</div>
+              {deadlineInfo && (
+                <div className="stage-deadline">
+                  Target: {formatDeadline(deadlineInfo.deadline)}
+                </div>
+              )}
+            </div>
+          )
         })}
       </div>
       {currentStageIndex < stages.length - 1 && (
         <div className="update-form">
           <h5>Update ke Tahap Berikutnya: {stages[currentStageIndex + 1]}</h5>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
-          <input type="file" accept="image/*" onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])} />
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Tambahkan catatan..."
+            rows={3}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])}
+          />
           <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
         </div>
       )}
-       {item.progressHistory && item.progressHistory.length > 0 && (
-         <div className="history-log">
-            <h6>Riwayat Progress</h6>
-            {item.progressHistory.map(log => (
-                <div key={log.id} className="log-entry">
-                    <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
-                    <p>{log.notes}</p>
-                    {log.photo_url && <a href={log.photo_url} target="_blank" rel="noopener noreferrer">Lihat Foto</a>}
-                </div>
-            ))}
-         </div>
+      {item.progressHistory && item.progressHistory.length > 0 && (
+        <div className="history-log">
+          <h6>Riwayat Progress</h6>
+          {item.progressHistory.map((log) => (
+            <div key={log.id} className="log-entry">
+              <p>
+                <strong>{log.stage}</strong> ({formatDate(log.created_at)})
+              </p>
+              <p>{log.notes}</p>
+              {log.photo_url && (
+                <a href={log.photo_url} target="_blank" rel="noopener noreferrer">
+                  Lihat Foto
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </Card>
   )
@@ -105,7 +152,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       setIsLoading(true)
       try {
         // @ts-ignore
-        const fetchedItems = await window.api.getPOItemsDetails(po.id)
+        const fetchedItems = await apiService.getPOItemsWithDetails(po.id)
         setItems(fetchedItems)
       } catch (err) {
         console.error('Gagal memuat item:', err)
@@ -141,12 +188,22 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       {isLoading ? (
         <p>Memuat item...</p>
       ) : items.length > 0 ? (
-        items.map((item) => <ProgressItem key={item.id} item={item} poId={po.id} poNumber={po.po_number} onUpdate={fetchItems} />)
+        items.map((item) => (
+          <ProgressItem
+            key={item.id}
+            item={item}
+            poId={po.id}
+            poNumber={po.po_number}
+            onUpdate={fetchItems}
+          />
+        ))
       ) : (
-        <Card><p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p></Card>
+        <Card>
+          <p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p>
+        </Card>
       )}
     </div>
   )
-};
+}
 
-export default UpdateProgressPage;
+export default UpdateProgressPage
