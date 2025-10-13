@@ -37,42 +37,6 @@ body {
   padding: 0 2rem;
 }
 
-/* --- Navbar --- */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background-color: var(--card-bg);
-  border-bottom: 1px solid var(--border-color);
-  padding-top: env(safe-area-inset-top);
-}
-
-.navbar-brand {
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.navbar-links a {
-  margin-left: 1.5rem;
-  text-decoration: none;
-  color: var(--text-secondary);
-  font-weight: 500;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.navbar-links a:hover {
-  color: var(--text-primary);
-}
-
-.navbar-links a.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-
 /* --- Page --- */
 .page-container {
   max-width: 1200px;
@@ -1354,53 +1318,6 @@ label {
   line-height: 1.8;
 }
 
-/* file: src/renderer/src/assets/index.css */
-
-/* Tombol hamburger disembunyikan di layar besar */
-.hamburger-menu {
-  display: none;
-  background: none;
-  border: none;
-  color: #333;
-  font-size: 2rem;
-  cursor: pointer;
-}
-
-/* Terapkan style ini hanya untuk layar dengan lebar MAKSIMAL 768px (layar HP) */
-@media (max-width: 768px) {
-  /* Tampilkan tombol hamburger */
-  .hamburger-menu {
-    display: block;
-    position: absolute;
-    top: 15px;
-    right: 20px;
-  }
-
-  /* Sembunyikan daftar link secara default */
-  .navbar-links {
-    display: none;
-    flex-direction: column; /* Susun link secara vertikal */
-    width: 100%;
-    position: absolute;
-    top: 70px; /* Posisikan di bawah navbar */
-    left: 0;
-    background-color: #f8f9fa;
-    border-top: 1px solid #ddd;
-    padding: 1rem 0;
-  }
-
-  /* Tampilkan daftar link jika menu terbuka */
-  .navbar-links.active {
-    display: flex;
-  }
-
-  /* Atur style untuk setiap link di mobile */
-  .navbar-links a {
-    text-align: center;
-    padding: 1rem;
-    width: 100%;
-  }
-}
 
 /* =============================================== */
 /* == CSS RESPONSIVE UNTUK PROGRESS TRACKING PAGE == */

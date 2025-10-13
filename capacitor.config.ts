@@ -11,7 +11,12 @@ const config: CapacitorConfig = {
     hostname: 'ubinkayu-erp1.vercel.app', // <-- TAMBAHKAN BARIS INI
     androidScheme: 'https',
     allowNavigation: ['ubinkayu-erp1.vercel.app']
+  },
+
+  ios: {
+    contentInset: 'never' // <-- Ganti dari 'none' menjadi 'never'
   }
 }
+
 
 export default config

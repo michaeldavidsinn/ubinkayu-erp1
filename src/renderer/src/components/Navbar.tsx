@@ -1,7 +1,11 @@
 // file: src/renderer/src/components/Navbar.tsx
 
-import React, { useState } from 'react'
+import React from 'react'
 import logo from '../assets/WhatsApp Image 2025-09-09 at 14.30.02 - Edited.png'
+// Impor ikon yang akan kita gunakan
+import { LuLayoutDashboard, LuListOrdered, LuTrendingUp, LuActivity } from 'react-icons/lu'
+// Impor file CSS yang akan kita buat
+import './Navbar.css'
 
 interface NavbarProps {
   currentView: string
@@ -9,63 +13,62 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
-  const [menuOpen, setMenuOpen] = useState(false)
-
   const handleLinkClick = (view: 'dashboard' | 'list' | 'tracking' | 'analysis') => {
     onNavigate(view)
-    setMenuOpen(false) // Tutup menu setelah link di-klik
   }
 
-  const getLinkClass = (viewName: string) => {
-    if (viewName === 'Dashboard' && currentView === 'dashboard') return 'active'
-    if (viewName === 'Purchase Orders' && ['list', 'input', 'detail'].includes(currentView))
-      return 'active'
-    if (viewName === 'Progress Tracking' && ['tracking', 'updateProgress'].includes(currentView))
-      return 'active'
-    if (viewName === 'Product Analysis' && currentView === 'analysis') return 'active'
+  // Fungsi ini sedikit disederhanakan untuk lebih mudah dibaca
+  const getLinkClass = (viewName: 'dashboard' | 'list' | 'tracking' | 'analysis') => {
+    const listViews = ['list', 'input', 'detail']
+    const trackingViews = ['tracking', 'updateProgress']
+
+    if (viewName === 'list' && listViews.includes(currentView)) return 'active'
+    if (viewName === 'tracking' && trackingViews.includes(currentView)) return 'active'
+    if (viewName === currentView) return 'active'
+
     return ''
   }
 
   return (
     <nav className="navbar">
+      {/* Brand/logo hanya akan terlihat di desktop */}
       <div className="navbar-brand">
         <img src={logo} alt="Ubinkayu Logo" className="navbar-logo" />
       </div>
 
-      {/* Tombol Hamburger untuk Mobile */}
-      <button className="hamburger-menu" onClick={() => setMenuOpen(!menuOpen)}>
-        ☰
-      </button>
-
       {/* Daftar Link Navigasi */}
-      <div className={`navbar-links ${menuOpen ? 'active' : ''}`}>
+      <div className="navbar-links">
         <a
           href="#"
           onClick={() => handleLinkClick('dashboard')}
-          className={getLinkClass('Dashboard')}
+          className={`nav-link ${getLinkClass('dashboard')}`}
         >
-          Dashboard
+          <LuLayoutDashboard className="nav-icon" />
+          <span>Dashboard</span>
         </a>
         <a
           href="#"
           onClick={() => handleLinkClick('list')}
-          className={getLinkClass('Purchase Orders')}
+          className={`nav-link ${getLinkClass('list')}`}
         >
-          Purchase Orders
+          <LuListOrdered className="nav-icon" />
+          <span>Purchase Orders</span>
         </a>
         <a
           href="#"
           onClick={() => handleLinkClick('tracking')}
-          className={getLinkClass('Progress Tracking')}
+          className={`nav-link ${getLinkClass('tracking')}`}
         >
-          Progress Tracking
+          <LuActivity className="nav-icon" />
+          <span>Progress Tracking</span>
         </a>
         <a
           href="#"
           onClick={() => handleLinkClick('analysis')}
-          className={getLinkClass('Product Analysis')}
+          className={`nav-link ${getLinkClass('analysis')}`}
         >
-          Product Analysis
+          <LuTrendingUp className="nav-icon" />
+          <span>Product Analysis</span>
         </a>
       </div>
     </nav>
