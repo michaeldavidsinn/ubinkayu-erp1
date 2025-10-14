@@ -5,6 +5,7 @@ import { Textarea } from '../components/textarea'
 import { Button } from '../components/Button'
 import { POHeader, POItem } from '../types'
 import { AddProductModal } from '../components/AddProductModal'
+import * as apiService from '../apiService'
 
 interface InputPOPageProps {
   onSaveSuccess: () => void
@@ -23,11 +24,14 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     alamatKirim: '',
     catatan: editingPO?.notes || ''
   })
+  
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
+
+  const isElectron = !!window.api;
 
   useEffect(() => {
     if (editingPO) {

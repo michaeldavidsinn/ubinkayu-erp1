@@ -14,7 +14,6 @@ export interface ProgressUpdate {
   created_at: string;
 }
 
-// [MODIFIKASI] POItem ditambahkan progressHistory
 export interface POItem {
   id: number
   customer_name?: string
@@ -37,12 +36,11 @@ export interface POItem {
   location: string
   notes: string
   kubikasi?: number
-  progressHistory?: ProgressUpdate[]; // Riwayat progress untuk item ini
+  progressHistory?: ProgressUpdate[];
   stageDeadlines?: { stageName: string; deadline: string }[];
-  customer_name?: string; // [+] TAMBAHKAN INI
+  customer_name?: string;
 }
 
-// [MODIFIKASI] POHeader ditambahkan progress
 export interface POHeader {
   id: string
   po_number: string
@@ -59,7 +57,6 @@ export interface POHeader {
   photo_url?: string | null;
 }
 
-// Tipe ini tidak diubah
 export interface PORevision {
   id: string
   purchase_order_id: string
