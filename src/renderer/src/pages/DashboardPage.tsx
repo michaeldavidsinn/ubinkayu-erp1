@@ -26,14 +26,14 @@ const StatCard = ({ title, value, icon, color }) => (
 const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
   const dashboardData = useMemo(() => {
     if (!poList || poList.length === 0) {
-        return {
-            totalPOs: 0,
-            activePOs: 0,
-            completedPOs: 0,
-            dailyPOData: [], // Diubah dari monthly
-            statusPOData: [],
-            nearingDeadlinePOs: []
-        };
+      return {
+        totalPOs: 0,
+        activePOs: 0,
+        completedPOs: 0,
+        dailyPOData: [], // Diubah dari monthly
+        statusPOData: [],
+        nearingDeadlinePOs: []
+      };
     }
 
     const totalPOs = poList.length;
@@ -42,42 +42,42 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
 
     // [MODIFIKASI] Data dihitung per HARI, bukan per bulan
     const dailyCounts = poList.reduce((acc, po) => {
-        const day = new Date(po.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-        acc[day] = (acc[day] || 0) + 1;
-        return acc;
+      const day = new Date(po.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+      acc[day] = (acc[day] || 0) + 1;
+      return acc;
     }, {});
 
     // Mengurutkan data berdasarkan tanggal asli untuk memastikan urutan grafik benar
     const sortedDays = Object.keys(dailyCounts).sort((a, b) => {
-        // Logika untuk mengubah "20 Sep" menjadi tanggal yang bisa diurutkan
-        const dateA = new Date(`${a} ${new Date().getFullYear()}`);
-        const dateB = new Date(`${b} ${new Date().getFullYear()}`);
-        return dateA.getTime() - dateB.getTime();
+      // Logika untuk mengubah "20 Sep" menjadi tanggal yang bisa diurutkan
+      const dateA = new Date(`${a} ${new Date().getFullYear()}`);
+      const dateB = new Date(`${b} ${new Date().getFullYear()}`);
+      return dateA.getTime() - dateB.getTime();
     });
 
     const dailyPOData = sortedDays.map(day => ({
-        name: day,
-        "PO Baru": dailyCounts[day]
+      name: day,
+      "PO Baru": dailyCounts[day]
     }));
 
 
     const statusCounts = poList.reduce((acc, po) => {
-        const status = po.status || 'Open';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
+      const status = po.status || 'Open';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
     }, {});
     const statusPOData = Object.keys(statusCounts).map(status => ({
-        name: status,
-        value: statusCounts[status]
+      name: status,
+      value: statusCounts[status]
     }));
 
     const today = new Date();
     const nextTwoWeeks = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
     const nearingDeadlinePOs = poList.filter(po => {
-        if (!po.deadline || po.status === 'Completed' || po.status === 'Cancelled') return false;
-        const deadlineDate = new Date(po.deadline);
-        return deadlineDate >= today && deadlineDate <= nextTwoWeeks;
-    }).sort((a,b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+      if (!po.deadline || po.status === 'Completed' || po.status === 'Cancelled') return false;
+      const deadlineDate = new Date(po.deadline);
+      return deadlineDate >= today && deadlineDate <= nextTwoWeeks;
+    }).sort((a, b) => new Date(a.deadline || 0).getTime() - new Date(b.deadline || 0).getTime());
 
 
     return { totalPOs, activePOs, completedPOs, dailyPOData, statusPOData, nearingDeadlinePOs };
@@ -95,7 +95,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
           <p>Ringkasan aktivitas produksi PT Ubinkayu — {todayFormatted}</p>
         </div>
       </div>
-        {/* [MODIFIKASI] Tambahkan Kartu Notifikasi di sini */}
+      {/* [MODIFIKASI] Tambahkan Kartu Notifikasi di sini */}
       {/* [MODIFIKASI] Ganti blok Kartu Notifikasi yang lama dengan yang ini */}
       {!isLoading && dashboardData.nearingDeadlinePOs.length > 0 && (
         <Card className="attention-card">
@@ -134,63 +134,63 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
       <div className="dashboard-widgets-grid">
         {/* [MODIFIKASI] Mengganti BarChart menjadi LineChart */}
         <Card>
-            <h4>Purchase Order Baru per Hari</h4>
-            {isLoading ? <p>Memuat data...</p> : (
+          <h4>Purchase Order Baru per Hari</h4>
+          {isLoading ? <p>Memuat data...</p> : (
             <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={dashboardData.dailyPOData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false}/>
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="PO Baru" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
-                </LineChart>
+              <LineChart data={dashboardData.dailyPOData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="PO Baru" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
+              </LineChart>
             </ResponsiveContainer>
-            )}
+          )}
         </Card>
         <Card>
-            <h4>Komposisi Status PO</h4>
-            {isLoading ? <p>Memuat data...</p> : (
+          <h4>Komposisi Status PO</h4>
+          {isLoading ? <p>Memuat data...</p> : (
             <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                    <Pie data={dashboardData.statusPOData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                        {dashboardData.statusPOData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name] || '#8884d8'} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                </PieChart>
+              <PieChart>
+                <Pie data={dashboardData.statusPOData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                  {dashboardData.statusPOData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name] || '#8884d8'} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
-            )}
+          )}
         </Card>
       </div>
 
       <Card>
         <h4>🚨 PO Mendekati Deadline (14 Hari ke Depan)</h4>
         {isLoading ? <p>Memuat data...</p> : dashboardData.nearingDeadlinePOs.length > 0 ? (
-            <table className="simple-table">
-                <thead>
-                    <tr>
-                        <th>Nomor PO</th>
-                        <th>Customer</th>
-                        <th>Deadline</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {dashboardData.nearingDeadlinePOs.map(po => (
-                        <tr key={po.id}>
-                            <td>{po.po_number}</td>
-                            <td>{po.project_name}</td>
-                            <td>{new Date(po.deadline).toLocaleDateString('id-ID')}</td>
-                            <td><span className={`status-badge status-${(po.status || 'open').toLowerCase().replace(' ', '-')}`}>{po.status}</span></td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+          <table className="simple-table">
+            <thead>
+              <tr>
+                <th>Nomor PO</th>
+                <th>Customer</th>
+                <th>Deadline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboardData.nearingDeadlinePOs.map(po => (
+                <tr key={po.id}>
+                  <td>{po.po_number}</td>
+                  <td>{po.project_name}</td>
+                  <td>{po.deadline ? new Date(po.deadline).toLocaleDateString('id-ID') : 'N/A'}</td>
+                  <td><span className={`status-badge status-${(po.status || 'open').toLowerCase().replace(' ', '-')}`}>{po.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
-            <p>Tidak ada PO yang mendekati deadline. Kerja bagus! 👍</p>
+          <p>Tidak ada PO yang mendekati deadline. Kerja bagus! 👍</p>
         )}
       </Card>
 

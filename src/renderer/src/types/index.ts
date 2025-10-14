@@ -17,6 +17,7 @@ export interface ProgressUpdate {
 // [MODIFIKASI] POItem ditambahkan progressHistory
 export interface POItem {
   id: number
+  customer_name?: string
   purchase_order_id?: string
   revision_id?: string
   product_id: string
@@ -53,9 +54,9 @@ export interface POHeader {
   notes?: string
   kubikasi_total?: number
   pdf_link?: string | null
-  progress?: number; // Progress keseluruhan PO
-  items?: POItem[]; // [+] TAMBAHKAN INI
-  photo_url?: string | null; // [+] TAMBAHKAN INI
+  progress?: number;
+  items?: POItem[];
+  photo_url?: string | null;
 }
 
 // Tipe ini tidak diubah
@@ -84,4 +85,14 @@ export interface AnalysisData {
   slowMovingProducts: string[];
   woodTypeDistribution: { name: string; value: number }[]; // Tambahkan ini
   topCustomers: { name: string; totalKubikasi: number }[]; // Tambahkan ini
+}
+
+export interface DeleteResult {
+  success: boolean;
+  message: string;
+  summary?: {
+    duration?: string;
+    failedFileDeletes?: number;
+  };
+  error?: string;
 }

@@ -89,7 +89,7 @@ function App() {
     }
   }
 
-  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking' | 'analysis') => {
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking' | 'analysis'): void => {
     setSelectedPoId(null)
     setTrackingPO(null)
     setEditingPO(null)
