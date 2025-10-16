@@ -1822,3 +1822,47 @@ label {
     text-align: center;
   }
 }
+
+/* =================================================================== */
+/* == CSS RESPONSIVE UNTUK UPDATE PROGRESS PAGE == */
+/* =================================================================== */
+
+/* --- Membuat Timeline bisa di-scroll Horizontal --- */
+.timeline-container {
+  overflow-x: auto; /* Aktifkan scroll horizontal */
+  padding-bottom: 1rem;
+  /* Beri sedikit bayangan di tepi untuk menandakan bisa di-scroll */
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
+}
+
+.progress-timeline {
+  min-width: 800px; /* Paksa timeline menjadi lebar agar scrolling aktif */
+}
+
+/* --- Mempercantik Tampilan Tombol Unggah Foto --- */
+
+/* Sembunyikan input file bawaan yang jelek */
+.update-form input[type="file"] {
+  display: none;
+}
+
+/* Buat label terlihat seperti tombol */
+.file-input-label {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  border: 1px dashed var(--border-color); /* Border putus-putus */
+  border-radius: 6px;
+  background-color: #f9fafb;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input-label:hover {
+  background-color: var(--secondary-color);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}

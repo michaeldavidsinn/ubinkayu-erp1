@@ -21,18 +21,20 @@ const PRODUCTION_STAGES = [
 ]
 
 function getAuth() {
-  const isDev = !app.isPackaged;
+  const isDev = !app.isPackaged
 
   const credPath = isDev
     ? path.join(process.cwd(), 'resources', 'credentials.json')
-    : path.join(process.resourcesPath, 'credentials.json');
+    : path.join(process.resourcesPath, 'credentials.json')
 
   if (!fs.existsSync(credPath)) {
-    console.error('Lokasi file credentials.json yang dicari:', credPath);
-    throw new Error('File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".');
+    console.error('Lokasi file credentials.json yang dicari:', credPath)
+    throw new Error(
+      'File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".'
+    )
   }
 
-  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
 
   return new JWT({
     email: creds.client_email,
@@ -41,7 +43,7 @@ function getAuth() {
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive.file'
     ]
-  });
+  })
 }
 
 async function openDoc() {
@@ -345,10 +347,26 @@ export async function listPOs() {
       }
 
       let finalStatus = poObject.status
+      let completed_at = null
+
       if (finalStatus !== 'Cancelled') {
-        if (poProgress >= 100) finalStatus = 'Completed'
-        else if (poProgress > 0) finalStatus = 'In Progress'
-        else finalStatus = 'Open'
+        if (poProgress >= 100) {
+          finalStatus = 'Completed'
+          // --- TAMBAHKAN LOGIKA INI ---
+          // Cari tanggal update progress terakhir untuk PO ini
+          const allProgressForPO = progressRows
+            .filter((row) => row.get('purchase_order_id') === poId)
+            .map((row) => new Date(row.get('created_at')).getTime())
+
+          if (allProgressForPO.length > 0) {
+            completed_at = new Date(Math.max(...allProgressForPO)).toISOString()
+          }
+          // --- AKHIR LOGIKA BARU ---
+        } else if (poProgress > 0) {
+          finalStatus = 'In Progress'
+        } else {
+          finalStatus = 'Open'
+        }
       }
 
       return {
@@ -356,6 +374,7 @@ export async function listPOs() {
         items: poItems,
         progress: Math.round(poProgress),
         status: finalStatus,
+        completed_at: completed_at,
         pdf_link: po.get('pdf_link') || null
       }
     })
@@ -1293,19 +1312,19 @@ export async function getSalesItemData() {
 }
 export async function addNewProduct(productData) {
   try {
-    const doc = await openDoc();
-    const sheet = await getSheet(doc, 'product_master');
+    const doc = await openDoc()
+    const sheet = await getSheet(doc, 'product_master')
 
     // Dapatkan ID unik berikutnya dari sheet
-    const nextId = await getNextIdFromSheet(sheet);
+    const nextId = await getNextIdFromSheet(sheet)
 
     // Tambahkan baris baru dengan ID dan data produk
-    await sheet.addRow({ id: nextId, ...productData });
+    await sheet.addRow({ id: nextId, ...productData })
 
-    console.log(`✅ Produk baru [ID: ${nextId}] berhasil ditambahkan.`);
-    return { success: true, newId: nextId };
+    console.log(`✅ Produk baru [ID: ${nextId}] berhasil ditambahkan.`)
+    return { success: true, newId: nextId }
   } catch (err) {
-    console.error('❌ Gagal menambahkan produk baru:', err.message);
-    return { success: false, error: err.message };
+    console.error('❌ Gagal menambahkan produk baru:', err.message)
+    return { success: false, error: err.message }
   }
 }

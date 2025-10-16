@@ -74,28 +74,22 @@ const ProgressItem = ({
           Qty: {item.quantity} {item.satuan}
         </span>
       </div>
-      <div className="progress-timeline">
-        {stages.map((stage, index) => {
-          const deadlineInfo = item.stageDeadlines?.find((d) => d.stageName === stage)
-          const isCompleted = index <= currentStageIndex
-          const isOverdue =
-            deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted
+      <div className="timeline-container">
+        <div className="progress-timeline">
+          {stages.map((stage, index) => {
+            const deadlineInfo = item.stageDeadlines?.find((d) => d.stageName === stage);
+            const isCompleted = index <= currentStageIndex;
+            const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted;
 
-          return (
-            <div
-              key={stage}
-              className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}
-            >
-              <div className="stage-dot"></div>
-              <div className="stage-name">{stage}</div>
-              {deadlineInfo && (
-                <div className="stage-deadline">
-                  Target: {formatDeadline(deadlineInfo.deadline)}
-                </div>
-              )}
-            </div>
-          )
-        })}
+            return (
+              <div key={stage} className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
+                <div className="stage-dot"></div>
+                <div className="stage-name">{stage}</div>
+                {deadlineInfo && <div className="stage-deadline">Target: {formatDeadline(deadlineInfo.deadline)}</div>}
+              </div>
+            );
+          })}
+        </div>
       </div>
       {currentStageIndex < stages.length - 1 && (
         <div className="update-form">
@@ -106,11 +100,17 @@ const ProgressItem = ({
             placeholder="Tambahkan catatan..."
             rows={3}
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])}
-          />
+          <div>
+            <label htmlFor={`file-upload-${item.id}`} className="file-input-label">
+              {photoFile ? `✅ ${photoFile.name}` : '📷 Unggah Foto (Opsional)'}
+            </label>
+            <input
+              id={`file-upload-${item.id}`}
+              type="file"
+              accept="image/*"
+              onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])}
+            />
+          </div>
           <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>

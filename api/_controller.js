@@ -123,16 +123,33 @@ export async function handleListPOs(req, res) {
       poProgress = totalPercentage / poItems.length
     }
     let finalStatus = poObject.status
+    let completed_at = null
+
     if (finalStatus !== 'Cancelled') {
-      if (poProgress >= 100) finalStatus = 'Completed'
-      else if (poProgress > 0) finalStatus = 'In Progress'
-      else finalStatus = 'Open'
+      if (poProgress >= 100) {
+        finalStatus = 'Completed';
+        // --- TAMBAHKAN LOGIKA INI ---
+        // Cari tanggal update progress terakhir untuk PO ini
+        const allProgressForPO = progressRows
+          .filter(row => row.get('purchase_order_id') === poId)
+          .map(row => new Date(row.get('created_at')).getTime());
+
+        if (allProgressForPO.length > 0) {
+          completed_at = new Date(Math.max(...allProgressForPO)).toISOString();
+        }
+        // --- AKHIR LOGIKA BARU ---
+      } else if (poProgress > 0) {
+        finalStatus = 'In Progress';
+      } else {
+        finalStatus = 'Open';
+      }
     }
     return {
       ...poObject,
       items: poItems,
       progress: Math.round(poProgress),
       status: finalStatus,
+      completed_at: completed_at,
       pdf_link: po.get('pdf_link') || null
     }
   })

@@ -66,18 +66,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
       return acc
     }, {})
 
-    // Mengurutkan data berdasarkan tanggal asli untuk memastikan urutan grafik benar
-    const sortedDays = Object.keys(dailyCounts).sort((a, b) => {
-      // Logika untuk mengubah "20 Sep" menjadi tanggal yang bisa diurutkan
-      const dateA = new Date(`${a} ${new Date().getFullYear()}`)
-      const dateB = new Date(`${b} ${new Date().getFullYear()}`)
-      return dateA.getTime() - dateB.getTime()
-    })
+    const completedCounts = poList.reduce((acc, po) => {
+      if (po.status === 'Completed' && po.completed_at) {
+        const day = new Date(po.completed_at).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short'
+        })
+        acc[day] = (acc[day] || 0) + 1
+      }
+      return acc
+    }, {})
 
-    const dailyPOData = sortedDays.map((day) => ({
+    const allDaysSet = new Set([...Object.keys(dailyCounts), ...Object.keys(completedCounts)]);
+    const allDaysSorted = Array.from(allDaysSet).sort((a, b) => {
+        return new Date(`${a} ${new Date().getFullYear()}`).getTime() - new Date(`${b} ${new Date().getFullYear()}`).getTime();
+    });
+
+
+    const dailyPOData = allDaysSorted.map(day => ({
       name: day,
-      'PO Baru': dailyCounts[day]
-    }))
+      "PO Baru": dailyCounts[day] || 0,
+      "PO Selesai": completedCounts[day] || 0,
+  }));
 
     const statusCounts = poList.reduce((acc, po) => {
       const status = po.status || 'Open'
@@ -206,6 +216,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
                   strokeWidth={2}
                   activeDot={{ r: 8 }}
                 />
+                <Line type="monotone" dataKey="PO Selesai" stroke="#38A169" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -232,10 +243,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
                 </Pie>
                 <Tooltip />
                 <Legend
-                      layout={isMobile ? 'horizontal' : 'vertical'} // <-- Tata letak legend
-                      verticalAlign={isMobile ? 'bottom' : 'middle'}
-                      align={isMobile ? 'center' : 'right'}
-                    />
+                  layout={isMobile ? 'horizontal' : 'vertical'} // <-- Tata letak legend
+                  verticalAlign={isMobile ? 'bottom' : 'middle'}
+                  align={isMobile ? 'center' : 'right'}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
