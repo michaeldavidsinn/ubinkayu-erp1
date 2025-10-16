@@ -386,11 +386,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       <div className="item-section-header">
         <h2>Daftar Item</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button
-            variant="secondary"
-            onClick={() => setIsAddProductModalOpen(true)}
-            disabled={!isElectron}
-          >
+          <Button variant="secondary" onClick={() => setIsAddProductModalOpen(true)}>
             + Tambah Produk Master
           </Button>
           <Button onClick={handleAddItem}>+ Tambah Item ke PO</Button>
