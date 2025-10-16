@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import path from 'node:path'
+import fs from 'fs'
 
 import {
   testSheetConnection,
@@ -99,7 +100,17 @@ app.whenReady().then(() => {
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
   ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
-ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
+  ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
+
+  ipcMain.handle('app:read-file-base64', async (_event, filePath) => {
+    try {
+      const buffer = await fs.promises.readFile(filePath);
+      return buffer.toString('base64');
+    } catch (error) {
+      console.error('Failed to read file as base64:', error);
+      return null;
+    }
+  });
 
   createWindow()
   app.on('activate', () => {
