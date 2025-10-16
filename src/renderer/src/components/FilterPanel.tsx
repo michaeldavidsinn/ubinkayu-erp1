@@ -47,6 +47,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="form-group search-bar">
           <label>Pencarian</label>
           <Input
+            label=""
             type="text"
             name="searchQuery"
             placeholder="Cari berdasarkan nomor PO atau nama customer..."
@@ -105,16 +106,17 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
         <div className="form-group">
           <label>Tanggal Input Dari</label>
-          <Input type="date" name="dateFrom" value={filters.dateFrom} onChange={handleInputChange} />
+          <Input label="" type="date" name="dateFrom" value={filters.dateFrom} onChange={handleInputChange} />
         </div>
         <div className="form-group">
           <label>Tanggal Input Sampai</label>
-          <Input type="date" name="dateTo" value={filters.dateTo} onChange={handleInputChange} />
+          <Input label="" type="date" name="dateTo" value={filters.dateTo} onChange={handleInputChange} />
         </div>
 
         <div className="form-group">
           <label>Tanggal Kirim Dari</label>
           <Input
+            label=""
             type="date"
             name="deadlineFrom"
             value={filters.deadlineFrom}
@@ -124,6 +126,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="form-group">
           <label>Tanggal Kirim Sampai</label>
           <Input
+            label=""
             type="date"
             name="deadlineTo"
             value={filters.deadlineTo}

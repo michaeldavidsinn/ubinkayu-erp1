@@ -1,8 +1,6 @@
 /* eslint-disable prettier/prettier */
 // src/renderer/src/types/index.ts
 
-// [BARU] Tipe untuk satu entri progress
-
 export type ProductionStage = 'Cari Bahan Baku' | 'Sawmill' | 'KD' | 'Pembahanan' | 'Moulding' | 'Coating' | 'Siap Kirim';
 
 export interface ProgressUpdate {
@@ -14,9 +12,9 @@ export interface ProgressUpdate {
   created_at: string;
 }
 
+// [MERGE] Menggunakan versi dari Project A yang tidak duplikat
 export interface POItem {
   id: number
-  customer_name?: string
   purchase_order_id?: string
   revision_id?: string
   product_id: string
@@ -38,7 +36,7 @@ export interface POItem {
   kubikasi?: number
   progressHistory?: ProgressUpdate[];
   stageDeadlines?: { stageName: string; deadline: string }[];
-  customer_name?: string;
+  customer_name?: string; // Hanya ada satu properti ini
 }
 
 export interface POHeader {
@@ -67,10 +65,9 @@ export interface PORevision {
   priority: string | null
   notes: string | null
   created_at: string
-  pdf_link?: string | null // <-- [TAMBAHKAN BARIS INI]
+  pdf_link?: string | null
 }
 
-// Tipe ini tidak diubah
 export interface RevisionHistoryItem {
   revision: PORevision;
   items: POItem[];
@@ -80,10 +77,11 @@ export interface AnalysisData {
   topSellingProducts: { name: string; totalQuantity: number }[];
   trendingProducts: { name: string; change: number }[];
   slowMovingProducts: string[];
-  woodTypeDistribution: { name: string; value: number }[]; // Tambahkan ini
-  topCustomers: { name: string; totalKubikasi: number }[]; // Tambahkan ini
+  woodTypeDistribution: { name: string; value: number }[];
+  topCustomers: { name: string; totalKubikasi: number }[];
 }
 
+// [MERGE] Menambahkan interface baru dari Project B
 export interface DeleteResult {
   success: boolean;
   message: string;
