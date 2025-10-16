@@ -1782,3 +1782,42 @@ label {
     font-size: 10px;
   }
 }
+
+/* =================================================================== */
+/* 5. ATURAN RESPONSIVE (MEDIA QUERIES) - Lanjutan                     */
+/* =================================================================== */
+
+/* Aturan ini berlaku untuk layar HP/Tablet (lebar di bawah 768px) */
+@media (max-width: 768px) {
+
+  /* --- Perbaikan Header Halaman Utama --- */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .page-header .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+
+  /* --- Perbaikan Header Kartu Riwayat Revisi --- */
+  .revision-header {
+    flex-direction: column;     /* Tumpuk grup judul dan grup aksi ke bawah */
+    align-items: flex-start;    /* Ratakan semuanya ke kiri */
+    gap: 0.75rem;               /* Beri sedikit jarak vertikal */
+  }
+
+  .revision-actions-group {
+    flex-direction: column;     /* Tumpuk juga tanggal dan tombol di dalamnya */
+    align-items: flex-start;    /* Ratakan ke kiri */
+    gap: 0.75rem;
+    width: 100%; /* Pastikan grup ini memenuhi lebar kartu */
+  }
+
+  .revision-actions-group > .btn {
+    width: 100%; /* Buat tombol "Buka PDF" memenuhi lebar agar mudah disentuh */
+    text-align: center;
+  }
+}
