@@ -35,6 +35,7 @@ body {
 
 .main-content {
   padding: 0 2rem;
+  padding-top: env(safe-area-inset-top);
 }
 
 /* --- Navbar --- */
