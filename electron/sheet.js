@@ -1293,19 +1293,17 @@ export async function getSalesItemData() {
 }
 export async function addNewProduct(productData) {
   try {
-    console.log('📦 Menambahkan produk baru ke master:', productData);
     const doc = await openDoc();
     const sheet = await getSheet(doc, 'product_master');
 
-    // Menambahkan baris baru dengan data yang dikirim dari form
-    await sheet.addRow(productData);
+    // Dapatkan ID unik berikutnya dari sheet
+    const nextId = await getNextIdFromSheet(sheet);
 
-    // PENTING: Jika nanti Anda sudah menerapkan sistem cache,
-    // jangan lupa untuk membersihkan cache di sini agar daftar produk bisa ter-refresh.
-    // Contoh: clearSheetCache(); atau getAllSheetData(true);
+    // Tambahkan baris baru dengan ID dan data produk
+    await sheet.addRow({ id: nextId, ...productData });
 
-    console.log('✅ Produk baru berhasil ditambahkan.');
-    return { success: true };
+    console.log(`✅ Produk baru [ID: ${nextId}] berhasil ditambahkan.`);
+    return { success: true, newId: nextId };
   } catch (err) {
     console.error('❌ Gagal menambahkan produk baru:', err.message);
     return { success: false, error: err.message };

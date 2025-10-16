@@ -51,6 +51,9 @@ export default async function handler(req, res) {
       case 'getSalesItemData':
         return await Controller.handleGetSalesItemData(req, res)
 
+      case 'addNewProduct':
+        return await Controller.handleAddNewProduct(req, res)
+
       default:
         return res.status(404).json({ error: 'Action not found' })
     }

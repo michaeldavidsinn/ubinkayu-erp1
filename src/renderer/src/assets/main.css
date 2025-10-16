@@ -1352,3 +1352,433 @@ label {
   padding-left: 1.25rem;
   line-height: 1.8;
 }
+
+/* ======================================= */
+/* == CSS RESPONSIVE UNTUK DASHBOARD PAGE == */
+/* ======================================= */
+
+/* --- Grid untuk Kartu Statistik (Total PO, Aktif, Selesai) --- */
+
+/* Default (Mobile): Tumpuk kartu statistik secara vertikal */
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Jarak antar kartu */
+}
+
+/* Aturan untuk Tablet & Desktop */
+@media (min-width: 768px) {
+  .dashboard-grid {
+    display: grid;
+    /* Buat 3 kolom dengan lebar yang sama */
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+
+/* --- Grid untuk Widget/Grafik (Grafik Garis & Pie) --- */
+
+/* Default (Mobile): Tumpuk kartu grafik secara vertikal */
+.dashboard-widgets-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Jarak antar kartu */
+}
+
+/* Aturan untuk Tablet & Desktop */
+@media (min-width: 992px) { /* Gunakan breakpoint yg lebih lebar agar grafik tidak sempit */
+  .dashboard-widgets-grid {
+    display: grid;
+    /* Buat 2 kolom, kolom kiri 60% dan kanan 40% */
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+
+/* --- Perbaikan untuk Kartu Notifikasi "Perhatian!" --- */
+
+/* Pastikan item di dalamnya juga ditumpuk rapi */
+.attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attention-item .customer-name {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.attention-item .attention-line-2 {
+  font-size: 0.9em;
+  color: #888;
+}
+
+
+/* --- Perbaikan untuk Tabel "PO Mendekati Deadline" --- */
+
+/* Buat tabel bisa di-scroll ke samping jika tidak muat di layar HP */
+.simple-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Beri wrapper pada tabel agar bisa di-scroll tanpa merusak layout card */
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* ======================================= */
+/* === PERBAIKAN RESPONSIVE & PADDING ==== */
+/* ======================================= */
+
+/* 1. Tambahkan padding bawah ke semua halaman */
+.page-container {
+  padding-bottom: 2rem; /* Anda bisa sesuaikan nilainya */
+}
+
+/* ======================================= */
+/* == PERBAIKAN TAMPILAN KARTU PERHATIAN == */
+/* ======================================= */
+
+.attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Jarak antar item diatur oleh padding & border */
+}
+
+.attention-item {
+  /* Hapus flex-direction dan justify-content agar item menumpuk secara alami */
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attention-item:last-child {
+  border-bottom: none; /* Hilangkan border pada item terakhir */
+  padding-bottom: 0;
+}
+
+.attention-item:first-child {
+  padding-top: 8px; /* Kurangi padding atas pada item pertama */
+}
+
+/* Hilangkan margin default dari paragraf di dalam item */
+.attention-item p {
+  margin: 0;
+}
+
+/* Baris pertama: Nomor PO & Customer */
+.attention-line-1 {
+  font-size: 1rem;      /* Sedikit lebih besar */
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;   /* Beri jarak ke baris deadline di bawahnya */
+}
+
+.attention-line-1 strong {
+  font-weight: 700; /* Membuat Nomor PO lebih tebal dan menonjol */
+}
+
+.attention-line-1 .customer-name {
+  color: var(--text-secondary); /* Membuat nama customer sedikit lebih redup */
+}
+
+/* Baris kedua: Deadline */
+.attention-line-2 {
+  font-size: 0.875rem;
+  color: #c2410c; /* Warna oranye-merah untuk menandakan urgensi */
+  font-weight: 500;
+}
+
+/* =================================================================== */
+/* 5. ATURAN RESPONSIF (MEDIA QUERIES) - Lanjutan                     */
+/* =================================================================== */
+
+/* Aturan untuk PO List Page di layar lebih kecil */
+@media (max-width: 768px) {
+  /* --- Penyesuaian Header Halaman --- */
+  .page-header {
+    flex-direction: column;     /* Tumpuk judul dan tombol ke bawah */
+    align-items: flex-start;    /* Ratakan semuanya ke kiri */
+  }
+
+  .header-actions {
+    width: 100%; /* Buat container tombol memenuhi lebar */
+  }
+
+  /* Buat tombol "+ Tambah PO Baru" memenuhi lebar */
+  .header-actions > .btn {
+    flex-grow: 1;
+    text-align: center;
+  }
+
+
+  /* --- Penyesuaian Filter Panel --- */
+  .filter-panel {
+    padding: 1rem; /* Kurangi padding di layar kecil */
+  }
+
+  /* Buat header filter turun jika tidak muat */
+  .filter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+
+  /* --- Penyesuaian View Switcher --- */
+  .view-switcher {
+    width: 100%; /* Buat switcher memenuhi lebar */
+    justify-content: center; /* Posisikan tombol di tengah */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .view-switcher-btn {
+    flex: 1; /* Buat kedua tombol memiliki lebar yang sama */
+    text-align: center;
+  }
+
+
+  /* --- Penyesuaian Tabel PO --- */
+  /* Buat tombol aksi di dalam tabel ditumpuk vertikal agar tidak terlalu lebar */
+  .po-table-actions {
+    flex-direction: column;
+    align-items: stretch; /* Buat semua tombol selebar kolomnya */
+  }
+
+  .po-table-actions .btn,
+  .po-table-actions button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ================================================= */
+/* == PERBAIKAN RESPONSIVE UNTUK HEADER HALAMAN == */
+/* ================================================= */
+
+/* Aturan ini hanya berlaku untuk layar kecil (HP/Tablet) */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;     /* Tumpuk judul dan tombol ke bawah */
+    align-items: flex-start;    /* Ratakan semuanya ke kiri agar rapi */
+    gap: 1rem;                  /* Beri jarak antara judul dan tombol */
+  }
+
+  .header-actions {
+    width: 100%; /* Buat container tombol memenuhi lebar layar */
+  }
+
+  /* Target tombol "+ Tambah PO Baru" di dalam header */
+  .page-header .btn {
+    width: 100%; /* Buat tombolnya memenuhi lebar container */
+    text-align: center; /* Pastikan teks tombol di tengah */
+  }
+}
+
+/* =================================================================== */
+/* == PERBAIKAN TABEL RIWAYAT REVISI (REVISION HISTORY TABLE) == */
+/* =================================================================== */
+
+/* Wrapper yang sudah ada, memastikan tabel bisa di-scroll di HP */
+.revision-history-card .po-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+/* Menargetkan tabel di dalam kartu revisi */
+.revision-history-card .simple-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* --- Header Tabel (th) --- */
+.revision-history-card .simple-table th {
+  background-color: #F8F9FA; /* Warna abu-abu yang sangat terang */
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap; /* Mencegah header turun baris */
+}
+
+/* --- Sel Data (td) --- */
+.revision-history-card .simple-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  vertical-align: top; /* Rata atas agar rapi jika ada teks panjang */
+}
+
+/* --- Baris Tabel (tr) --- */
+.revision-history-card .simple-table tbody tr:last-child td {
+  border-bottom: none; /* Hapus border pada baris terakhir */
+}
+
+.revision-history-card .simple-table tbody tr:hover {
+  background-color: #F1F5F9; /* Warna hover yang lembut */
+}
+
+/* --- Styling Spesifik Kolom (Membuatnya "Menarik") --- */
+
+/* Kolom pertama (Produk) dibuat lebih menonjol */
+.revision-history-card .simple-table td:first-child {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Kolom terakhir (Catatan) dibuat lebih fleksibel dan tidak terlalu menonjol */
+.revision-history-card .simple-table td:last-child {
+  white-space: normal; /* Izinkan teks catatan turun baris */
+  min-width: 200px;  /* Beri lebar minimum agar tidak terlalu sempit */
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* =================================================================== */
+/* 5. ATURAN RESPONSIVE (MEDIA QUERIES) - Lanjutan                     */
+/* =================================================================== */
+
+/* Aturan ini hanya berlaku untuk layar tablet dan HP (lebar di bawah 992px) */
+@media (max-width: 992px) {
+
+  /* --- Ubah Layout Utama Halaman Tracking --- */
+  .tracking-layout {
+    grid-template-columns: 1fr; /* Paksa layout grid menjadi satu kolom */
+  }
+
+  /* --- Penyesuaian Header Halaman --- */
+  .page-header {
+    flex-direction: column;     /* Tumpuk judul dan tombol ke bawah */
+    align-items: flex-start;    /* Ratakan semuanya ke kiri agar rapi */
+  }
+}
+
+/* ======================================= */
+/* ====== STYLING UNTUK MODAL POPUP ====== */
+/* ======================================= */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 700px; /* Lebar maksimal di desktop */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: scaleUp 0.3s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.modal-body {
+  overflow-y: auto; /* Agar bisa di-scroll jika kontennya panjang */
+  padding-right: 1rem; /* Beri ruang untuk scrollbar */
+  margin-right: -1rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Animasi untuk modal */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsif untuk form di dalam modal */
+@media (max-width: 640px) {
+  .modal-content .form-grid {
+    grid-template-columns: 1fr; /* Tumpuk form menjadi 1 kolom di HP */
+  }
+  .modal-content {
+    padding: 1rem;
+  }
+}
+
+/* =================================================================== */
+/* 5. ATURAN RESPONSIF (MEDIA QUERIES) - Lanjutan                     */
+/* =================================================================== */
+
+/* Aturan ini berlaku untuk layar tablet dan HP (lebar di bawah 992px) */
+@media (max-width: 992px) {
+
+  /* --- Perbaikan Halaman Analisis --- */
+
+  /* Ubah semua layout grid 2 kolom menjadi 1 kolom */
+  .dashboard-widgets-grid,
+  .interactive-bi-layout {
+    grid-template-columns: 1fr; /* Paksa menjadi satu kolom penuh */
+  }
+
+  /* Beri sedikit ruang pada panel filter yang sekarang ada di atas */
+  .interactive-bi-layout .bi-filters {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Aturan tambahan untuk layar HP yang sangat sempit (lebar di bawah 480px) */
+@media (max-width: 480px) {
+
+  /* --- Perbaikan Halaman Analisis (Lanjutan) --- */
+
+  /* Kecilkan font pada label sumbu-Y di bar chart agar tidak terpotong */
+  .recharts-yAxis .recharts-text {
+    font-size: 10px;
+  }
+}

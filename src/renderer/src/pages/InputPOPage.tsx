@@ -70,9 +70,20 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           setPoPhotoPath('Foto referensi dari revisi sebelumnya.')
         }
 
+        // file: src/renderer/pages/InputPOPage.tsx
+
         try {
           const poItems = await apiService.listPOItems(editingPO.id)
-          setItems(poItems)
+
+          // --- TAMBAHKAN BLOK KONVERSI INI ---
+          const itemsWithNumbers = poItems.map((item) => ({
+            ...item,
+            // Ubah setiap nilai kubikasi menjadi Angka
+            kubikasi: Number(item.kubikasi) || 0
+          }))
+          // ------------------------------------
+
+          setItems(itemsWithNumbers) // Simpan data yang sudah bersih
         } catch (error) {
           console.error('❌ Gagal memuat item PO:', error)
         }

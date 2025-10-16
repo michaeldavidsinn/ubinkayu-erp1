@@ -751,3 +751,17 @@ export async function handleGetSalesItemData(req, res) {
     .filter(Boolean)
   return res.status(200).json(combinedData)
 }
+
+export async function handleAddNewProduct(req, res) {
+  const productData = req.body;
+  try {
+    const doc = await openDoc();
+    const sheet = await getSheet(doc, 'product_master');
+    const nextId = await getNextIdFromSheet(sheet);
+    await sheet.addRow({ id: nextId, ...productData });
+    return res.status(200).json({ success: true, newId: nextId });
+  } catch (error) {
+    console.error('❌ Gagal menambahkan produk baru di Vercel:', error.message);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+}

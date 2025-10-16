@@ -179,3 +179,12 @@ export function readFileAsBase64(filePath) {
   console.warn('Fungsi baca file hanya tersedia di aplikasi desktop.');
   return Promise.resolve(null);
 }
+
+export function addNewProduct(data) {
+  if (window.api) return window.api.addNewProduct(data);
+  return fetchAPI(createApiEndpoint('addNewProduct'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}

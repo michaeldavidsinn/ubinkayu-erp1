@@ -37,7 +37,8 @@ const api = {
 
   // --- Fungsi untuk File ---
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
-  readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath)
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath),
+  addNewProduct: (data) => ipcRenderer.invoke('product:add', data)
 }
 
 try {
