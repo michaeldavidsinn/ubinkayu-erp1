@@ -140,12 +140,20 @@ async function generateAndUploadPO(poData, revisionNumber) {
     const auth = getAuth()
     const drive = google.drive({ version: 'v3', auth })
     const fileName = path.basename(pdfResult.path)
+    const ext = path.extname(fileName).toLowerCase()
+
+    let mimeType = 'application/octet-stream'
+    if (ext === '.jpeg' || ext === '.jpg') mimeType = 'image/jpeg'
+    else if (ext === '.png') mimeType = 'image/png'
+    else if (ext === '.pdf') mimeType = 'application/pdf'
+
     const response = await drive.files.create({
-      requestBody: { name: fileName, mimeType: 'application/pdf', parents: [PO_ARCHIVE_FOLDER_ID] },
-      media: { mimeType: 'application/pdf', body: fs.createReadStream(pdfResult.path) },
+      requestBody: { name: fileName, mimeType, parents: [PO_ARCHIVE_FOLDER_ID] },
+      media: { mimeType, body: fs.createReadStream(pdfResult.path) },
       fields: 'id, webViewLink',
       supportsAllDrives: true
     })
+
     fs.unlinkSync(pdfResult.path)
     return { success: true, link: response.data.webViewLink }
   } catch (error) {
