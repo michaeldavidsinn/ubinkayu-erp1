@@ -29,8 +29,31 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
 
+  // Fungsi baru untuk membuat objek item kosong
+  const createEmptyItem = (): POItem => ({
+    id: Date.now(),
+    product_id: '',
+    product_name: '',
+    wood_type: '',
+    profile: '',
+    color: '',
+    finishing: '',
+    sample: '',
+    marketing: '',
+    thickness_mm: 0,
+    width_mm: 0,
+    length_mm: 0,
+    length_type: '',
+    quantity: 1,
+    satuan: 'pcs',
+    location: '',
+    notes: '',
+    kubikasi: 0
+  })
+
   useEffect(() => {
     if (editingPO) {
+      // @ts-ignore
       setPoPhotoPath(editingPO.photo_url || null)
     } else {
       setPoPhotoPath(null)
@@ -99,7 +122,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         alamatKirim: '',
         catatan: ''
       })
-      setItems([])
+      // Tambahkan satu baris kosong saat membuat PO baru
+      setItems([createEmptyItem()])
     }
 
     fetchProducts()
@@ -112,40 +136,24 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const handleAddItem = () => {
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        product_id: '',
-        product_name: '',
-        wood_type: '',
-        profile: '',
-        color: '',
-        finishing: '',
-        sample: '',
-        marketing: '',
-        thickness_mm: 0,
-        width_mm: 0,
-        length_mm: 0,
-        length_type: '',
-        quantity: 1,
-        satuan: 'pcs',
-        location: '',
-        notes: '',
-        kubikasi: 0
-      }
-    ])
+    setItems((prev) => [...prev, createEmptyItem()])
   }
 
-  const handleItemChange = (id: number, field: keyof POItem, value: string | number) => {
+  const handleItemChange = (id: number | string, field: keyof POItem, value: string | number) => {
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, [field]: value, kubikasi: calculateKubikasi({ ...item, [field]: value }) } : item
-      )
+      prev.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value }
+          return { ...updatedItem, kubikasi: calculateKubikasi(updatedItem) }
+        }
+        return item
+      })
     )
   }
 
-  const handleRemoveItem = (id: number) => {
+  const handleRemoveItem = (id: number | string) => {
+    // Jangan biarkan baris terakhir dihapus
+    if (items.length <= 1) return
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
@@ -164,10 +172,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         kubikasi: calculateKubikasi(item)
       }))
 
-      const kubikasiTotal = itemsWithKubikasi.reduce(
-        (acc, item) => acc + (item.kubikasi || 0),
-        0
-      )
+      const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
 
       const payload = {
         ...poData,
@@ -176,16 +181,15 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         poId: editingPO?.id,
         poPhotoPath: poPhotoPath
       }
-      console.log('TITIK A (Frontend): Mengirim payload:', payload)
       // @ts-ignore
       const result = editingPO
-        // @ts-ignore
-        ? await window.api.updatePO(payload)
-        // @ts-ignore
-        : await window.api.saveNewPO(payload)
+        ? // @ts-ignore
+          await window.api.updatePO(payload)
+        : // @ts-ignore
+          await window.api.saveNewPO(payload)
 
       if (result.success) {
-        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan PDF telah diunggah!`)
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan file gambar telah diunggah!`)
         onSaveSuccess()
       } else {
         throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
@@ -208,10 +212,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         kubikasi: calculateKubikasi(item)
       }))
 
-      const kubikasiTotal = itemsWithKubikasi.reduce(
-        (acc, item) => acc + (item.kubikasi || 0),
-        0
-      )
+      const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
 
       const payload = {
         ...poData,
@@ -262,6 +263,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
 
   return (
     <div className="page-container">
+      {/* BAGIAN INFORMASI DASAR PO (TIDAK BERUBAH) */}
       <div className="page-header">
         <div>
           <h1>{editingPO ? 'Revisi Purchase Order' : 'Input Purchase Order'}</h1>
@@ -277,7 +279,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </Button>
         </div>
       </div>
-
       <Card>
         <h2>Informasi Dasar PO</h2>
         <div className="form-grid">
@@ -319,6 +320,24 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               <option value="Urgent">Urgent</option>
             </select>
           </div>
+
+          {/* [TAMBAH] Input Combobox untuk Marketing */}
+          <div className="form-group">
+            <label>Marketing</label>
+            <input
+              list="marketing-list"
+              name="marketing"
+              value={poData.marketing}
+              onChange={handleDataChange}
+              placeholder="Pilih atau ketik nama"
+              className="combobox-input"
+            />
+            <datalist id="marketing-list">
+              {getUniqueOptions('marketing').map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </div>
         </div>
         <Textarea
           label="Catatan"
@@ -341,182 +360,203 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 </Button>
               </div>
             ) : (
-              <Button variant="secondary" onClick={handleSelectPoPhoto}>Pilih Foto</Button>
+              <Button variant="secondary" onClick={handleSelectPoPhoto}>
+                Pilih Foto
+              </Button>
             )}
           </div>
         </div>
       </Card>
 
+      {/* [DIROMBAK TOTAL] BAGIAN DAFTAR ITEM */}
       <div className="item-section-header">
         <h2>Daftar Item</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <Button variant="secondary" onClick={() => setIsAddProductModalOpen(true)}>
             + Tambah Produk Master
           </Button>
-          <Button onClick={handleAddItem}>+ Tambah Item ke PO</Button>
+          <Button onClick={handleAddItem}>+ Tambah Baris</Button>
         </div>
       </div>
 
-      {items.map((item, index) => (
-        <Card key={item.id} className="item-card">
-          <div className="item-card-header">
-            <h4>Item #{index + 1}</h4>
-            <Button variant="secondary" onClick={() => handleRemoveItem(item.id)}>
-              Hapus
-            </Button>
-          </div>
-          <div className="form-grid">
-            <Input
-              label="Product ID"
-              value={item.product_id}
-              onChange={(e) => handleItemChange(item.id, 'product_id', e.target.value)}
-            />
-            <div className="form-group">
-              <label>Product Name</label>
-              <select
-                value={item.product_name}
-                onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
-              >
-                <option value="">Pilih Produk</option>
-                {getUniqueOptions('product_name').map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Wood Type</label>
-              <select
-                value={item.wood_type}
-                onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
-              >
-                <option value="">Pilih Tipe Kayu</option>
-                {getUniqueOptions('wood_type').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Profile</label>
-              <select
-                value={item.profile}
-                onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
-              >
-                <option value="">Pilih Profil</option>
-                {getUniqueOptions('profile').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Color</label>
-              <select
-                value={item.color}
-                onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
-              >
-                <option value="">Pilih Warna</option>
-                {getUniqueOptions('color').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Finishing</label>
-              <select
-                value={item.finishing}
-                onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
-              >
-                <option value="">Pilih Finishing</option>
-                {getUniqueOptions('finishing').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Sample</label>
-              <select
-                value={item.sample}
-                onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
-              >
-                <option value="">Pilih Sample</option>
-                {getUniqueOptions('sample').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Marketing</label>
-              <select
-                value={item.marketing}
-                onChange={(e) => handleItemChange(item.id, 'marketing', e.target.value)}
-              >
-                <option value="">Pilih Marketing</option>
-                {getUniqueOptions('marketing').map((val) => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label="Thickness (mm)"
-              type="number"
-              value={item.thickness_mm}
-              onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
-            />
-            <Input
-              label="Width (mm)"
-              type="number"
-              value={item.width_mm}
-              onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
-            />
-            <Input
-              label="Length (mm)"
-              type="number"
-              value={item.length_mm}
-              onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
-            />
-            <Input
-              label="Length Type"
-              value={item.length_type}
-              onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
-              placeholder="e.g., RL, Fix"
-            />
-            <Input
-              label="Quantity"
-              type="number"
-              value={item.quantity}
-              onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
-            />
-            <div className="form-group">
-              <label>Satuan</label>
-              <select
-                value={item.satuan}
-                onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
-              >
-                <option value="pcs">pcs</option>
-                <option value="m1">m1</option>
-                <option value="m2">m2</option>
-              </select>
-            </div>
-            <Input
-              label="Location"
-              value={item.location}
-              onChange={(e) => handleItemChange(item.id, 'location', e.target.value)}
-              placeholder="e.g., Gudang A"
-            />
-            <Input
-              label="Catatan Item"
-              value={item.notes}
-              onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>Kubikasi Item</label>
-            <p>
-              <b>{calculateKubikasi(item).toFixed(3)} m³</b>
-            </p>
-          </div>
-        </Card>
-      ))}
+      <Card>
+        <div className="table-responsive">
+          <table className="item-table">
+            <thead>
+              <tr>
+                <th>Produk</th>
+                <th>Jenis Kayu</th>
+                <th>Profil</th>
+                <th>Warna</th>
+                <th>Finishing</th>
+                <th>Sample</th>
+                <th>Ukuran (T x L x P)</th>
+                <th>Tipe Pjg</th>
+                <th>Qty</th>
+                <th>Catatan Item</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  {/* Produk */}
+                  <td style={{ minWidth: '150px' }}>
+                    <input
+                      list="product-list"
+                      value={item.product_name}
+                      onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
+                      placeholder="Pilih/Ketik Produk"
+                    />
+                    <datalist id="product-list">
+                      {getUniqueOptions('product_name').map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Jenis Kayu */}
+                  <td style={{ minWidth: '130px' }}>
+                    <input
+                      list="wood-type-list"
+                      value={item.wood_type}
+                      onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
+                      placeholder="Pilih/Ketik Kayu"
+                    />
+                    <datalist id="wood-type-list">
+                      {getUniqueOptions('wood_type').map((val) => (
+                        <option key={val} value={val} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Profil */}
+                  <td style={{ minWidth: '100px' }}>
+                    <input
+                      list="profile-list"
+                      type="text"
+                      value={item.profile}
+                      onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
+                      placeholder="Pilih/Ketik Profil"
+                    />
+                     <datalist id="profile-list">
+                      {getUniqueOptions('profile').map((val) => (
+                        <option key={val} value={val} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Warna */}
+                  <td style={{ minWidth: '100px' }}>
+                    <input
+                      list="color-list"
+                      type="text"
+                      value={item.color}
+                      onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
+                      placeholder="Pilih/Ketik Warna"
+                    />
+                    <datalist id="color-list">
+                      {getUniqueOptions('color').map((val) => (
+                        <option key={val} value={val} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Finishing */}
+                  <td style={{ minWidth: '120px' }}>
+                    <input
+                      list="finishing-list"
+                      value={item.finishing}
+                      onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
+                      placeholder="Pilih/Ketik Finishing"
+                    />
+                    <datalist id="finishing-list">
+                      {getUniqueOptions('finishing').map((val) => (
+                        <option key={val} value={val} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Sample */}
+                  <td style={{ minWidth: '120px' }}>
+                     <input
+                      list="sample-list"
+                      value={item.sample}
+                      onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
+                      placeholder="Pilih/Ketik Sample"
+                    />
+                    <datalist id="sample-list">
+                      {getUniqueOptions('sample').map((val) => (
+                        <option key={val} value={val} />
+                      ))}
+                    </datalist>
+                  </td>
+                  {/* Ukuran (T x L x P) */}
+                  <td style={{ minWidth: '200px' }}>
+                    <div className="size-inputs">
+                      <input
+                        type="number" // <-- Ini adalah input angka biasa
+                        value={item.thickness_mm}
+                        onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+                      />
+                      <span>x</span>
+                      <input
+                        type="number" // <-- Ini adalah input angka biasa
+                        value={item.width_mm}
+                        onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+                      />
+                      <span>x</span>
+                      <input
+                        type="number" // <-- Ini adalah input angka biasa
+                        value={item.length_mm}
+                        onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+                      />
+                    </div>
+                  </td>
+                  {/* Tipe Panjang */}
+                  <td style={{ minWidth: '80px' }}>
+                     <input
+                      type="text"
+                      value={item.length_type}
+                      onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
+                    />
+                  </td>
+                  {/* Kuantitas */}
+                  <td style={{ minWidth: '150px' }}>
+                    <div className="quantity-inputs">
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+                      />
+                      <select
+                        value={item.satuan}
+                        onChange={(e) => handleItemChange(item.id, 'satuan', e.target.value)}
+                      >
+                        <option value="pcs">pcs</option>
+                        <option value="m1">m1</option>
+                        <option value="m2">m2</option>
+                      </select>
+                    </div>
+                  </td>
+                  {/* Catatan Item */}
+                  <td style={{ minWidth: '180px' }}>
+                    <input
+                      type="text"
+                      value={item.notes}
+                      onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
+                      placeholder="Catatan..."
+                    />
+                  </td>
+                  {/* Aksi */}
+                  <td>
+                    <Button variant="danger" onClick={() => handleRemoveItem(item.id)}>
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
+      {/* BAGIAN KUBIKASI TOTAL (TIDAK BERUBAH) */}
       <Card>
         <h2>Kubikasi Total</h2>
         <p>
@@ -524,6 +564,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         </p>
       </Card>
 
+      {/* MODAL (TIDAK BERUBAH) */}
       <AddProductModal
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}

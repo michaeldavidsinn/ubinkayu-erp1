@@ -1352,3 +1352,68 @@ label {
   padding-left: 1.25rem;
   line-height: 1.8;
 }
+
+
+
+/* CSS untuk Tabel Input Item */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto; /* PENTING: Ini yang membuat tabel bisa di-scroll ke kanan-kiri */
+}
+
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.item-table th,
+.item-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.item-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  white-space: nowrap; /* Mencegah header terpotong saat di-scroll */
+}
+
+/* Membuat input dan select memenuhi sel tabel */
+.item-table input,
+.item-table select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Penting agar padding tidak menambah lebar */
+}
+
+/* Styling untuk input ukuran T x L x P */
+.size-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.size-inputs input {
+  width: 50px;
+  text-align: center;
+}
+.size-inputs span {
+  padding: 0 2px;
+}
+
+/* Styling untuk input Qty + Satuan */
+.quantity-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.quantity-inputs input {
+  flex: 1;
+}
+.quantity-inputs select {
+  width: 60px;
+}
