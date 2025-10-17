@@ -21,7 +21,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     tanggalKirim: editingPO?.deadline || '',
     prioritas: editingPO?.priority || 'Normal',
     alamatKirim: '',
-    catatan: editingPO?.notes || ''
+    catatan: editingPO?.notes || '',
+    marketing: editingPO?.marketing || ''
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
@@ -29,7 +30,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
 
-  // Fungsi baru untuk membuat objek item kosong
   const createEmptyItem = (): POItem => ({
     id: Date.now(),
     product_id: '',
@@ -51,20 +51,83 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     kubikasi: 0
   })
 
+  const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
+    return productList
+      .map((p) => p[field])
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort()
+  }
+
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.toLowerCase()
+    const s2 = str2.toLowerCase()
+    const longer = s1.length > s2.length ? s1 : s2
+    const shorter = s1.length > s2.length ? s2 : s1
+
+    if (longer.length === 0) return 1.0
+    const editDistance = getEditDistance(longer, shorter)
+    return (longer.length - editDistance) / longer.length
+  }
+
+  const getEditDistance = (s1: string, s2: string): number => {
+    const costs: number[] = []
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i
+      for (let j = 0; j <= s2.length; j++) {
+        if (i === 0) {
+          costs[j] = j
+        } else if (j > 0) {
+          let newValue = costs[j - 1]
+          if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1
+          }
+          costs[j - 1] = lastValue
+          lastValue = newValue
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue
+    }
+    return costs[s2.length]
+  }
+
+  const findBestMatch = (field: string, value: string): string => {
+    if (!value.trim()) return value
+
+    const options = getUniqueOptions(field as any)
+
+    // First, try exact match (case-insensitive)
+    const exactMatch = options.find((opt) => opt.toLowerCase() === value.toLowerCase())
+    if (exactMatch) return exactMatch
+
+    // Then, try fuzzy matching with similarity threshold
+    const matches = options
+      .map((opt) => ({
+        option: opt,
+        similarity: calculateSimilarity(value, opt)
+      }))
+      .filter((m) => m.similarity >= 0.6) // 60% similarity threshold
+      .sort((a, b) => b.similarity - a.similarity)
+
+    return matches.length > 0 ? matches[0].option : value
+  }
+
   useEffect(() => {
     if (editingPO) {
-      // @ts-ignore
-      setPoPhotoPath(editingPO.photo_url || null)
+      setPoPhotoPath(editingPO.photo_url as string | null || null)
     } else {
       setPoPhotoPath(null)
     }
   }, [editingPO])
 
   const handleSelectPoPhoto = async () => {
-    // @ts-ignore
-    const selectedPath = await window.api.openFileDialog()
-    if (selectedPath) {
-      setPoPhotoPath(selectedPath)
+    try {
+      const selectedPath = await (window as any).api.openFileDialog()
+      if (selectedPath) {
+        setPoPhotoPath(selectedPath)
+      }
+    } catch (error) {
+      console.error('Failed to select photo:', error)
     }
   }
 
@@ -72,21 +135,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     setPoPhotoPath(null)
   }
 
-  const getUniqueOptions = (field: keyof (typeof productList)[0]) => {
-    return productList
-      .map((p) => p[field])
-      .filter(Boolean)
-      .filter((v, i, a) => a.indexOf(v) === i)
-  }
-
   const fetchProducts = useCallback(async () => {
     try {
-      // @ts-ignore
-      const products = await window.api.getProducts()
+      const products = await (window as any).api.getProducts()
       setProductList(products)
-      console.log('Daftar produk berhasil di-refresh.')
+      console.log('Product list refreshed successfully.')
     } catch (error) {
-      console.error('❌ Gagal memuat daftar produk:', error)
+      console.error('Failed to load product list:', error)
     }
   }, [])
 
@@ -99,16 +154,16 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         tanggalKirim: editingPO.deadline || '',
         prioritas: editingPO.priority || 'Normal',
         alamatKirim: '',
-        catatan: editingPO.notes || ''
+        catatan: editingPO.notes || '',
+        marketing: (editingPO as any).marketing || ''
       })
 
       const fetchPOItems = async () => {
         try {
-          // @ts-ignore
-          const poItems = await window.api.listPOItems(editingPO.id)
+          const poItems = await (window as any).api.listPOItems(editingPO.id)
           setItems(poItems)
         } catch (error) {
-          console.error('❌ Gagal memuat item PO:', error)
+          console.error('Failed to load PO items:', error)
         }
       }
       fetchPOItems()
@@ -120,19 +175,25 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         tanggalKirim: '',
         prioritas: 'Normal',
         alamatKirim: '',
-        catatan: ''
+        catatan: '',
+        marketing: ''
       })
-      // Tambahkan satu baris kosong saat membuat PO baru
       setItems([createEmptyItem()])
     }
 
     fetchProducts()
-  }, [editingPO, fetchProducts])
+  }, [editingPO, fetchProducts, today])
 
   const handleDataChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setPoData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    setPoData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleDataBlur = (field: string, value: string) => {
+    const correctedValue = findBestMatch(field, value)
+    setPoData((prev) => ({ ...prev, [field]: correctedValue }))
   }
 
   const handleAddItem = () => {
@@ -151,18 +212,34 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     )
   }
 
+  const handleItemBlur = (id: number | string, field: keyof POItem, value: string | number) => {
+    if (typeof value !== 'string') return
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          const correctedValue = findBestMatch(field, value)
+          const updatedItem = { ...item, [field]: correctedValue }
+          return { ...updatedItem, kubikasi: calculateKubikasi(updatedItem) }
+        }
+        return item
+      })
+    )
+  }
+
   const handleRemoveItem = (id: number | string) => {
-    // Jangan biarkan baris terakhir dihapus
     if (items.length <= 1) return
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
   const handleSaveOrUpdatePO = async () => {
     if (!poData.nomorPo || !poData.namaCustomer) {
-      return alert('Nomor PO dan Nama Customer harus diisi!')
+      alert('PO Number and Customer Name are required!')
+      return
     }
     if (items.length === 0) {
-      return alert('Tambahkan minimal satu item.')
+      alert('Add at least one item.')
+      return
     }
 
     setIsSaving(true)
@@ -179,24 +256,21 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         items: itemsWithKubikasi,
         kubikasi_total: kubikasiTotal,
         poId: editingPO?.id,
-        poPhotoPath: poPhotoPath,
-        acc_marketing: poData.marketing
+        poPhotoPath: poPhotoPath
       }
-      // @ts-ignore
+
       const result = editingPO
-        ? // @ts-ignore
-          await window.api.updatePO(payload)
-        : // @ts-ignore
-          await window.api.saveNewPO(payload)
+        ? await (window as any).api.updatePO(payload)
+        : await (window as any).api.saveNewPO(payload)
 
       if (result.success) {
-        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'} dan file gambar telah diunggah!`)
+        alert(`PO successfully ${editingPO ? 'updated' : 'saved'}!`)
         onSaveSuccess()
       } else {
-        throw new Error(result.error || 'Terjadi kesalahan yang tidak diketahui di backend.')
+        throw new Error(result.error || 'Unknown error occurred.')
       }
     } catch (error) {
-      alert(`❌ Gagal menyimpan PO: ${(error as Error).message}`)
+      alert(`Failed to save PO: ${(error as Error).message}`)
     } finally {
       setIsSaving(false)
     }
@@ -204,7 +278,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
 
   const handlePreviewPO = async () => {
     if (items.length === 0) {
-      return alert('Tambahkan minimal satu item untuk preview.')
+      alert('Add at least one item to preview.')
+      return
     }
     setIsPreviewing(true)
     try {
@@ -219,12 +294,10 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         ...poData,
         items: itemsWithKubikasi,
         kubikasi_total: kubikasiTotal,
-        poPhotoPath: poPhotoPath,
-        acc_marketing: poData.marketing
+        poPhotoPath: poPhotoPath
       }
 
-      // @ts-ignore
-      const result = await window.api.previewPO(payload)
+      const result = await (window as any).api.previewPO(payload)
 
       if (result.success) {
         const imageWindow = window.open()
@@ -234,10 +307,10 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           )
         }
       } else {
-        throw new Error(result.error || 'Gagal menghasilkan data preview.')
+        throw new Error(result.error || 'Failed to generate preview data.')
       }
     } catch (error) {
-      alert(`❌ Gagal preview PO: ${(error as Error).message}`)
+      alert(`Failed to preview PO: ${(error as Error).message}`)
     } finally {
       setIsPreviewing(false)
     }
@@ -265,27 +338,27 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
 
   return (
     <div className="page-container">
-      {/* BAGIAN INFORMASI DASAR PO (TIDAK BERUBAH) */}
       <div className="page-header">
         <div>
-          <h1>{editingPO ? 'Revisi Purchase Order' : 'Input Purchase Order'}</h1>
-          <p>{editingPO ? 'Perbarui data PO dan itemnya' : 'Buat PO baru dengan spesifikasi detail'}</p>
+          <h1>{editingPO ? 'Revise Purchase Order' : 'Input Purchase Order'}</h1>
+          <p>{editingPO ? 'Update PO and item data' : 'Create new PO with detailed specifications'}</p>
         </div>
         <div className="header-actions">
-          <Button onClick={onSaveSuccess}>Kembali</Button>
+          <Button onClick={onSaveSuccess}>Back</Button>
           <Button variant="secondary" onClick={handlePreviewPO} disabled={isPreviewing}>
-            {isPreviewing ? 'Membuka Preview...' : '◎ Preview'}
+            {isPreviewing ? 'Opening Preview...' : '◎ Preview'}
           </Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
-            {isSaving ? 'Menyimpan...' : editingPO ? 'Simpan Revisi' : 'Simpan PO Baru'}
+            {isSaving ? 'Saving...' : editingPO ? 'Save Revision' : 'Save New PO'}
           </Button>
         </div>
       </div>
+
       <Card>
-        <h2>Informasi Dasar PO</h2>
+        <h2>Basic PO Information</h2>
         <div className="form-grid">
           <Input
-            label="Nomor PO *"
+            label="PO Number *"
             name="nomorPo"
             value={poData.nomorPo}
             onChange={handleDataChange}
@@ -293,14 +366,14 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             disabled={!!editingPO}
           />
           <Input
-            label="Nama Customer *"
+            label="Customer Name *"
             name="namaCustomer"
             value={poData.namaCustomer}
             onChange={handleDataChange}
             placeholder="e.g., ELIE MAGDA SBY"
           />
           <Input
-            label="Tanggal Masuk"
+            label="Entry Date"
             name="tanggalMasuk"
             type="date"
             value={poData.tanggalMasuk}
@@ -308,14 +381,14 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             disabled
           />
           <Input
-            label="Tanggal Target Kirim *"
+            label="Target Delivery Date *"
             name="tanggalKirim"
             type="date"
             value={poData.tanggalKirim}
             onChange={handleDataChange}
           />
           <div className="form-group">
-            <label>Prioritas</label>
+            <label>Priority</label>
             <select name="prioritas" value={poData.prioritas} onChange={handleDataChange}>
               <option value="Normal">Normal</option>
               <option value="High">High</option>
@@ -323,7 +396,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             </select>
           </div>
 
-          {/* [TAMBAH] Input Combobox untuk Marketing */}
           <div className="form-group">
             <label>Marketing</label>
             <input
@@ -331,7 +403,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               name="marketing"
               value={poData.marketing}
               onChange={handleDataChange}
-              placeholder="Pilih atau ketik nama"
+              onBlur={() => handleDataBlur('marketing', poData.marketing)}
+              placeholder="Select or type name"
               className="combobox-input"
             />
             <datalist id="marketing-list">
@@ -342,15 +415,15 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </div>
         </div>
         <Textarea
-          label="Catatan"
+          label="Notes"
           name="catatan"
           value={poData.catatan}
           onChange={handleDataChange}
-          placeholder="Catatan khusus untuk PO ini..."
+          placeholder="Special notes for this PO..."
           rows={3}
         />
         <div className="form-group" style={{ marginTop: '1rem' }}>
-          <label>Foto Referensi PO (Opsional)</label>
+          <label>PO Reference Photo (Optional)</label>
           <div className="file-input-container">
             {poPhotoPath ? (
               <div className="file-preview">
@@ -358,26 +431,25 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                   {poPhotoPath.split(/[/\\]/).pop()}
                 </span>
                 <Button variant="secondary" onClick={handleCancelPoPhoto} className="cancel-photo-btn">
-                  Batal
+                  Cancel
                 </Button>
               </div>
             ) : (
               <Button variant="secondary" onClick={handleSelectPoPhoto}>
-                Pilih Foto
+                Select Photo
               </Button>
             )}
           </div>
         </div>
       </Card>
 
-      {/* [DIROMBAK TOTAL] BAGIAN DAFTAR ITEM */}
       <div className="item-section-header">
-        <h2>Daftar Item</h2>
+        <h2>Item List</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <Button variant="secondary" onClick={() => setIsAddProductModalOpen(true)}>
-            + Tambah Produk Master
+            + Add Master Product
           </Button>
-          <Button onClick={handleAddItem}>+ Tambah Baris</Button>
+          <Button onClick={handleAddItem}>+ Add Row</Button>
         </div>
       </div>
 
@@ -386,29 +458,29 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           <table className="item-table">
             <thead>
               <tr>
-                <th>Produk</th>
-                <th>Jenis Kayu</th>
-                <th>Profil</th>
-                <th>Warna</th>
+                <th>Product</th>
+                <th>Wood Type</th>
+                <th>Profile</th>
+                <th>Color</th>
                 <th>Finishing</th>
                 <th>Sample</th>
-                <th>Ukuran (T x L x P)</th>
-                <th>Tipe Pjg</th>
+                <th>Size (T x W x L)</th>
+                <th>Length Type</th>
                 <th>Qty</th>
-                <th>Catatan Item</th>
-                <th>Aksi</th>
+                <th>Item Notes</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id}>
-                  {/* Produk */}
                   <td style={{ minWidth: '150px' }}>
                     <input
                       list="product-list"
                       value={item.product_name}
                       onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
-                      placeholder="Pilih/Ketik Produk"
+                      onBlur={() => handleItemBlur(item.id, 'product_name', item.product_name)}
+                      placeholder="Select/Type Product"
                     />
                     <datalist id="product-list">
                       {getUniqueOptions('product_name').map((name) => (
@@ -416,13 +488,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       ))}
                     </datalist>
                   </td>
-                  {/* Jenis Kayu */}
                   <td style={{ minWidth: '130px' }}>
                     <input
                       list="wood-type-list"
                       value={item.wood_type}
                       onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
-                      placeholder="Pilih/Ketik Kayu"
+                      onBlur={() => handleItemBlur(item.id, 'wood_type', item.wood_type)}
+                      placeholder="Select/Type Wood"
                     />
                     <datalist id="wood-type-list">
                       {getUniqueOptions('wood_type').map((val) => (
@@ -430,29 +502,29 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       ))}
                     </datalist>
                   </td>
-                  {/* Profil */}
                   <td style={{ minWidth: '100px' }}>
                     <input
                       list="profile-list"
                       type="text"
                       value={item.profile}
                       onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
-                      placeholder="Pilih/Ketik Profil"
+                      onBlur={() => handleItemBlur(item.id, 'profile', item.profile)}
+                      placeholder="Select/Type Profile"
                     />
-                     <datalist id="profile-list">
+                    <datalist id="profile-list">
                       {getUniqueOptions('profile').map((val) => (
                         <option key={val} value={val} />
                       ))}
                     </datalist>
                   </td>
-                  {/* Warna */}
                   <td style={{ minWidth: '100px' }}>
                     <input
                       list="color-list"
                       type="text"
                       value={item.color}
                       onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
-                      placeholder="Pilih/Ketik Warna"
+                      onBlur={() => handleItemBlur(item.id, 'color', item.color)}
+                      placeholder="Select/Type Color"
                     />
                     <datalist id="color-list">
                       {getUniqueOptions('color').map((val) => (
@@ -460,13 +532,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       ))}
                     </datalist>
                   </td>
-                  {/* Finishing */}
                   <td style={{ minWidth: '120px' }}>
                     <input
                       list="finishing-list"
                       value={item.finishing}
                       onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
-                      placeholder="Pilih/Ketik Finishing"
+                      onBlur={() => handleItemBlur(item.id, 'finishing', item.finishing)}
+                      placeholder="Select/Type Finishing"
                     />
                     <datalist id="finishing-list">
                       {getUniqueOptions('finishing').map((val) => (
@@ -474,13 +546,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       ))}
                     </datalist>
                   </td>
-                  {/* Sample */}
                   <td style={{ minWidth: '120px' }}>
-                     <input
+                    <input
                       list="sample-list"
                       value={item.sample}
                       onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
-                      placeholder="Pilih/Ketik Sample"
+                      onBlur={() => handleItemBlur(item.id, 'sample', item.sample)}
+                      placeholder="Select/Type Sample"
                     />
                     <datalist id="sample-list">
                       {getUniqueOptions('sample').map((val) => (
@@ -488,43 +560,45 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       ))}
                     </datalist>
                   </td>
-                  {/* Ukuran (T x L x P) */}
                   <td style={{ minWidth: '200px' }}>
                     <div className="size-inputs">
                       <input
-                        type="number" // <-- Ini adalah input angka biasa
+                        type="number"
                         value={item.thickness_mm}
                         onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+                        placeholder="T"
                       />
                       <span>x</span>
                       <input
-                        type="number" // <-- Ini adalah input angka biasa
+                        type="number"
                         value={item.width_mm}
                         onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+                        placeholder="W"
                       />
                       <span>x</span>
                       <input
-                        type="number" // <-- Ini adalah input angka biasa
+                        type="number"
                         value={item.length_mm}
                         onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+                        placeholder="L"
                       />
                     </div>
                   </td>
-                  {/* Tipe Panjang */}
                   <td style={{ minWidth: '80px' }}>
-                     <input
+                    <input
                       type="text"
                       value={item.length_type}
                       onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
+                      placeholder="Type"
                     />
                   </td>
-                  {/* Kuantitas */}
                   <td style={{ minWidth: '150px' }}>
                     <div className="quantity-inputs">
                       <input
                         type="number"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+                        placeholder="Qty"
                       />
                       <select
                         value={item.satuan}
@@ -536,19 +610,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       </select>
                     </div>
                   </td>
-                  {/* Catatan Item */}
                   <td style={{ minWidth: '180px' }}>
                     <input
                       type="text"
                       value={item.notes}
                       onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-                      placeholder="Catatan..."
+                      placeholder="Notes..."
                     />
                   </td>
-                  {/* Aksi */}
                   <td>
                     <Button variant="danger" onClick={() => handleRemoveItem(item.id)}>
-                      Hapus
+                      Delete
                     </Button>
                   </td>
                 </tr>
@@ -558,15 +630,13 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         </div>
       </Card>
 
-      {/* BAGIAN KUBIKASI TOTAL (TIDAK BERUBAH) */}
       <Card>
-        <h2>Kubikasi Total</h2>
+        <h2>Total Kubikasi</h2>
         <p>
           <b>{totalKubikasi.toFixed(3)} m³</b>
         </p>
       </Card>
 
-      {/* MODAL (TIDAK BERUBAH) */}
       <AddProductModal
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}
