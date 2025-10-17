@@ -1,10 +1,11 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
-import { POHeader, POItem, ProductionStage } from '../types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { POHeader, POItem, ProductionStage } from '../types'
 
 const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
 const formatDeadline = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
@@ -16,11 +17,36 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
   const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1;
 
   const [notes, setNotes] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  // [DIUBAH] State sekarang menyimpan path file (string), bukan objek File
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const handleViewPhoto = (url: string) => {
+    try {
+      // @ts-ignore
+      window.api.openExternalLink(url);
+    } catch (error) {
+      console.error("Gagal membuka link eksternal:", error);
+      alert(`Tidak dapat membuka link: ${(error as Error).message}`);
+    }
+  };
+
+  // [BARU] Fungsi untuk membuka dialog pilih file menggunakan API Electron
+  const handleSelectPhoto = async () => {
+    try {
+      // @ts-ignore
+      const selectedPath = await window.api.openFileDialog();
+      if (selectedPath) {
+        setPhotoPath(selectedPath);
+      }
+    } catch (error) {
+       console.error("Gagal membuka dialog file:", error);
+       alert('Gagal memilih file.');
+    }
+  };
+
   const handleUpdate = async (nextStage: string) => {
-    if (!notes && !photoFile) return alert('Harap isi catatan atau unggah foto.');
+    if (!notes && !photoPath) return alert('Harap isi catatan atau unggah foto.');
     setIsUpdating(true);
     try {
       const payload = {
@@ -29,14 +55,21 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         poNumber: poNumber,
         stage: nextStage,
         notes: notes,
-        photoPath: (photoFile as any)?.path
+        // [DIUBAH] Mengirim path file yang sudah disimpan di state
+        photoPath: photoPath
       };
       // @ts-ignore
-      await window.api.updateItemProgress(payload);
-      alert(`Progress item ${item.product_name} berhasil diupdate!`);
-      onUpdate();
-      setNotes('');
-      setPhotoFile(null);
+      const result = await window.api.updateItemProgress(payload);
+      // @ts-ignore
+      if (result.success) {
+        alert(`Progress item ${item.product_name} berhasil diupdate!`);
+        onUpdate();
+        setNotes('');
+        setPhotoPath(null); // Reset state path setelah berhasil
+      } else {
+        // @ts-ignore
+        throw new Error(result.error || 'Terjadi kesalahan di backend.');
+      }
     } catch (err) {
       alert(`Gagal update progress: ${(err as Error).message}`);
     } finally {
@@ -69,20 +102,37 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         <div className="update-form">
           <h5>Update ke Tahap Berikutnya: {stages[currentStageIndex + 1]}</h5>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
-          <input type="file" accept="image/*" onChange={(e) => e.target.files && setPhotoFile(e.target.files[0])} />
+          
+          {/* [DIROMBAK] Mengganti <input type="file"> dengan tombol fungsional */}
+          <div className="file-input-container" style={{ margin: '0.5rem 0' }}>
+            <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
+            {photoPath && <span className="file-name" style={{ marginLeft: '1rem' }}>{photoPath.split(/[/\\]/).pop()}</span>}
+          </div>
+
           <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
         </div>
       )}
-       {item.progressHistory && item.progressHistory.length > 0 && (
+        {item.progressHistory && item.progressHistory.length > 0 && (
          <div className="history-log">
             <h6>Riwayat Progress</h6>
             {item.progressHistory.map(log => (
                 <div key={log.id} className="log-entry">
-                    <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
-                    <p>{log.notes}</p>
-                    {log.photo_url && <a href={log.photo_url} target="_blank" rel="noopener noreferrer">Lihat Foto</a>}
+                    <div className="log-details">
+                      <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
+                      <p>{log.notes}</p>
+                    </div>
+                    
+                    {log.photo_url && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleViewPhoto(log.photo_url!)}
+                        className="view-photo-btn"
+                      >
+                        Lihat Foto
+                      </Button>
+                    )}
                 </div>
             ))}
          </div>
