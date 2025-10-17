@@ -23,7 +23,8 @@ import {
   getAttentionData,
   getProductSalesAnalysis,
   addNewProduct,
-  getSalesItemData
+  getSalesItemData,
+  updateStageDeadline
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -100,6 +101,7 @@ app.whenReady().then(() => {
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
   ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
 ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
+ipcMain.handle('progress:updateDeadline', (_event, data) => updateStageDeadline(data));
 
   createWindow()
   app.on('activate', () => {

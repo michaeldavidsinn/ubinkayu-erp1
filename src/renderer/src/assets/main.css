@@ -1417,3 +1417,125 @@ label {
 .quantity-inputs select {
   width: 60px;
 }
+
+.stage-deadline.editable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stage-deadline.editable label {
+  font-size: 0.7rem;
+}
+.stage-deadline.editable input[type="date"] {
+  border: 1px solid transparent;
+  background: none;
+  font-size: 0.7rem;
+  padding: 2px;
+  border-radius: 4px;
+  text-align: center;
+  width: 110px; /* Sesuaikan lebar */
+}
+.stage-deadline.editable input[type="date"]:focus {
+  border-color: var(--primary-color);
+  background-color: white;
+}
+
+/* =================================================================== */
+/* == CSS RESPONSIVE UNTUK UPDATE PROGRESS PAGE == */
+/* =================================================================== */
+
+/* --- Membuat Timeline bisa di-scroll Horizontal --- */
+.timeline-container {
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
+}
+
+.progress-timeline {
+  min-width: 800px; /* Paksa timeline menjadi lebar agar scrolling aktif */
+}
+
+/* --- Mempercantik Tampilan Tombol Unggah Foto --- */
+.update-form input[type="file"] {
+  display: none;
+}
+
+.file-input-label {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  background-color: #f9fafb;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input-label:hover {
+  background-color: var(--secondary-color);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* ================================================= */
+/* == STYLING UNTUK DEADLINE YANG BISA DIEDIT == */
+/* ================================================= */
+
+.stage-deadline.editable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.stage-deadline.editable label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.stage-deadline.editable input[type="date"] {
+  border: 1px solid transparent;
+  background-color: transparent;
+  font-family: inherit;
+  font-size: 0.75rem; /* Ukuran font disesuaikan */
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-align: center;
+  width: 120px; /* Lebar input */
+  cursor: pointer;
+}
+
+/* Beri style saat overdue */
+.stage.overdue .stage-deadline.editable input[type="date"] {
+  color: var(--danger-color);
+  font-weight: bold;
+}
+
+/* Beri style saat diedit */
+.stage-deadline.editable input[type="date"]:focus {
+  border-color: var(--primary-color);
+  background-color: white;
+  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+  color: var(--text-primary);
+}
+
+/* ======================================= */
+/* == STYLING INPUT DEADLINE DINONAKTIFKAN == */
+/* ======================================= */
+
+.stage-deadline input[type="date"]:disabled {
+  background-color: transparent;
+  cursor: not-allowed;
+  color: var(--text-secondary);
+  font-weight: normal; /* Kembalikan ke normal jika sebelumnya bold */
+}
+
+/* Hilangkan panah di input date yang dinonaktifkan */
+.stage-deadline input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+  display: none;
+}

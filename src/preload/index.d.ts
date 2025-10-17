@@ -17,7 +17,7 @@ interface ICustomAPI {
 
   // Definisi tipe untuk fungsi progress tracking
   getActivePOs: () => Promise<any[]>;
-  getPOItemsDetails: (poId: string) => Promise<any[]>;
+  getPOItemsWithDetails: (poId: string) => Promise<any[]>;
   updateItemProgress: (data: any) => Promise<{ success: boolean; error?: string }>;
   getRecentUpdates: () => Promise<any[]>;
   // [BARU] Tambahkan definisi tipe baru di sini

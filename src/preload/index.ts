@@ -27,7 +27,8 @@ const api = {
 
   // --- Fungsi untuk Progress Tracking ---
   getActivePOs: () => ipcRenderer.invoke('progress:getActivePOs'),
-  getPOItemsDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
+  // Use the full, correct name
+  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
   getRecentUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   // [BARU] Tambahkan fungsi baru di sini
@@ -35,8 +36,9 @@ const api = {
 
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
-  getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData')
-};
+  getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData'),
+  updateStageDeadline: (data) => ipcRenderer.invoke('progress:updateDeadline', data)
+}
 
 try {
   contextBridge.exposeInMainWorld('api', api)

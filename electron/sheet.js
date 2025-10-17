@@ -20,19 +20,32 @@ const PRODUCTION_STAGES = [
   'Siap Kirim'
 ]
 
+const DEFAULT_STAGE_DURATIONS = {
+  Pembahanan: 7, // 1 minggu
+  Moulding: 7, // 1 minggu
+  KD: 14, // 2 minggu
+  Coating: 14, // 2 minggu
+  // Tahap lain bisa diberi default 0 jika tidak ada durasi spesifik
+  'Cari Bahan Baku': 0,
+  Sawmill: 0,
+  'Siap Kirim': 0
+}
+
 function getAuth() {
-  const isDev = !app.isPackaged;
+  const isDev = !app.isPackaged
 
   const credPath = isDev
     ? path.join(process.cwd(), 'resources', 'credentials.json')
-    : path.join(process.resourcesPath, 'credentials.json');
+    : path.join(process.resourcesPath, 'credentials.json')
 
   if (!fs.existsSync(credPath)) {
-    console.error('Lokasi file credentials.json yang dicari:', credPath);
-    throw new Error('File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".');
+    console.error('Lokasi file credentials.json yang dicari:', credPath)
+    throw new Error(
+      'File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".'
+    )
   }
 
-  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+  const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
 
   return new JWT({
     email: creds.client_email,
@@ -41,7 +54,7 @@ function getAuth() {
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive.file'
     ]
-  });
+  })
 }
 
 async function openDoc() {
@@ -885,67 +898,46 @@ export async function getActivePOsWithProgress() {
 }
 
 export async function getPOItemsWithDetails(poId) {
-  console.log(`\n--- [DEBUG] Memulai getPOItemsWithDetails untuk PO ID: ${poId} ---`)
   try {
     const doc = await openDoc()
-    const poSheet = await getSheet(doc, 'purchase_orders')
-    const itemSheet = await getSheet(doc, 'purchase_order_items')
-    const progressSheet = await getSheet(doc, 'progress_tracking')
-
+    const [poSheet, itemSheet, progressSheet] = await Promise.all([
+      getSheet(doc, 'purchase_orders'),
+      getSheet(doc, 'purchase_order_items'),
+      getSheet(doc, 'progress_tracking')
+    ])
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
     ])
 
-    const allRevisionsForPO = poRows.filter((r) => r.get('id') === poId)
-    console.log(`[DEBUG] Ditemukan ${allRevisionsForPO.length} baris revisi untuk PO ID ${poId}`)
-
     const latestPoRev = Math.max(
       -1,
-      ...allRevisionsForPO.map((r) => toNum(r.get('revision_number')))
+      ...poRows.filter((r) => r.get('id') === poId).map((r) => toNum(r.get('revision_number')))
     )
-    console.log(`[DEBUG] Revisi terbaru adalah: #${latestPoRev}`)
-
-    const poData = allRevisionsForPO.find((r) => toNum(r.get('revision_number')) === latestPoRev)
+    const poData = poRows.find(
+      (r) => r.get('id') === poId && toNum(r.get('revision_number')) === latestPoRev
+    )
 
     if (!poData) {
-      console.error(`[DEBUG] ERROR: Tidak ada data PO ditemukan untuk revisi #${latestPoRev}`)
       throw new Error(`PO dengan ID ${poId} tidak ditemukan.`)
     }
-    console.log(`[DEBUG] Data PO ditemukan.`)
 
-    const createdAtRaw = poData.get('created_at')
-    const deadlineRaw = poData.get('deadline')
-    console.log(`[DEBUG] created_at (mentah): ${createdAtRaw} | Tipe: ${typeof createdAtRaw}`)
-    console.log(`[DEBUG] deadline (mentah): ${deadlineRaw} | Tipe: ${typeof deadlineRaw}`)
+    const poStartDate = new Date(poData.get('created_at'))
+    const poDeadline = new Date(poData.get('deadline'))
 
-    const poStartDate = new Date(createdAtRaw)
-    const poDeadline = new Date(deadlineRaw)
-    console.log(`[DEBUG] poStartDate (setelah new Date): ${poStartDate.toISOString()}`)
-    console.log(`[DEBUG] poDeadline (setelah new Date): ${poDeadline.toISOString()}`)
-
+    // --- LOGIKA PERHITUNGAN DEADLINE YANG SUDAH DIPERBAIKI ---
     let stageDeadlines = []
-
-    if (poStartDate && poDeadline && poDeadline > poStartDate) {
-      console.log('[DEBUG] Kondisi IF untuk kalkulasi deadline TERPENUHI.')
-      const totalDuration = poDeadline.getTime() - poStartDate.getTime()
-      const durationPerStage = totalDuration / PRODUCTION_STAGES.length
-      console.log(
-        `[DEBUG] Total Durasi: ${totalDuration} ms, Durasi per Tahap: ${durationPerStage} ms`
-      )
-
-      stageDeadlines = PRODUCTION_STAGES.map((stageName, index) => {
-        const deadlineTime = poStartDate.getTime() + durationPerStage * (index + 1)
-        return {
-          stageName,
-          deadline: new Date(deadlineTime).toISOString()
-        }
-      })
-      console.log('[DEBUG] stageDeadlines berhasil dihitung:', stageDeadlines)
-    } else {
-      console.warn('[DEBUG] Kondisi IF untuk kalkulasi deadline TIDAK TERPENUHI.')
-    }
+    let cumulativeDate = new Date(poStartDate)
+    stageDeadlines = PRODUCTION_STAGES.map((stageName) => {
+      if (stageName === 'Siap Kirim') {
+        return { stageName, deadline: poDeadline.toISOString() }
+      }
+      const durationDays = DEFAULT_STAGE_DURATIONS[stageName] || 0
+      cumulativeDate.setDate(cumulativeDate.getDate() + durationDays)
+      return { stageName, deadline: new Date(cumulativeDate).toISOString() }
+    })
+    // --- AKHIR BLOK PERBAIKAN ---
 
     const poItems = itemRows.filter(
       (item) =>
@@ -953,34 +945,46 @@ export async function getPOItemsWithDetails(poId) {
         toNum(item.get('revision_number'), -1) === latestPoRev
     )
 
-    const poProgressRows = progressRows.filter((row) => row.get('purchase_order_id') === poId)
-    const progressByItemId = poProgressRows.reduce((acc, row) => {
-      const itemId = row.get('purchase_order_item_id')
-      if (!acc[itemId]) acc[itemId] = []
-      acc[itemId].push(row.toObject())
-      return acc
-    }, {})
+    const progressByItemId = progressRows
+      .filter((row) => row.get('purchase_order_id') === poId)
+      .reduce((acc, row) => {
+        const itemId = row.get('purchase_order_item_id')
+        if (!acc[itemId]) acc[itemId] = []
+        acc[itemId].push(row.toObject())
+        return acc
+      }, {})
+
     const result = poItems.map((item) => {
-      const itemObject = {}
-      itemSheet.headerValues.forEach((header) => {
-        itemObject[header] = item.get(header)
-      })
+      const itemObject = item.toObject()
       const itemId = String(itemObject.id)
       const history = (progressByItemId[itemId] || []).sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
       )
-
-      return {
-        ...itemObject,
-        progressHistory: history,
-        stageDeadlines: stageDeadlines
-      }
+      return { ...itemObject, progressHistory: history, stageDeadlines }
     })
-    console.log('--- [DEBUG] Proses Selesai ---')
+
     return result
   } catch (err) {
     console.error(`❌ Gagal get PO items with details for PO ID ${poId}:`, err.message)
     return []
+  }
+}
+
+export async function updateStageDeadline(data) {
+  const { poId, itemId, stageName, newDeadline } = data
+  try {
+    const doc = await openDoc()
+    const sheet = await getSheet(doc, 'progress_tracking')
+    await sheet.addRow({
+      purchase_order_id: poId,
+      purchase_order_item_id: itemId,
+      stage: `DEADLINE_OVERRIDE: ${stageName}`,
+      custom_deadline: newDeadline,
+      created_at: new Date().toISOString()
+    })
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message }
   }
 }
 
@@ -1305,21 +1309,22 @@ export async function getSalesItemData() {
 }
 export async function addNewProduct(productData) {
   try {
-    console.log('📦 Menambahkan produk baru ke master:', productData);
-    const doc = await openDoc();
-    const sheet = await getSheet(doc, 'product_master');
+    console.log('📦 Menambahkan produk baru ke master:', productData)
+    const doc = await openDoc()
+    const sheet = await getSheet(doc, 'product_master')
 
     // Menambahkan baris baru dengan data yang dikirim dari form
-    await sheet.addRow(productData);
+    const nextId = await getNextIdFromSheet(sheet)
+    await sheet.addRow({ id: nextId, ...productData })
 
     // PENTING: Jika nanti Anda sudah menerapkan sistem cache,
     // jangan lupa untuk membersihkan cache di sini agar daftar produk bisa ter-refresh.
     // Contoh: clearSheetCache(); atau getAllSheetData(true);
 
-    console.log('✅ Produk baru berhasil ditambahkan.');
-    return { success: true };
+    console.log('✅ Produk baru berhasil ditambahkan.')
+    return { success: true }
   } catch (err) {
-    console.error('❌ Gagal menambahkan produk baru:', err.message);
-    return { success: false, error: err.message };
+    console.error('❌ Gagal menambahkan produk baru:', err.message)
+    return { success: false, error: err.message }
   }
 }

@@ -1,47 +1,63 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import React, { useState, useEffect } from 'react'
-import { Button } from '../components/Button'
-import { Card } from '../components/Card'
-import { POHeader, POItem, ProductionStage } from '../types'
+import React, { useState, useEffect, useCallback } from 'react';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
+import { POHeader, POItem, ProductionStage } from '../types';
 
+// Helper functions
 const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
-const formatDeadline = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+const formatDeadlineForInput = (isoString: string) => new Date(isoString).toISOString().split('T')[0];
 
-const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: string, poNumber: string, onUpdate: () => void }) => {
+// --- ProgressItem Component ---
+// Handles a single item's progress display and update form.
+const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: string; poNumber: string; onUpdate: () => void }) => {
   const stages: ProductionStage[] = ['Cari Bahan Baku', 'Sawmill', 'KD', 'Pembahanan', 'Moulding', 'Coating', 'Siap Kirim'];
-
   const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage;
   const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1;
 
+  // State for the form
   const [notes, setNotes] = useState('');
-  // [DIUBAH] State sekarang menyimpan path file (string), bukan objek File
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleViewPhoto = (url: string) => {
-    try {
-      // @ts-ignore
-      window.api.openExternalLink(url);
-    } catch (error) {
-      console.error("Gagal membuka link eksternal:", error);
-      alert(`Tidak dapat membuka link: ${(error as Error).message}`);
-    }
+  // State for editable deadlines
+  const [editableDeadlines, setEditableDeadlines] = useState(item.stageDeadlines || []);
+
+  // Function to handle changes in the date inputs
+  const handleDeadlineChange = (stageName: string, newDate: string) => {
+    if (!newDate || stageName !== 'Siap Kirim') return;
+    const newDeadlineISO = new Date(newDate).toISOString();
+
+    const updatedDeadlines = editableDeadlines.map(d =>
+      d.stageName === stageName ? { ...d, deadline: newDeadlineISO } : d
+    );
+    setEditableDeadlines(updatedDeadlines);
+
+    // Call the backend directly via window.api
+    // @ts-ignore
+    window.api.updateStageDeadline({
+      poId,
+      itemId: item.id,
+      stageName,
+      newDeadline: newDeadlineISO
+    }).catch(err => {
+      alert(`Gagal menyimpan deadline baru: ${err.message}`);
+      setEditableDeadlines(item.stageDeadlines || []); // Revert on failure
+    });
   };
 
-  // [BARU] Fungsi untuk membuka dialog pilih file menggunakan API Electron
+  const handleViewPhoto = (url: string) => {
+    // @ts-ignore
+    window.api.openExternalLink(url);
+  };
+
   const handleSelectPhoto = async () => {
-    try {
-      // @ts-ignore
-      const selectedPath = await window.api.openFileDialog();
-      if (selectedPath) {
-        setPhotoPath(selectedPath);
-      }
-    } catch (error) {
-       console.error("Gagal membuka dialog file:", error);
-       alert('Gagal memilih file.');
+    // @ts-ignore
+    const selectedPath = await window.api.openFileDialog();
+    if (selectedPath) {
+      setPhotoPath(selectedPath);
     }
   };
 
@@ -50,24 +66,23 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
     setIsUpdating(true);
     try {
       const payload = {
-        poId: poId,
+        poId,
         itemId: item.id,
-        poNumber: poNumber,
+        poNumber,
         stage: nextStage,
-        notes: notes,
-        // [DIUBAH] Mengirim path file yang sudah disimpan di state
-        photoPath: photoPath
+        notes,
+        photoPath, // Send the file path directly
       };
+
       // @ts-ignore
       const result = await window.api.updateItemProgress(payload);
-      // @ts-ignore
+
       if (result.success) {
         alert(`Progress item ${item.product_name} berhasil diupdate!`);
         onUpdate();
         setNotes('');
-        setPhotoPath(null); // Reset state path setelah berhasil
+        setPhotoPath(null);
       } else {
-        // @ts-ignore
         throw new Error(result.error || 'Terjadi kesalahan di backend.');
       }
     } catch (err) {
@@ -83,30 +98,47 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
         <h4>{item.product_name} ({item.wood_type})</h4>
         <span>Qty: {item.quantity} {item.satuan}</span>
       </div>
-      <div className="progress-timeline">
-        {stages.map((stage, index) => {
-            const deadlineInfo = item.stageDeadlines?.find(d => d.stageName === stage);
-            const isCompleted = index <= currentStageIndex;
+
+      <div className="timeline-container">
+        <div className="progress-timeline">
+          {stages.map((stage) => {
+            const deadlineInfo = editableDeadlines.find((d) => d.stageName === stage);
+            const isCompleted = stages.indexOf(stage) <= currentStageIndex;
             const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted;
+            const isEditable = stage === 'Siap Kirim'; // Tentukan apakah bisa diedit
 
             return (
               <div key={stage} className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
                 <div className="stage-dot"></div>
                 <div className="stage-name">{stage}</div>
-                {deadlineInfo && <div className="stage-deadline">Target: {formatDeadline(deadlineInfo.deadline)}</div>}
+
+                {deadlineInfo && (
+                  <div className={`stage-deadline ${isEditable ? 'editable' : ''}`}>
+                    <label htmlFor={`deadline-${item.id}-${stage}`}>Target:</label>
+                    <input
+                      id={`deadline-${item.id}-${stage}`}
+                      type="date"
+                      value={formatDeadlineForInput(deadlineInfo.deadline)}
+                      onChange={(e) => handleDeadlineChange(stage, e.target.value)}
+                      disabled={!isEditable} // Nonaktifkan input jika tidak bisa diedit
+                    />
+                  </div>
+                )}
               </div>
-            )
-        })}
+            );
+          })}
+        </div>
       </div>
+
       {currentStageIndex < stages.length - 1 && (
         <div className="update-form">
           <h5>Update ke Tahap Berikutnya: {stages[currentStageIndex + 1]}</h5>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
-          
-          {/* [DIROMBAK] Mengganti <input type="file"> dengan tombol fungsional */}
-          <div className="file-input-container" style={{ margin: '0.5rem 0' }}>
-            <Button variant="secondary" onClick={handleSelectPhoto}>Pilih Foto</Button>
-            {photoPath && <span className="file-name" style={{ marginLeft: '1rem' }}>{photoPath.split(/[/\\]/).pop()}</span>}
+
+          <div>
+            <label onClick={handleSelectPhoto} className="file-input-label">
+              {photoPath ? `✅ ${photoPath.split(/[/\\]/).pop()}` : '📷 Unggah Foto (Opsional)'}
+            </label>
           </div>
 
           <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
@@ -114,7 +146,8 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
           </Button>
         </div>
       )}
-        {item.progressHistory && item.progressHistory.length > 0 && (
+
+      {item.progressHistory && item.progressHistory.length > 0 && (
          <div className="history-log">
             <h6>Riwayat Progress</h6>
             {item.progressHistory.map(log => (
@@ -123,13 +156,8 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
                       <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
                       <p>{log.notes}</p>
                     </div>
-                    
                     {log.photo_url && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleViewPhoto(log.photo_url!)}
-                        className="view-photo-btn"
-                      >
+                      <Button variant="secondary" onClick={() => handleViewPhoto(log.photo_url!)} className="view-photo-btn">
                         Lihat Foto
                       </Button>
                     )}
@@ -138,36 +166,37 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem, poId: 
          </div>
       )}
     </Card>
-  )
-}
+  );
+};
 
+// --- Main Page Component ---
 interface UpdateProgressPageProps {
-  po: POHeader | null
-  onBack: () => void
+  po: POHeader | null;
+  onBack: () => void;
 }
 
 const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) => {
-  const [items, setItems] = useState<POItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [items, setItems] = useState<POItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchItems = async () => {
-    if (po?.id) {
-      setIsLoading(true)
-      try {
-        // @ts-ignore
-        const fetchedItems = await window.api.getPOItemsDetails(po.id)
-        setItems(fetchedItems)
-      } catch (err) {
-        console.error('Gagal memuat item:', err)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchItems = useCallback(async () => {
+    if (!po?.id) return;
+
+    setIsLoading(true);
+    try {
+      // @ts-ignore
+      const fetchedItems = await window.api.getPOItemsWithDetails(po.id);
+      setItems(fetchedItems);
+    } catch (err) {
+      console.error('Gagal memuat item:', err);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, [po]);
 
   useEffect(() => {
-    fetchItems()
-  }, [po])
+    fetchItems();
+  }, [fetchItems]);
 
   if (!po) {
     return (
@@ -175,7 +204,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
         <p>Pilih PO untuk diupdate.</p>
         <Button onClick={onBack}>Kembali</Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -196,7 +225,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
         <Card><p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p></Card>
       )}
     </div>
-  )
+  );
 };
 
 export default UpdateProgressPage;
