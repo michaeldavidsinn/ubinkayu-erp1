@@ -457,8 +457,22 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       finalCtx.moveTo(colX, currentY + 25)
       finalCtx.lineTo(colX + approvalColWidth, currentY + 25)
       finalCtx.stroke()
+
+      // Tulis tanggal ACC di bawah
       finalCtx.fillText('tgl:', colX + approvalColWidth / 2, currentY + approvalTableHeight - 10)
+
+      // Tambah nama marketing kalau kolomnya 'ACC Mrktng'
+      if (title === 'ACC Mrktng' && poData.marketing) {
+        finalCtx.fillStyle = blackColor
+        finalCtx.font = `bold 10px ${baseFont}`
+        finalCtx.fillText(
+          poData.marketing,
+          colX + approvalColWidth / 2,
+          currentY + approvalTableHeight / 2
+        )
+      }
     })
+
 
     finalCtx.fillStyle = greenColor
     finalCtx.font = `10px ${baseFont}`

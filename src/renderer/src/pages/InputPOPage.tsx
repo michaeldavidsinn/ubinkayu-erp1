@@ -179,7 +179,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         items: itemsWithKubikasi,
         kubikasi_total: kubikasiTotal,
         poId: editingPO?.id,
-        poPhotoPath: poPhotoPath
+        poPhotoPath: poPhotoPath,
+        acc_marketing: poData.marketing
       }
       // @ts-ignore
       const result = editingPO
@@ -218,7 +219,8 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
         ...poData,
         items: itemsWithKubikasi,
         kubikasi_total: kubikasiTotal,
-        poPhotoPath: poPhotoPath
+        poPhotoPath: poPhotoPath,
+        acc_marketing: poData.marketing
       }
 
       // @ts-ignore

@@ -395,6 +395,7 @@ export async function saveNewPO(data) {
       priority: data.prioritas || '',
       notes: data.catatan || '',
       kubikasi_total: data.kubikasi_total || 0,
+      acc_marketing: data.marketing || '',
       created_at: now,
       pdf_link: 'generating...'
     })
@@ -429,7 +430,8 @@ export async function saveNewPO(data) {
       notes: data.catatan,
       created_at: now,
       kubikasi_total: data.kubikasi_total || 0,
-      poPhotoPath: data.poPhotoPath
+      poPhotoPath: data.poPhotoPath,
+      marketing: data.namaMarketing || 'Unknown' // <--- tambahin ini
     }
     console.log('TITIK C (Backend): Meneruskan ke PDF:', poDataForJpeg)
     const uploadResult = await generateAndUploadPO(poDataForJpeg, 0)
@@ -472,6 +474,7 @@ export async function updatePO(data) {
       priority: data.prioritas ?? prev.priority ?? '',
       notes: data.catatan ?? prev.notes ?? '',
       kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
+      acc_marketing: data.marketing ?? prev.acc_marketing ?? '',
       created_at: now,
       pdf_link: 'generating...'
     })
@@ -506,7 +509,8 @@ export async function updatePO(data) {
       notes: data.catatan ?? prev.notes,
       created_at: now,
       kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
-      poPhotoPath: data.poPhotoPath
+      poPhotoPath: data.poPhotoPath,
+      marketing: data.acc_marketing
     }
 
     const uploadResult = await generateAndUploadPO(poDataForJpeg, newRev)

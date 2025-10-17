@@ -53,6 +53,7 @@ export interface POHeader {
   kubikasi_total?: number
   pdf_link?: string | null
   progress?: number; // Progress keseluruhan PO
+  marketing?: string
 }
 
 // Tipe ini tidak diubah
