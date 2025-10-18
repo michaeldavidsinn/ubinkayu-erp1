@@ -782,3 +782,39 @@ export async function handleAddNewProduct(req, res) {
     return res.status(500).json({ success: false, error: error.message });
   }
 }
+
+// --- LOGIC FOR: listPORevisions ---
+export async function handleListPORevisions(req, res) {
+  const { poId } = req.query;
+  const doc = await openDoc();
+  const poSheet = await getSheet(doc, 'purchase_orders');
+  const rows = await poSheet.getRows();
+  const revisions = rows
+    .filter((r) => String(r.get('id')).trim() === String(poId).trim())
+    .map((r) => r.toObject())
+    .sort((a, b) => a.revision_number - b.revision_number);
+  return res.status(200).json(revisions);
+}
+
+// --- LOGIC FOR: listPOItemsByRevision ---
+export async function handleListPOItemsByRevision(req, res) {
+  const { poId, revisionNumber } = req.query;
+  const doc = await openDoc();
+  const items = await getItemsByRevision(String(poId), toNum(revisionNumber, 0), doc);
+  return res.status(200).json(items);
+}
+
+// --- LOGIC FOR: updateStageDeadline ---
+export async function handleUpdateStageDeadline(req, res) {
+  const { poId, itemId, stageName, newDeadline } = req.body;
+  const doc = await openDoc();
+  const sheet = await getSheet(doc, 'progress_tracking');
+  await sheet.addRow({
+    purchase_order_id: poId,
+    purchase_order_item_id: itemId,
+    stage: `DEADLINE_OVERRIDE: ${stageName}`,
+    custom_deadline: newDeadline,
+    created_at: new Date().toISOString()
+  });
+  return res.status(200).json({ success: true });
+}

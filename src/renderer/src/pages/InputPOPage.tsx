@@ -12,8 +12,24 @@ const apiService = {
     console.log('apiService.getProducts called')
     if (!!(window as any).api) return (window as any).api.getProducts()
     return Promise.resolve([
-      { product_name: 'Product A', wood_type: 'Meranti', profile: 'P1', color: 'Red', finishing: 'Gloss', sample: 'S1', marketing: 'John Doe' },
-      { product_name: 'Product B', wood_type: 'Kamper', profile: 'P2', color: 'Blue', finishing: 'Matte', sample: 'S2', marketing: 'Jane Smith' },
+      {
+        product_name: 'Product A',
+        wood_type: 'Meranti',
+        profile: 'P1',
+        color: 'Red',
+        finishing: 'Gloss',
+        sample: 'S1',
+        marketing: 'John Doe'
+      },
+      {
+        product_name: 'Product B',
+        wood_type: 'Kamper',
+        profile: 'P2',
+        color: 'Blue',
+        finishing: 'Matte',
+        sample: 'S2',
+        marketing: 'Jane Smith'
+      }
     ])
   },
   listPOItems: async (poId: number) => {
@@ -47,51 +63,79 @@ const apiService = {
     return Promise.resolve({ success: true, base64Data: 'mock_preview_base64_string' })
   },
   addNewProduct: async (data: any) => {
-    console.log('apiService.addNewProduct called with data:', data);
-    if (!!(window as any).api) return (window as any).api.addNewProduct(data);
-    return Promise.resolve({ success: true });
+    console.log('apiService.addNewProduct called with data:', data)
+    if (!!(window as any).api) return (window as any).api.addNewProduct(data)
+    return Promise.resolve({ success: true })
   }
 }
 
 // Basic Component Implementations
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={`card-container ${className || ''}`}>{children}</div>
-)
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className
+}) => <div className={`card-container ${className || ''}`}>{children}</div>
 
-const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, name, ...props }) => (
+const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({
+  label,
+  name,
+  ...props
+}) => (
   <div className="form-group">
     <label htmlFor={name}>{label}</label>
     <input id={name} name={name} {...props} />
   </div>
 )
 
-const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({ label, name, ...props }) => (
+const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({
+  label,
+  name,
+  ...props
+}) => (
   <div className="form-group">
     <label htmlFor={name}>{label}</label>
     <textarea id={name} name={name} {...props} />
   </div>
 )
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
-  <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : 'btn-primary'} ${variant === 'danger' ? 'btn-danger' : ''}`} {...props}>
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({
+  children,
+  variant,
+  ...props
+}) => (
+  <button
+    className={`btn ${variant === 'secondary' ? 'btn-secondary' : 'btn-primary'} ${variant === 'danger' ? 'btn-danger' : ''}`}
+    {...props}
+  >
     {children}
   </button>
 )
 
-const AddProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSaveSuccess: () => void }> = ({ isOpen, onClose, onSaveSuccess }) => {
-  const [productData, setProductData] = useState({ product_name: '', wood_type: '', profile: '', color: '', finishing: '', sample: '', marketing: '' });
+const AddProductModal: React.FC<{
+  isOpen: boolean
+  onClose: () => void
+  onSaveSuccess: () => void
+}> = ({ isOpen, onClose, onSaveSuccess }) => {
+  const [productData, setProductData] = useState({
+    product_name: '',
+    wood_type: '',
+    profile: '',
+    color: '',
+    finishing: '',
+    sample: '',
+    marketing: ''
+  })
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   const handleSave = async () => {
-    await apiService.addNewProduct(productData);
-    onSaveSuccess();
-    onClose();
-  };
-  
+    await apiService.addNewProduct(productData)
+    onSaveSuccess()
+    onClose()
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setProductData(prev => ({...prev, [name]: value}));
+    const { name, value } = e.target
+    setProductData((prev) => ({ ...prev, [name]: value }))
   }
 
   return (
@@ -99,29 +143,56 @@ const AddProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSaveSu
       <div className="modal-content">
         <div className="modal-header">
           <h3>Tambah Master Produk Baru</h3>
-          <button onClick={onClose} className="modal-close-btn">&times;</button>
+          <button onClick={onClose} className="modal-close-btn">
+            &times;
+          </button>
         </div>
         <div className="modal-body">
-            <Input label="Nama Produk" name="product_name" value={productData.product_name} onChange={handleChange} />
-            <Input label="Tipe Kayu" name="wood_type" value={productData.wood_type} onChange={handleChange} />
-            <Input label="Profil" name="profile" value={productData.profile} onChange={handleChange} />
-            <Input label="Warna" name="color" value={productData.color} onChange={handleChange} />
-            <Input label="Finishing" name="finishing" value={productData.finishing} onChange={handleChange} />
-            <Input label="Sample" name="sample" value={productData.sample} onChange={handleChange} />
-            <Input label="Marketing" name="marketing" value={productData.marketing} onChange={handleChange} />
+          <Input
+            label="Nama Produk"
+            name="product_name"
+            value={productData.product_name}
+            onChange={handleChange}
+          />
+          <Input
+            label="Tipe Kayu"
+            name="wood_type"
+            value={productData.wood_type}
+            onChange={handleChange}
+          />
+          <Input
+            label="Profil"
+            name="profile"
+            value={productData.profile}
+            onChange={handleChange}
+          />
+          <Input label="Warna" name="color" value={productData.color} onChange={handleChange} />
+          <Input
+            label="Finishing"
+            name="finishing"
+            value={productData.finishing}
+            onChange={handleChange}
+          />
+          <Input label="Sample" name="sample" value={productData.sample} onChange={handleChange} />
+          <Input
+            label="Marketing"
+            name="marketing"
+            value={productData.marketing}
+            onChange={handleChange}
+          />
         </div>
         <div className="modal-footer">
-          <Button variant="secondary" onClick={onClose}>Batal</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Batal
+          </Button>
           <Button onClick={handleSave}>Simpan</Button>
         </div>
       </div>
     </div>
-  );
-};
-
+  )
+}
 
 // --- END: Component & Service Definitions ---
-
 
 interface InputPOPageProps {
   onSaveSuccess: () => void
@@ -560,7 +631,11 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                 <span className="file-name" title={poPhotoPath}>
                   {poPhotoPath.split(/[/\\]/).pop()}
                 </span>
-                <Button variant="secondary" onClick={handleCancelPoPhoto} className="cancel-photo-btn">
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelPoPhoto}
+                  className="cancel-photo-btn"
+                >
                   Batal
                 </Button>
               </div>
@@ -693,21 +768,27 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       <input
                         type="number"
                         value={item.thickness_mm}
-                        onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'thickness_mm', Number(e.target.value))
+                        }
                         placeholder="T"
                       />
                       <span>x</span>
                       <input
                         type="number"
                         value={item.width_mm}
-                        onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'width_mm', Number(e.target.value))
+                        }
                         placeholder="L"
                       />
                       <span>x</span>
                       <input
                         type="number"
                         value={item.length_mm}
-                        onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'length_mm', Number(e.target.value))
+                        }
                         placeholder="P"
                       />
                     </div>
@@ -725,7 +806,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'quantity', Number(e.target.value))
+                        }
                         placeholder="Qty"
                       />
                       <select

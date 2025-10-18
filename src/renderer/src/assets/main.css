@@ -1,3 +1,5 @@
+/* File: src/renderer/src/assets/main.css */
+
 /* --- Global & Layout --- */
 :root {
   font-family: 'Inter', system-ui, sans-serif;
@@ -10,7 +12,6 @@
   --primary-hover: #E68A1C;
   --secondary-color: #F5F5F5;
   --secondary-hover: #E0E0E0;
-  --danger-color: #E53E3E;
 }
 .link-lihat-foto {
   font-size: 0.9em;
@@ -34,7 +35,6 @@ body {
 
 .main-content {
   padding: 0 2rem;
-  padding-top: env(safe-area-inset-top);
 }
 
 /* --- Navbar --- */
@@ -76,7 +76,6 @@ body {
 .page-container {
   max-width: 1200px;
   margin: 2rem auto;
-  padding-bottom: 2rem;
 }
 
 .page-header {
@@ -121,74 +120,26 @@ body {
 }
 
 /* --- Form Elements --- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-color: #fff;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #111827;
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 10px 12px;
-  height: 42px;
-  box-sizing: border-box;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  vertical-align: middle;
-}
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: #757575;
-}
-
-.form-group select option[disabled],
-.form-group select option[hidden],
-.form-group select option[value=""] {
-  color: #757575;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #f7931e;
-  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
-}
-
-.form-group select {
-  padding-right: 36px;
-  background-image: url("data:image/svg+xml;utf8,<svg fill='%23757575' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  cursor: pointer;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem 2rem;
-  align-items: center;
-}
 
 /* --- Buttons --- */
 .btn {
@@ -217,14 +168,6 @@ body {
   background-color: var(--secondary-color);
 }
 
-.btn.btn-danger {
-  background-color: var(--danger-color);
-  color: white;
-}
-.btn.btn-danger:hover {
-  background-color: #C53030;
-}
-
 /* --- Item Section --- */
 .item-section-header {
   display: flex;
@@ -232,7 +175,56 @@ body {
   align-items: center;
   margin-bottom: 1rem;
 }
+/* Tambahkan kode ini di paling bawah main.css */
 
+.po-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+.po-item-card {
+  border-left: 4px solid #4299E1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.po-item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.po-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+.customer-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0.5rem 0 1rem 0;
+}
+.status-badge {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  color: white;
+}
+.status-badge.normal { background-color: #4A5568; }
+.status-badge.high { background-color: #D69E2E; }
+.status-badge.urgent { background-color: #C53030; }
+.status-badge.baru { background-color: #3182CE; }
+.po-card-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+.po-card-footer {
+    display: flex;
+    gap: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
 .item-card {
   border-left: 4px solid var(--primary-color);
 }
@@ -249,78 +241,144 @@ body {
 .item-card-header h4 {
   margin: 0;
 }
+/* Style umum untuk semua form field */
+input,
+select,
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px; /* konsisten */
+  height: 42px;       /* kunci tinggi */
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  vertical-align: middle; /* teks sejajar */
+}
 
-/* --- PO List / Grid View --- */
-.po-grid {
+select option[disabled],
+select option[hidden],
+select option[value=""] {
+  color: var(--text-secondary); /* sama dengan placeholder input */
+}
+
+/* Fokus */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #f7931e;
+  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+}
+
+/* Select: samakan dengan input + custom arrow */
+select {
+  padding-right: 36px; /* ruang untuk arrow */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23757575' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Supaya label rapi */
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+   color: var(--text-primary);
+}
+
+/* Semua form field sama: input, select, textarea */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111827;               /* isi normal hitam */
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  height: 42px;                 /* kunci tinggi sama */
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  vertical-align: middle;
+}
+
+/* Placeholder input + placeholder select (option kosong) */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #757575;               /* abu sama kayak label */
+}
+
+.form-group select option[disabled],
+.form-group select option[hidden],
+.form-group select option[value=""] {
+  color: #757575;               /* placeholder select */
+}
+
+/* Fokus */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #f7931e;
+  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+}
+
+/* Custom arrow untuk select */
+.form-group select {
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23757575' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Label */
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Grid */
+.form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.po-item-card {
-  border-left: 4px solid #4299E1;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.po-item-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-.po-card-header {
-  display: flex;
-  justify-content: space-between;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem 2rem;
   align-items: center;
-  font-weight: 600;
-}
-.po-card-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-}
-.po-card-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 1rem;
-  margin-top: 1rem;
-}
-.button-row {
-  display: flex;
-  gap: 0.5rem;
-}
-.button-row > .btn,
-.button-row > button {
-  flex: 1;
 }
 
-/* --- Status Badge --- */
-.status-badge {
-  font-size: 0.8rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  color: white;
-}
-.status-badge.normal { background-color: #4A5568; }
-.status-badge.high { background-color: #D69E2E; }
-.status-badge.urgent { background-color: #C53030; }
-.status-badge.baru { background-color: #3182CE; }
-.status-badge.status-open { background-color: #3182CE; }
-.status-badge.status-in-progress { background-color: #D69E2E; }
-.status-badge.status-completed { background-color: #38A169; }
-.status-badge.status-cancelled { background-color: #C53030; }
-.status-badge.overdue { background-color: var(--danger-color); }
+/* ================================== */
+/* STYLING UNTUK PANEL SORT & FILTER  */
+/* ================================== */
 
-
-/* --- Filter Panel --- */
 .filter-panel {
   padding: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 24px; /* Memberi jarak ke daftar PO di bawah */
   background-color: #fff;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 }
+
 .filter-header {
   display: flex;
   justify-content: space-between;
@@ -329,33 +387,61 @@ body {
   padding-bottom: 16px;
   border-bottom: 1px solid #e2e8f0;
 }
+
 .filter-header h3 {
   margin: 0;
   font-size: 1.25rem;
 }
+
 .filter-header span {
   font-size: 0.875rem;
   color: #718096;
 }
+
+/* Kunci utama layoutnya ada di sini */
 .filter-grid {
   display: grid;
+  /* Membuat kolom responsif, minimal 220px */
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px 16px;
+  gap: 20px 16px; /* Jarak vertikal dan horizontal */
 }
+
+/* Membuat bar pencarian memanjang penuh */
 .search-bar {
   grid-column: 1 / -1;
 }
 
-/* --- PO Detail Page --- */
+/* Sedikit penyesuaian untuk form-group yang sudah ada */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+/* Tambahkan di bawah bagian .po-item-card atau di akhir file */
+
+/* ================================== */
+/* STYLING UNTUK PO DETAIL PAGE       */
+/* ================================== */
+
 .detail-po-info {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsif, min 350px */
+  gap: 1.5rem; /* Jarak antar kartu */
   margin-bottom: 2rem;
 }
+
 .po-summary-card {
+  /* Border kiri untuk menonjolkan PO */
   border-left: 4px solid var(--primary-color);
 }
+
 .po-summary-header {
   display: flex;
   justify-content: space-between;
@@ -364,61 +450,95 @@ body {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border-color);
 }
+
 .po-summary-po-number {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.5rem; /* Lebih besar dari h2 Card */
   font-weight: 700;
-  color: var(--primary-color);
+  color: var(--primary-color); /* Warna PO number */
 }
+
 .po-summary-customer {
   font-size: 1.1rem;
   color: var(--text-primary);
   margin-top: 0;
   margin-bottom: 1.5rem;
 }
+
 .po-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
 }
+
 .info-item {
   display: flex;
   flex-direction: column;
 }
+
 .info-item label {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-bottom: 0.25rem;
   font-weight: 500;
 }
+
 .info-item span {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
-.info-item .status-badge {
-  color: white;
-  font-size: 0.85rem;
-  padding: 0.4rem 0.8rem;
-  line-height: 1;
-  text-align: center;
-  align-self: flex-start;
-  min-width: 80px;
-}
+
+/* Badge untuk status PO di detail page */
+.status-badge.status-open { background-color: #3182CE; } /* Blue */
+.status-badge.status-in-progress { background-color: #D69E2E; } /* Orange */
+.status-badge.status-completed { background-color: #38A169; } /* Green */
+.status-badge.status-cancelled { background-color: #C53030; } /* Red */
+
+
 .notes-card {
-  border-left: 4px solid #A0AEC0;
+  /* Jika Anda ingin kartu catatan memiliki border kiri yang berbeda */
+  border-left: 4px solid #A0AEC0; /* Abu-abu */
 }
+
 .notes-card h4 {
   margin-top: 0;
   color: var(--text-primary);
 }
+
 .notes-card p {
   font-size: 0.95rem;
   line-height: 1.5;
   color: var(--text-secondary);
 }
 
-/* --- Progress Tracking Page --- */
+/* Penyesuaian untuk input di dalam detail item */
+.item-card .form-grid {
+    gap: 1rem; /* Kurangi sedikit jarak di sini */
+}
+.item-card .form-grid .form-group {
+    margin-bottom: 0; /* Hindari margin berlebihan */
+}
+
+.info-item .status-badge {
+  color: white;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem; /* Sedikit tambah padding vertikal */
+  line-height: 1;
+
+  /* --- PERUBAHAN DI SINI --- */
+  text-align: center;      /* 1. Membuat teks rata tengah */
+  align-self: flex-start;  /* 2. Mencegah badge meregang selebar kolom */
+  min-width: 80px;         /* 3. (Opsional) Memberi lebar minimum agar konsisten */
+}
+
+/* Tambahkan di akhir file main.css */
+
+/* ================================== */
+/* STYLING UNTUK PROGRESS TRACKING PAGE */
+/* ================================== */
+
+/* --- Progress Bar --- */
 .progress-bar-container {
   width: 100%;
   height: 8px;
@@ -427,22 +547,27 @@ body {
   overflow: hidden;
   margin: 0.25rem 0;
 }
+
 .progress-bar-fill {
   height: 100%;
   background-color: var(--primary-color);
   border-radius: 4px;
   transition: width 0.3s ease-in-out;
 }
+
+/* --- Layout Utama Halaman --- */
 .tracking-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1fr; /* 2/3 untuk daftar, 1/3 untuk sidebar */
   gap: 2rem;
   align-items: flex-start;
 }
+
+/* --- Kartu Perhatian --- */
 .attention-card {
   margin-bottom: 2rem;
-  background-color: #FFFBEB;
-  border-left: 4px solid #FBBF24;
+  background-color: #FFFBEB; /* Warna kuning muda */
+  border-left: 4px solid #FBBF24; /* Warna kuning tua */
 }
 .attention-card h4 {
   margin-top: 0;
@@ -451,39 +576,43 @@ body {
 .attention-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1rem;
 }
 .attention-item {
-  padding: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--border-color);
 }
 .attention-item:last-child {
   border-bottom: none;
-  padding-bottom: 0;
 }
-.attention-item:first-child {
-  padding-top: 8px;
+.attention-info {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
-.attention-item p {
-  margin: 0;
+.attention-po-number {
+  font-weight: 600;
 }
-.attention-line-1 {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-.attention-line-1 strong {
-  font-weight: 700;
-}
-.attention-line-1 .customer-name {
+.attention-customer, .attention-deadline {
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
-.attention-line-2 {
-  font-size: 0.875rem;
-  color: #c2410c;
-  font-weight: 500;
+.attention-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
+.attention-progress a {
+  font-weight: 600;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+
+/* --- Daftar PO Aktif --- */
 .active-po-list h3 {
   margin-top: 0;
   margin-bottom: 1rem;
@@ -527,6 +656,9 @@ body {
   gap: 0.5rem;
   font-size: 0.9rem;
 }
+.status-badge.overdue {
+  background-color: #E53E3E; /* Merah */
+}
 .po-tracking-actions {
   display: flex;
   gap: 0.5rem;
@@ -535,16 +667,23 @@ body {
     padding: 0.5rem;
     min-width: 36px;
 }
+
+
+/* --- Sidebar Update Terbaru --- */
 .recent-updates h3, .recent-updates h4 {
   margin-top: 0;
 }
+
 .no-updates-text {
     color: var(--text-secondary);
     text-align: center;
     padding: 2rem 0;
 }
 
-/* --- View Switcher & Table --- */
+/* ================================== */
+/* STYLING UNTUK VIEW SWITCHER & TABLE */
+/* ================================== */
+
 .view-switcher {
   display: flex;
   justify-content: flex-end;
@@ -555,6 +694,7 @@ body {
   width: fit-content;
   margin-left: auto;
 }
+
 .view-switcher-btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -565,14 +705,17 @@ body {
   color: var(--text-secondary);
   transition: all 0.2s ease;
 }
+
 .view-switcher-btn:hover {
   color: var(--text-primary);
 }
+
 .view-switcher-btn.active {
   background-color: var(--card-bg);
   color: var(--primary-color);
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+
 .po-table-container {
   width: 100%;
   overflow-x: auto;
@@ -580,16 +723,19 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 8px;
 }
+
 .po-table {
   width: 100%;
   border-collapse: collapse;
 }
+
 .po-table th, .po-table td {
   padding: 12px 15px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
+
 .po-table th {
   background-color: var(--secondary-color);
   font-size: 0.85rem;
@@ -597,38 +743,54 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
 }
+
 .po-table tbody tr:hover {
   background-color: #f9fafb;
 }
+
 .po-table tbody td {
   font-size: 0.9rem;
 }
+
 .po-table-actions {
   display: flex;
   gap: 0.5rem;
 }
+
 .po-table-actions .button {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
 }
 
-/* --- Dashboard Page --- */
+/* Badge untuk status PO di dalam tabel */
+.status-badge.status-open { background-color: #3182CE; }
+.status-badge.status-in-progress { background-color: #D69E2E; }
+.status-badge.status-completed { background-color: #38A169; }
+.status-badge.status-cancelled { background-color: #C53030; }
+
+/* ================================== */
+/* STYLING UNTUK DASHBOARD PAGE       */
+/* ================================== */
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
+
 .stat-card {
   display: flex;
   align-items: center;
   padding: 1.5rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .stat-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+
 .stat-card-icon {
   font-size: 2.5rem;
   margin-right: 1.5rem;
@@ -640,35 +802,42 @@ body {
   justify-content: center;
   border-radius: 50%;
 }
+
 .stat-card-info {
   display: flex;
   flex-direction: column;
 }
+
 .stat-card-title {
   color: var(--text-secondary);
   font-weight: 500;
   margin-bottom: 0.25rem;
 }
+
 .stat-card-value {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
 }
+
 .welcome-card {
   background-color: #F8FAFC;
   border-left: 4px solid var(--primary-color);
 }
+
 .welcome-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     margin-top: 1.5rem;
 }
+
 .welcome-card h4 {
     margin-top: 0;
     margin-bottom: 1rem;
     color: var(--text-primary);
 }
+
 .welcome-card ul {
     list-style-type: '✓  ';
     padding-left: 1.25rem;
@@ -676,6 +845,8 @@ body {
     color: var(--text-secondary);
     line-height: 1.8;
 }
+
+/* Styling untuk Grid Widget Dashboard */
 .dashboard-widgets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -683,66 +854,65 @@ body {
   margin-top: 24px;
   margin-bottom: 24px;
 }
+
+/* Styling untuk Tabel Sederhana di Dashboard */
 .simple-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 16px;
 }
+
 .simple-table th,
 .simple-table td {
   padding: 10px 12px;
   text-align: left;
   border-bottom: 1px solid #e2e8f0;
 }
+
 .simple-table th {
   font-size: 13px;
   font-weight: 600;
   color: #4a5568;
   background-color: #f7fafc;
 }
+
 .simple-table tbody tr:hover {
   background-color: #f7fafc;
 }
 
-/* --- Revision History --- */
+/* src/renderer/src/assets/index.css */
+
 .revision-history-card {
   margin-bottom: 20px;
-  border-left: 4px solid #718096;
+  border-left: 4px solid #718096; /* Memberi tanda visual */
 }
+
 .revision-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
   padding-bottom: 12px;
   margin-bottom: 12px;
 }
-.revision-title-group {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+
 .revision-header h3 {
   margin: 0;
 }
+
 .revision-header span {
   font-size: 0.85rem;
   color: #4a5568;
 }
-.revision-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
-}
+
 .revision-details {
   margin-bottom: 16px;
 }
+
 .revision-details p {
   margin: 4px 0;
 }
 
-/* --- Progress Timeline --- */
 .progress-timeline {
   display: flex;
   justify-content: space-between;
@@ -759,7 +929,7 @@ body {
 .stage-dot {
   width: 20px;
   height: 20px;
-  background-color: #CBD5E0;
+  background-color: #CBD5E0; /* abu-abu */
   border-radius: 50%;
   border: 3px solid white;
   z-index: 2;
@@ -771,7 +941,7 @@ body {
   color: #A0AEC0;
 }
 .stage.completed .stage-dot {
-  background-color: #48BB78;
+  background-color: #48BB78; /* hijau */
 }
 .stage.completed .stage-name {
   color: var(--text-primary);
@@ -790,22 +960,6 @@ body {
 .stage.completed:not(:last-child)::after {
     background-color: #48BB78;
 }
-.stage-deadline {
-  font-size: 0.7rem;
-  color: #718096;
-  margin-top: 4px;
-}
-.stage.overdue .stage-dot {
-  background-color: var(--danger-color);
-  border-color: #FFF5F5;
-}
-.stage.overdue .stage-name,
-.stage.overdue .stage-deadline {
-  color: var(--danger-color);
-  font-weight: bold;
-}
-
-/* --- Update Form & History Log --- */
 .update-form {
   margin-top: 1.5rem;
   padding: 1.5rem;
@@ -825,35 +979,100 @@ body {
     padding-top: 1.5rem;
 }
 .log-entry {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #EDF2F7;
+}
+.log-entry:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.log-entry p { margin: 0.25rem 0; }
+.log-entry a { color: var(--primary-color); font-weight: 500; }
+
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.update-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.update-icon {
+  font-size: 1.2rem;
+  margin-top: 2px;
+}
+.update-details p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.update-details .update-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.po-card-footer-stacked {
+  display: flex;
+  flex-direction: column; /* Menyusun baris tombol secara vertikal */
+  gap: 8px; /* Memberi jarak antar baris tombol */
+  margin-top: 1rem;
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-between; /* Menyebar tombol di baris kedua secara merata */
+  gap: 8px; /* Memberi jarak antar tombol */
+}
+
+/* Membuat tombol di baris kedua memiliki lebar yang sama */
+.button-row > button {
+  flex: 1;
+}
+.btn-danger {
+  background-color: #dc3545; /* Warna merah yang umum untuk bahaya */
+  color: white !important; /* !important untuk memastikan warna font putih */
+  border-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333; /* Warna merah lebih gelap saat disentuh */
+  border-color: #bd2130;
+}
+/* Tambahkan ini ke file CSS Anda */
+.log-entry {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid #f1f5f9;
 }
+
 .log-entry:last-child {
   border-bottom: none;
 }
-.log-entry p { margin: 0.25rem 0; }
-.log-entry a { color: var(--primary-color); font-weight: 500; }
 
-/* --- File Input & Preview --- */
 .view-photo-btn {
+  /* Atur agar tombol tidak terlalu besar */
   padding: 4px 12px;
   font-size: 12px;
-  white-space: nowrap;
+  white-space: nowrap; /* Mencegah teks tombol turun baris */
 }
+
 .file-preview {
   display: flex;
-  align-items: center;
+  align-items: center; /* Kunci untuk membuat item sejajar di tengah secara vertikal */
   justify-content: space-between;
   width: 100%;
-  padding: 6px 6px 6px 12px;
+  padding: 6px 6px 6px 12px; /* Atur padding: atas/bawah 6px, kanan 6px, kiri 12px */
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  box-sizing: border-box;
+  box-sizing: border-box; /* Pastikan padding tidak menambah lebar total */
 }
+
+/* 2. Teks nama file */
 .file-name {
   white-space: nowrap;
   overflow: hidden;
@@ -862,130 +1081,292 @@ body {
   font-size: 14px;
   color: #475569;
 }
+
+/* 3. Tombol "Batal" yang sudah dirapikan */
 .cancel-photo-btn {
-  height: 28px;
-  line-height: 28px;
-  padding: 0 10px;
+  height: 28px; /* Kunci tinggi tombol */
+  line-height: 28px; /* Samakan dengan tinggi agar teks di tengah */
+  padding: 0 10px; /* Padding horizontal saja */
   font-size: 12px;
-  font-weight: 600;
-  border: none;
-  background-color: #fee2e2;
-  color: #b91c1c;
+  font-weight: 600; /* Dibuat sedikit tebal */
+
+  border: none; /* Hilangkan border awal */
+  background-color: #fee2e2; /* Latar belakang merah muda */
+  color: #b91c1c; /* Teks merah tua */
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
+
 .cancel-photo-btn:hover {
-  background-color: #fecaca !important;
+  background-color: #fecaca !important; /* Warna sedikit lebih gelap saat hover */
   color: #991b1b !important;
 }
 
-/* --- Analysis & BI Page --- */
+
+.btn.btn-danger {
+  background-color: #E53E3E; /* Merah */
+  color: white;
+}
+.btn.btn-danger:hover {
+  background-color: #C53030; /* Merah lebih gelap */
+}
+
+.po-card-footer {
+  display: flex;
+  flex-direction: column; /* Membuat baris tombol tersusun vertikal */
+  gap: 0.5rem; /* Jarak antar baris tombol */
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem; /* Jarak antar tombol di dalam satu baris */
+}
+
+/* Membuat tombol-tombol memenuhi lebar barisnya secara merata */
+.button-row > .btn,
+.button-row > button {
+  flex: 1;
+}
+
+/* Styling untuk progress bar di halaman detail PO */
+.po-summary-progress {
+  margin-top: 1.5rem;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.progress-info label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.progress-info span {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* CSS untuk merapikan header kartu revisi */
+.revision-header {
+  /* Diubah dari flex biasa menjadi space-between */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.revision-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.revision-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0; /* Mencegah grup ini mengecil */
+}
+
+.filter-panel-simple {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.search-input-full {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+}
+.attention-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.attention-section h5 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+.attention-item-small {
+  padding: 0.5rem 0;
+}
+.attention-item-small p {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+}
+.attention-item-small span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.no-attention-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.insight-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.insight-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.insight-list li:last-child {
+  border-bottom: none;
+}
+.trend-up {
+  color: #38A169; /* hijau */
+  font-weight: bold;
+}
+.recommendation-card {
+  margin-top: 1.5rem;
+  background-color: #EBF8FF; /* Biru muda */
+  border-left: 4px solid #3182CE; /* Biru tua */
+}
+/* ======================================= */
+/* == PERBAIKAN TAMPILAN KARTU PERHATIAN == */
+/* ======================================= */
+
+.attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Jarak antar item diatur oleh border */
+}
+
+.attention-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attention-item:last-child {
+  border-bottom: none; /* Hilangkan border pada item terakhir */
+  padding-bottom: 0;
+}
+
+.attention-item:first-child {
+  padding-top: 8px;
+}
+
+/* Hilangkan margin default dari paragraf */
+.attention-item p {
+  margin: 0;
+}
+
+/* Baris pertama: Nomor PO & Customer */
+.attention-line-1 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px; /* Jarak ke baris deadline */
+}
+.attention-line-1 strong {
+  font-weight: 700; /* Membuat Nomor PO lebih tebal */
+}
+.attention-line-1 .customer-name {
+  color: var(--text-secondary);
+}
+
+/* Baris kedua: Deadline */
+.attention-line-2 {
+  font-size: 0.875rem;
+  color: #c2410c; /* Warna oranye-merah untuk deadline */
+  font-weight: 500;
+}
+
+.top-customer-list {
+  padding-left: 1.5rem;
+  margin: 0;
+}
+.top-customer-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.top-customer-list li:last-child {
+  border-bottom: none;
+}
+
+/* Tambahkan di akhir file main.css */
+.stage-deadline {
+  font-size: 0.7rem;
+  color: #718096; /* abu-abu */
+  margin-top: 4px;
+}
+.stage.overdue .stage-dot {
+  background-color: #E53E3E; /* merah */
+  border-color: #FFF5F5;
+}
+.stage.overdue .stage-name,
+.stage.overdue .stage-deadline {
+  color: #E53E3E;
+  font-weight: bold;
+}
+
+/* Tambahkan di akhir file main.css */
 .interactive-bi-layout {
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 250px 1fr; /* Kolom filter 250px, sisa untuk hasil */
   gap: 2rem;
 }
+
 .bi-filters {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
+
 .bi-filters h4 {
   margin-top: 0;
   margin-bottom: 0;
 }
+
 .insight-card {
   background-color: #F7FAFC;
   border-left: 4px solid var(--primary-color);
 }
+
 .insight-card h4 {
   margin-top: 0;
 }
+
 .insight-card ul {
   padding-left: 1.25rem;
   line-height: 1.8;
 }
 
-/* --- Modal Styling --- */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-out;
-}
-.modal-content {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  animation: scaleUp 0.3s ease-out;
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 1rem;
-  margin-bottom: 1.5rem;
-}
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-}
-.modal-body {
-  overflow-y: auto;
-  padding-right: 1rem;
-  margin-right: -1rem;
-}
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 1.5rem;
-  margin-top: 1.5rem;
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes scaleUp {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
 
-/* --- Item Input Table --- */
+
+/* CSS untuk Tabel Input Item */
 .table-responsive {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: auto; /* PENTING: Ini yang membuat tabel bisa di-scroll ke kanan-kiri */
 }
+
 .item-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
 }
+
 .item-table th,
 .item-table td {
   border: 1px solid #ddd;
@@ -993,19 +1374,24 @@ body {
   text-align: left;
   vertical-align: middle;
 }
+
 .item-table th {
   background-color: #f8f9fa;
   font-weight: bold;
-  white-space: nowrap;
+  white-space: nowrap; /* Mencegah header terpotong saat di-scroll */
 }
+
+/* Membuat input dan select memenuhi sel tabel */
 .item-table input,
 .item-table select {
   width: 100%;
   padding: 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
+  box-sizing: border-box; /* Penting agar padding tidak menambah lebar */
 }
+
+/* Styling untuk input ukuran T x L x P */
 .size-inputs {
   display: flex;
   align-items: center;
@@ -1018,6 +1404,8 @@ body {
 .size-inputs span {
   padding: 0 2px;
 }
+
+/* Styling untuk input Qty + Satuan */
 .quantity-inputs {
   display: flex;
   align-items: center;
@@ -1030,26 +1418,53 @@ body {
   width: 60px;
 }
 
-/* --- Timeline & Update Progress Page --- */
+.stage-deadline.editable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stage-deadline.editable label {
+  font-size: 0.7rem;
+}
+.stage-deadline.editable input[type="date"] {
+  border: 1px solid transparent;
+  background: none;
+  font-size: 0.7rem;
+  padding: 2px;
+  border-radius: 4px;
+  text-align: center;
+  width: 110px; /* Sesuaikan lebar */
+}
+.stage-deadline.editable input[type="date"]:focus {
+  border-color: var(--primary-color);
+  background-color: white;
+}
+
+/* =================================================================== */
+/* == CSS RESPONSIVE UNTUK UPDATE PROGRESS PAGE == */
+/* =================================================================== */
+
+/* --- Membuat Timeline bisa di-scroll Horizontal --- */
 .timeline-container {
-  overflow-x: auto; /* Aktifkan scroll horizontal */
+  overflow-x: auto;
   padding-bottom: 1rem;
-  /* Beri sedikit bayangan di tepi untuk menandakan bisa di-scroll */
   -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
   mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent);
 }
+
 .progress-timeline {
   min-width: 800px; /* Paksa timeline menjadi lebar agar scrolling aktif */
 }
-/* Sembunyikan input file bawaan yang jelek */
+
+/* --- Mempercantik Tampilan Tombol Unggah Foto --- */
 .update-form input[type="file"] {
   display: none;
 }
-/* Buat label terlihat seperti tombol */
+
 .file-input-label {
   display: block;
   padding: 0.75rem 1.5rem;
-  border: 1px dashed var(--border-color); /* Border putus-putus */
+  border: 1px dashed var(--border-color);
   border-radius: 6px;
   background-color: #f9fafb;
   color: var(--text-secondary);
@@ -1058,154 +1473,333 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .file-input-label:hover {
   background-color: var(--secondary-color);
   border-color: var(--primary-color);
   color: var(--primary-color);
 }
 
-/* --- Editable Stage Deadline --- */
+/* ================================================= */
+/* == STYLING UNTUK DEADLINE YANG BISA DIEDIT == */
+/* ================================================= */
+
 .stage-deadline.editable {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 4px;
 }
+
 .stage-deadline.editable label {
   font-size: 0.7rem;
   color: var(--text-secondary);
 }
+
 .stage-deadline.editable input[type="date"] {
   border: 1px solid transparent;
   background-color: transparent;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.75rem; /* Ukuran font disesuaikan */
   font-weight: 500;
   color: var(--text-secondary);
   padding: 2px 4px;
   border-radius: 4px;
   text-align: center;
-  width: 120px;
+  width: 120px; /* Lebar input */
   cursor: pointer;
 }
+
+/* Beri style saat overdue */
 .stage.overdue .stage-deadline.editable input[type="date"] {
   color: var(--danger-color);
   font-weight: bold;
 }
+
+/* Beri style saat diedit */
 .stage-deadline.editable input[type="date"]:focus {
   border-color: var(--primary-color);
   background-color: white;
   box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
   color: var(--text-primary);
 }
+
+/* ======================================= */
+/* == STYLING INPUT DEADLINE DINONAKTIFKAN == */
+/* ======================================= */
+
 .stage-deadline input[type="date"]:disabled {
   background-color: transparent;
   cursor: not-allowed;
   color: var(--text-secondary);
-  font-weight: normal;
+  font-weight: normal; /* Kembalikan ke normal jika sebelumnya bold */
 }
+
+/* Hilangkan panah di input date yang dinonaktifkan */
 .stage-deadline input[type="date"]:disabled::-webkit-calendar-picker-indicator {
   display: none;
 }
 
+/* ========================================= */
+/* == STYLING RESPONSIVE UNTUK MODAL      == */
+/* ========================================= */
 
-/* =================================================================== */
-/* == RESPONSIVE RULES (MEDIA QUERIES) == */
-/* =================================================================== */
+/* 1. Latar Belakang Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem; /* Padding agar modal tidak menempel di tepi layar kecil */
+  box-sizing: border-box;
+}
 
-/* --- Aturan untuk layar tablet dan HP (lebar di bawah 992px) --- */
-@media (max-width: 992px) {
-  /* Layout utama menjadi 1 kolom */
-  .tracking-layout,
-  .dashboard-widgets-grid,
-  .interactive-bi-layout {
-    grid-template-columns: 1fr;
+/* 2. Konten Modal Utama (Mobile First) */
+.modal-content {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 550px; /* Lebar maksimum untuk layar desktop */
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh; /* Batasi tinggi agar bisa di-scroll jika konten panjang */
+  overflow: hidden; /* Mencegah konten keluar dari border-radius */
+}
+
+/* 3. Header Modal */
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* 4. Body Modal (dengan scroll) */
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto; /* Aktifkan scroll jika konten lebih tinggi dari max-height */
+}
+
+/* 5. Form Grid (Responsive) */
+.modal-body .form-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Default: 1 kolom untuk mobile */
+  gap: 1.25rem;
+}
+
+/* 6. Footer Modal (Mobile First) */
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background-color: #f9fafb;
+  display: flex;
+  flex-direction: column-reverse; /* Tombol utama (Simpan) di atas */
+  gap: 0.75rem;
+}
+
+/* ====================================================== */
+/* == Media Query untuk layar lebih besar (Tablet ke atas) == */
+/* ====================================================== */
+@media (min-width: 768px) {
+  /* Ubah form grid menjadi 2 kolom */
+  .modal-body .form-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .interactive-bi-layout .bi-filters {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1.5rem;
+  /* Ubah layout footer menjadi horizontal */
+  .modal-footer {
+    flex-direction: row;
+    justify-content: flex-end;
   }
 }
 
-/* --- Aturan untuk layar HP/Tablet (lebar di bawah 768px) --- */
-@media (max-width: 768px) {
-  /* Header halaman menjadi vertikal */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  .header-actions {
-    width: 100%;
-  }
-  .page-header .btn {
-    width: 100%;
-    text-align: center;
-  }
+/* ========================================= */
+/* == STYLING MODERN & RESPONSIVE MODAL   == */
+/* ========================================= */
 
-  /* Filter Panel */
-  .filter-panel {
-    padding: 1rem;
-  }
-  .filter-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
+/* 1. Latar Belakang Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(17, 24, 39, 0.6); /* Sedikit lebih gelap untuk kontras */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+  backdrop-filter: blur(4px); /* Efek blur untuk background */
+}
 
-  /* View Switcher memenuhi lebar */
-  .view-switcher {
-    width: 100%;
-    justify-content: center;
-    margin-left: 0;
-  }
-  .view-switcher-btn {
-    flex: 1;
-    text-align: center;
-  }
+/* 2. Konten Modal Utama (Mobile First) */
+.modal-content {
+  background-color: var(--card-bg);
+  border-radius: 12px; /* Sudut lebih tumpul */
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  width: 100%;
+  max-width: 600px; /* Lebar maksimum agar tidak terlalu lebar di desktop */
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh; /* Batasi tinggi modal */
+  overflow: hidden;
+  /* Animasi saat muncul */
+  transform: scale(0.95);
+  opacity: 0;
+  animation: fadeInScale 0.2s ease-out forwards;
+}
 
-  /* Tombol aksi di tabel menjadi vertikal */
-  .po-table-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .po-table-actions .btn,
-  .po-table-actions button {
-    width: 100%;
-    text-align: center;
-  }
-
-  /* Header kartu revisi menjadi vertikal */
-  .revision-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-  .revision-actions-group {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    width: 100%;
-  }
-  .revision-actions-group > .btn {
-    width: 100%;
-    text-align: center;
-  }
-
-  /* Form di dalam modal menjadi 1 kolom */
-  .modal-content .form-grid {
-    grid-template-columns: 1fr;
-  }
-  .modal-content {
-    padding: 1rem;
+@keyframes fadeInScale {
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-/* --- Aturan untuk layar HP yang sangat sempit (lebar di bawah 480px) --- */
-@media (max-width: 480px) {
-  /* Kecilkan font pada label sumbu-Y di bar chart */
-  .recharts-yAxis .recharts-text {
-    font-size: 10px;
+/* 3. Header Modal */
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0; /* Mencegah header mengecil */
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
+}
+
+/* 4. Body Modal (dengan scroll) */
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto; /* Aktifkan scroll jika kontennya panjang */
+}
+
+/* 5. Form Grid (Responsive) */
+.modal-body .form-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Default: 1 kolom untuk mobile */
+  gap: 1.25rem;
+}
+
+/* 6. Footer Modal (Mobile First) */
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background-color: #F9FAFB; /* Latar belakang abu-abu muda */
+  display: flex;
+  flex-direction: column-reverse; /* Tombol utama (Simpan) di atas pada mobile */
+  gap: 0.75rem;
+  flex-shrink: 0; /* Mencegah footer mengecil */
+}
+
+/* ====================================================== */
+/* == Media Query untuk layar lebih besar (Tablet ke atas) == */
+/* ====================================================== */
+@media (min-width: 640px) { /* breakpoint lebih kecil untuk form 2 kolom */
+  /* Ubah form grid menjadi 2 kolom */
+  .modal-body .form-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
+
+  /* Ubah layout footer menjadi horizontal */
+  .modal-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.form-group label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px; /* <<< DIUBAH: Jarak ditambah dari 6px menjadi 8px */
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* 2. Menghapus tinggi tetap dan mengandalkan padding untuk ukuran yang natural */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111827;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 14px; /* <<< DIUBAH: Padding horizontal sedikit lebih lega */
+  /* height: 42px; */ /* <<< DIHAPUS: Hapus baris ini agar tinggi input fleksibel */
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  vertical-align: middle;
+}
+
+/* Placeholder input + placeholder select (option kosong) */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af; /* Warna placeholder sedikit lebih terang */
 }

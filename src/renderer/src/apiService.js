@@ -100,6 +100,16 @@ export function getRevisionHistory(poId) {
   return fetchAPI(createApiEndpoint('getRevisionHistory', { poId }))
 }
 
+export function listPORevisions(poId) {
+  if (window.api) return window.api.listPORevisions(poId)
+  return fetchAPI(createApiEndpoint('listPORevisions', { poId }))
+}
+
+export function listPOItemsByRevision(poId, revisionNumber) {
+  if (window.api) return window.api.listPOItemsByRevision(poId, revisionNumber)
+  return fetchAPI(createApiEndpoint('listPOItemsByRevision', { poId, revisionNumber }))
+}
+
 // --- Fungsi Pratinjau (Preview) ---
 
 export function previewPO(data) {
@@ -186,5 +196,14 @@ export function addNewProduct(data) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  })
+}
+
+export function updateStageDeadline(data) {
+  if (window.api) return window.api.updateStageDeadline(data)
+  return fetchAPI(createApiEndpoint('updateStageDeadline'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
   })
 }

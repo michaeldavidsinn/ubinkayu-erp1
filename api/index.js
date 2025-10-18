@@ -28,6 +28,10 @@ export default async function handler(req, res) {
         return await Controller.handleListPOItems(req, res)
       case 'getRevisionHistory':
         return await Controller.handleGetRevisionHistory(req, res)
+      case 'listPORevisions':
+        return await Controller.handleListPORevisions(req, res)
+      case 'listPOItemsByRevision':
+        return await Controller.handleListPOItemsByRevision(req, res)
 
       // Rute untuk Preview
       case 'previewPO':
@@ -42,6 +46,8 @@ export default async function handler(req, res) {
         return await Controller.handleGetPOItemsWithDetails(req, res)
       case 'getRecentProgressUpdates':
         return await Controller.handleGetRecentProgressUpdates(req, res)
+      case 'updateStageDeadline':
+        return await Controller.handleUpdateStageDeadline(req, res)
 
       // Rute untuk Analisis
       case 'getAttentionData':
