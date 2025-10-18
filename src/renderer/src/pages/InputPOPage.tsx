@@ -2,72 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { POHeader, POItem } from '../types'
-
-// --- START: Component & Service Definitions ---
-// The following components and services are defined here to resolve import errors.
-
-// Mock apiService to simulate functionality
-const apiService = {
-  getProducts: async () => {
-    console.log('apiService.getProducts called')
-    if (!!(window as any).api) return (window as any).api.getProducts()
-    return Promise.resolve([
-      {
-        product_name: 'Product A',
-        wood_type: 'Meranti',
-        profile: 'P1',
-        color: 'Red',
-        finishing: 'Gloss',
-        sample: 'S1',
-        marketing: 'John Doe'
-      },
-      {
-        product_name: 'Product B',
-        wood_type: 'Kamper',
-        profile: 'P2',
-        color: 'Blue',
-        finishing: 'Matte',
-        sample: 'S2',
-        marketing: 'Jane Smith'
-      }
-    ])
-  },
-  listPOItems: async (poId: string) => {
-    console.log(`apiService.listPOItems called with id: ${poId}`)
-    if (!!(window as any).api) return (window as any).api.listPOItems(poId)
-    return Promise.resolve([])
-  },
-  openFileDialog: async () => {
-    console.log('apiService.openFileDialog called')
-    if (!!(window as any).api) return (window as any).api.openFileDialog()
-    return Promise.resolve('/mock/file/path.jpg')
-  },
-  readFileAsBase64: async (path: string) => {
-    console.log(`apiService.readFileAsBase64 called with path: ${path}`)
-    if (!!(window as any).api) return (window as any).api.readFileAsBase64(path)
-    return Promise.resolve('mock_base64_string')
-  },
-  updatePO: async (payload: any) => {
-    console.log('apiService.updatePO called with payload:', payload)
-    if (!!(window as any).api) return (window as any).api.updatePO(payload)
-    return Promise.resolve({ success: true })
-  },
-  saveNewPO: async (payload: any) => {
-    console.log('apiService.saveNewPO called with payload:', payload)
-    if (!!(window as any).api) return (window as any).api.saveNewPO(payload)
-    return Promise.resolve({ success: true })
-  },
-  previewPO: async (payload: any) => {
-    console.log('apiService.previewPO called with payload:', payload)
-    if (!!(window as any).api) return (window as any).api.previewPO(payload)
-    return Promise.resolve({ success: true, base64Data: 'mock_preview_base64_string' })
-  },
-  addNewProduct: async (data: any) => {
-    console.log('apiService.addNewProduct called with data:', data)
-    if (!!(window as any).api) return (window as any).api.addNewProduct(data)
-    return Promise.resolve({ success: true })
-  }
-}
+import * as apiService from '../apiService'
 
 // Basic Component Implementations
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
