@@ -149,7 +149,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     prioritas: editingPO?.priority || 'Normal',
     alamatKirim: (editingPO as any)?.alamatKirim || '', // Field dari Vercel
     catatan: editingPO?.notes || '',
-    marketing: (editingPO as any)?.marketing || '' // Field dari Vercel-2
+    marketing: (editingPO as any)?.acc_marketing || '' // Field dari Vercel-2
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
