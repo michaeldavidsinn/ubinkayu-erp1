@@ -57,7 +57,11 @@ app.whenReady().then(() => {
 
   // --- IPC Handlers ---
   ipcMain.handle('ping', () => 'pong')
-  ipcMain.handle('po:list', () => listPOs())
+  ipcMain.handle('po:list', async () => {
+    const data = await listPOs();
+    // Lakukan pembersihan objek di sini sebelum dikirim balik:
+    return JSON.parse(JSON.stringify(data));
+});
   ipcMain.handle('po:save', async (_event, data) => saveNewPO(data))
   ipcMain.handle('po:delete', async (_event, poId) => deletePO(poId))
   ipcMain.handle('po:update', async (_event, data) => updatePO(data))
@@ -93,15 +97,15 @@ app.whenReady().then(() => {
   });
 
   // --- IPC Handlers untuk Progress Tracking ---
-  ipcMain.handle('progress:getActivePOs', () => getActivePOsWithProgress());
-  ipcMain.handle('progress:getPOItems', (_event, poId) => getPOItemsWithDetails(poId));
+  ipcMain.handle('progress:getActivePOsWithProgress', () => getActivePOsWithProgress()); // <-- ✅ PERBAIKAN
+  ipcMain.handle('progress:getPOItemsWithDetails', (_event, poId) => getPOItemsWithDetails(poId)); // <-- ✅ PERBAIKAN
   ipcMain.handle('progress:updateItem', (_event, data) => updateItemProgress(data));
-  ipcMain.handle('progress:getRecentUpdates', () => getRecentProgressUpdates());
+  ipcMain.handle('progress:getRecentProgressUpdates', () => getRecentProgressUpdates()); // <-- ✅ PERBAIKAN
   // [BARU] Daftarkan handler untuk data atensi
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
   ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
-ipcMain.handle('app:read-file-base64', async (_event, filePath) => {
+  ipcMain.handle('app:read-file-base64', async (_event, filePath) => {
     try {
       const buffer = await fs.promises.readFile(filePath);
       return buffer.toString('base64');

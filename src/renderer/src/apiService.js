@@ -133,7 +133,7 @@ export function updateItemProgress(data) {
 }
 
 export function getActivePOsWithProgress() {
-  if (window.api) return window.api.getActivePOs() // Nama di preload.js berbeda
+  if (window.api) return window.api.getActivePOsWithProgress() // <-- ✅ PERBAIKAN DI SINI
   return fetchAPI(createApiEndpoint('getActivePOsWithProgress'))
 }
 
@@ -144,7 +144,7 @@ export function getPOItemsWithDetails(poId) {
 }
 
 export function getRecentProgressUpdates() {
-  if (window.api) return window.api.getRecentUpdates() // Nama di preload.js berbeda
+  if (window.api) return window.api.getRecentProgressUpdates() // <-- ✅ PERBAIKI SEPERTI INI
   return fetchAPI(createApiEndpoint('getRecentProgressUpdates'))
 }
 

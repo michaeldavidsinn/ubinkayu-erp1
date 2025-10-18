@@ -28,10 +28,10 @@ const api = {
   openExternalLink: (url) => ipcRenderer.invoke('app:open-external-link', url),
 
   // --- Fungsi untuk Progress, Analisis & Lainnya ---
-  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOs'),
-  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItems', poId),
+  getActivePOsWithProgress: () => ipcRenderer.invoke('progress:getActivePOsWithProgress'), // <-- PERBAIKAN 1
+  getPOItemsWithDetails: (poId) => ipcRenderer.invoke('progress:getPOItemsWithDetails', poId), // <-- PERBAIKAN 2
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
-  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
+  getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentProgressUpdates'), // <-- PERBAIKAN 3
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
   updateStageDeadline: (data) => ipcRenderer.invoke('progress:updateDeadline', data),
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),

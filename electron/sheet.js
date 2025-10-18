@@ -2,7 +2,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 import path from 'node:path'
 import fs from 'node:fs'
-import { app, shell } from 'electron'
+import { app, dialog } from 'electron'
 import { google } from 'googleapis'
 import { generatePOJpeg } from './jpegGenerator.js'
 
@@ -36,13 +36,16 @@ function getAuth() {
 
   const credPath = isDev
     ? path.join(process.cwd(), 'resources', 'credentials.json')
-    : path.join(process.resourcesPath, 'credentials.json')
+    : path.join(process.resourcesPath, 'resources', 'credentials.json')
 
   if (!fs.existsSync(credPath)) {
-    console.error('Lokasi file credentials.json yang dicari:', credPath)
-    throw new Error(
-      'File credentials.json tidak ditemukan. Pastikan file sudah dipindahkan ke folder "resources".'
-    )
+    const title = 'Error Kredensial Kritis'
+    const content = `File credentials.json tidak dapat ditemukan di aplikasi.\n\nLokasi yang dicari:\n${credPath}`
+
+    console.error(content) // Tetap log di terminal
+    dialog.showErrorBox(title, content) // <-- INI AKAN MEMUNCULKAN POPUP ERROR
+
+    throw new Error('File credentials.json tidak ditemukan.')
   }
 
   const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'))
@@ -290,111 +293,110 @@ export async function listPOs() {
     const itemSheet = await getSheet(doc, 'purchase_order_items')
     const progressSheet = await getSheet(doc, 'progress_tracking')
 
-    const [poRows, itemRows, progressRows] = await Promise.all([
-      poSheet.getRows(),
-      itemSheet.getRows(),
-      progressSheet.getRows()
-    ])
+    // Ambil data mentah (rows)
+    const rawPoRows = await poSheet.getRows()
+    const rawItemRows = await itemSheet.getRows()
+    const rawProgressRows = await progressSheet.getRows()
 
+    // Lakukan pembersihan objek di sini untuk menghindari error cloning
+    const poRows = rawPoRows.map(r => r.toObject())
+    const itemRows = rawItemRows.map(r => r.toObject())
+    const progressRows = rawProgressRows.map(r => r.toObject())
+
+    // 1. Ambil Revisi Header Terbaru (dari data yang sudah bersih)
     const byId = new Map()
     for (const r of poRows) {
-      const id = String(r.get('id')).trim()
-      const rev = toNum(r.get('revision_number'), -1)
+      const id = String(r.id).trim()
+      const rev = toNum(r.revision_number, -1)
       const keep = byId.get(id)
       if (!keep || rev > keep.rev) byId.set(id, { rev, row: r })
     }
-    const latestPoRows = Array.from(byId.values()).map(({ row }) => row)
+    const latestPoObjects = Array.from(byId.values()).map(({ row }) => row)
 
+    // 2. Siapkan Helper Maps
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
-      const poId = row.get('purchase_order_id')
-      const itemId = row.get('purchase_order_item_id')
-      const key = `${poId}-${itemId}`
+      const key = `${row.purchase_order_id}-${row.purchase_order_item_id}`
       if (!acc[key]) acc[key] = []
-      acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') })
+      acc[key].push({ stage: row.stage, created_at: row.created_at })
       return acc
     }, {})
 
-    const itemsByPoId = itemRows.reduce((acc, item) => {
-      const poId = item.get('purchase_order_id')
-      if (!acc[poId]) acc[poId] = []
-      acc[poId].push(item.toObject())
-      return acc
-    }, {})
-
-    const latestItemRevisions = new Map()
-    itemRows.forEach((item) => {
-      const poId = item.get('purchase_order_id')
-      const rev = toNum(item.get('revision_number'), -1)
-      const current = latestItemRevisions.get(poId)
-      if (!current || rev > current) {
-        latestItemRevisions.set(poId, rev)
+    const latestItemRevisions = itemRows.reduce((acc, item) => {
+      const poId = item.purchase_order_id
+      const rev = toNum(item.revision_number, -1)
+      if (!acc.has(poId) || rev > acc.get(poId)) {
+        acc.set(poId, rev)
       }
-    })
+      return acc
+    }, new Map())
 
-    const result = latestPoRows.map((po) => {
-      const poObject = po.toObject()
+    // 3. Gabungkan dan Hitung Status/Progress
+    const result = latestPoObjects.map((poObject) => {
       const poId = poObject.id
 
       const latestRev = latestItemRevisions.get(poId) ?? -1
-      const poItems = (itemsByPoId[poId] || []).filter(
-        (item) => toNum(item.revision_number, -1) === latestRev
+      const poItems = itemRows.filter(
+        (item) => item.purchase_order_id === poId && toNum(item.revision_number, -1) === latestRev
       )
 
       let poProgress = 0
+      let finalStatus = poObject.status || 'Open' // Status default dari sheet/Open
+      let completed_at = null
+
+      // Hitung Progress
       if (poItems.length > 0) {
         let totalPercentage = 0
         poItems.forEach((item) => {
           const itemId = item.id
-          const needsSample = item.sample === 'Ada sample'
-          const stages = ['Pembahanan']
-          if (needsSample) stages.push('Kasih Sample')
-          stages.push('Start Produksi', 'Kirim')
           const compositeKey = `${poId}-${itemId}`
           const itemProgressHistory = progressByCompositeKey[compositeKey] || []
           let latestStageIndex = -1
+
           if (itemProgressHistory.length > 0) {
-            const latestProgress = itemProgressHistory.sort(
-              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0]
-            latestStageIndex = stages.indexOf(latestProgress.stage)
+             const latestProgress = itemProgressHistory.sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+             )[0]
+             // Gunakan PRODUCTION_STAGES yang terimpor
+             latestStageIndex = PRODUCTION_STAGES.indexOf(latestProgress.stage)
           }
+
           const itemPercentage =
-            latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0
+            latestStageIndex >= 0 ? ((latestStageIndex + 1) / PRODUCTION_STAGES.length) * 100 : 0
           totalPercentage += itemPercentage
         })
         poProgress = totalPercentage / poItems.length
       }
 
-      let finalStatus = poObject.status
-      let completed_at = null
+      // Tentukan Status (Menggantikan status lama dengan status yang dihitung)
+      const roundedProgress = Math.round(poProgress)
 
       if (finalStatus !== 'Cancelled') {
-        if (poProgress >= 100) {
+        if (roundedProgress >= 100) {
           finalStatus = 'Completed'
-          // --- TAMBAHKAN LOGIKA INI ---
+
           // Cari tanggal update progress terakhir untuk PO ini
           const allProgressForPO = progressRows
-            .filter((row) => row.get('purchase_order_id') === poId)
-            .map((row) => new Date(row.get('created_at')).getTime())
+            .filter((row) => row.purchase_order_id === poId)
+            .map((row) => new Date(row.created_at).getTime())
 
           if (allProgressForPO.length > 0) {
             completed_at = new Date(Math.max(...allProgressForPO)).toISOString()
           }
-          // --- AKHIR LOGIKA BARU ---
-        } else if (poProgress > 0) {
+        } else if (roundedProgress > 0) {
           finalStatus = 'In Progress'
         } else {
           finalStatus = 'Open'
         }
       }
 
+      // KUNCI: Kembalikan objek JavaScript murni dan lengkap (Deep Clone)
       return {
         ...poObject,
         items: poItems,
-        progress: Math.round(poProgress),
+        progress: roundedProgress,
         status: finalStatus,
         completed_at: completed_at,
-        pdf_link: po.get('pdf_link') || null
+        pdf_link: poObject.pdf_link || null
       }
     })
 
@@ -827,49 +829,47 @@ export async function updateItemProgress(data) {
 export async function getActivePOsWithProgress() {
   try {
     const doc = await openDoc()
-    const poSheet = await getSheet(doc, 'purchase_orders')
-    const itemSheet = await getSheet(doc, 'purchase_order_items')
-    const progressSheet = await getSheet(doc, 'progress_tracking')
-
+    const [poSheet, itemSheet, progressSheet] = await Promise.all([
+      getSheet(doc, 'purchase_orders'),
+      getSheet(doc, 'purchase_order_items'),
+      getSheet(doc, 'progress_tracking')
+    ])
     const [poRows, itemRows, progressRows] = await Promise.all([
       poSheet.getRows(),
       itemSheet.getRows(),
       progressSheet.getRows()
     ])
 
+    // 1. Ambil semua revisi PO terbaru (tanpa filter status)
     const byId = new Map()
     for (const r of poRows) {
       const id = String(r.get('id')).trim()
       const rev = toNum(r.get('revision_number'), -1)
-      const keep = byId.get(id)
-      if (!keep || rev > keep.rev) byId.set(id, { rev, row: r })
+      if (!byId.has(id) || rev > byId.get(id).rev) {
+        byId.set(id, { rev, row: r })
+      }
     }
     const latestPoRows = Array.from(byId.values()).map(({ row }) => row)
 
-    const activePOs = latestPoRows.filter(
-      (r) => r.get('status') !== 'Completed' && r.get('status') !== 'Cancelled'
-    )
-
+    // 2. Siapkan data helper
     const progressByCompositeKey = progressRows.reduce((acc, row) => {
-      const poId = row.get('purchase_order_id')
-      const itemId = row.get('purchase_order_item_id')
-      const key = `${poId}-${itemId}`
+      const key = `${row.get('purchase_order_id')}-${row.get('purchase_order_item_id')}`
       if (!acc[key]) acc[key] = []
       acc[key].push({ stage: row.get('stage'), created_at: row.get('created_at') })
       return acc
     }, {})
 
-    const latestItemRevisions = new Map()
-    itemRows.forEach((item) => {
+    const latestItemRevisions = itemRows.reduce((acc, item) => {
       const poId = item.get('purchase_order_id')
       const rev = toNum(item.get('revision_number'), -1)
-      const current = latestItemRevisions.get(poId)
-      if (!current || rev > current) {
-        latestItemRevisions.set(poId, rev)
+      if (!acc.has(poId) || rev > acc.get(poId)) {
+        acc.set(poId, rev)
       }
-    })
+      return acc
+    }, new Map())
 
-    const result = activePOs.map((po) => {
+    // 3. Hitung progress dan status untuk SETIAP PO
+    const allPOsWithCalculatedStatus = latestPoRows.map((po) => {
       const poId = po.get('id')
       const latestRev = latestItemRevisions.get(poId) ?? -1
       const poItems = itemRows.filter(
@@ -878,36 +878,43 @@ export async function getActivePOsWithProgress() {
           toNum(item.get('revision_number'), -1) === latestRev
       )
 
-      if (poItems.length === 0) {
-        return { ...po.toObject(), progress: 0 }
+      let totalPercentage = 0
+      if (poItems.length > 0) {
+        poItems.forEach((item) => {
+          const itemId = item.get('id')
+          const itemProgressHistory = progressByCompositeKey[`${poId}-${itemId}`] || []
+          let latestStageIndex = -1
+          if (itemProgressHistory.length > 0) {
+            const latestProgress = [...itemProgressHistory].sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0]
+            latestStageIndex = PRODUCTION_STAGES.indexOf(latestProgress.stage)
+          }
+          totalPercentage +=
+            latestStageIndex >= 0 ? ((latestStageIndex + 1) / PRODUCTION_STAGES.length) * 100 : 0
+        })
       }
 
-      let totalPercentage = 0
-      poItems.forEach((item) => {
-        const itemId = item.get('id')
+      const poProgress = poItems.length > 0 ? totalPercentage / poItems.length : 0
+      const poObject = po.toObject()
 
-        const stages = PRODUCTION_STAGES
+      // Hitung status secara dinamis
+      let finalStatus = poObject.status
+      if (finalStatus !== 'Cancelled') {
+        if (poProgress >= 100) finalStatus = 'Completed'
+        else if (poProgress > 0) finalStatus = 'In Progress'
+        else finalStatus = 'Open'
+      }
 
-        const compositeKey = `${poId}-${itemId}`
-        const itemProgressHistory = progressByCompositeKey[compositeKey] || []
-
-        let latestStageIndex = -1
-        if (itemProgressHistory.length > 0) {
-          const latestProgress = itemProgressHistory.sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0]
-          latestStageIndex = stages.indexOf(latestProgress.stage)
-        }
-
-        const itemPercentage =
-          latestStageIndex >= 0 ? ((latestStageIndex + 1) / stages.length) * 100 : 0
-        totalPercentage += itemPercentage
-      })
-
-      const poProgress = totalPercentage / poItems.length
-      return { ...po.toObject(), progress: Math.round(poProgress) }
+      return { ...poObject, progress: Math.round(poProgress), status: finalStatus }
     })
-    return result
+
+    // 4. BARU LAKUKAN FILTER di akhir berdasarkan status yang sudah dihitung
+    const activePOs = allPOsWithCalculatedStatus.filter(
+      (po) => po.status !== 'Completed' && po.status !== 'Cancelled'
+    )
+
+    return activePOs
   } catch (err) {
     console.error('❌ Gagal get active POs with progress:', err.message)
     return []

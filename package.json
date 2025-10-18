@@ -63,5 +63,24 @@
   },
   "overrides": {
     "google-auth-library": "^9.0.0"
+  },
+  "build": {
+    "appId": "com.ubinkayu.erp",
+    "productName": "Ubinkayu ERP",
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business",
+      "identity": null
+    },
+    "extraResources": [
+      {
+        "from": "./resources/",
+        "to": "resources"
+      }
+    ]
   }
 }
