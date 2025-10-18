@@ -138,7 +138,8 @@ export function getActivePOsWithProgress() {
 }
 
 export function getPOItemsWithDetails(poId) {
-  if (window.api) return window.api.getPOItemsDetails(poId) // Nama di preload.js berbeda
+  // SEBELUMNYA: window.api.getPOItemsDetails (kurang "With")
+  if (window.api) return window.api.getPOItemsWithDetails(poId) // <-- PERBAIKI INI
   return fetchAPI(createApiEndpoint('getPOItemsWithDetails', { poId }))
 }
 
