@@ -3,22 +3,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { POHeader, POItem, ProductionStage } from '../types'
+import * as apiService from '../apiService'
 
 // --- START: Component & Service Definitions ---
 // The following are defined here to resolve import errors.
 
 const apiService = {
-  getPOItemsWithDetails: async (poId: string): Promise<POItem[]> => {
-    if ((window as any).api) return (window as any).api.getPOItemsWithDetails(poId)
-    // Return mock data for web/browser environment
-    console.warn('API service not found, returning mock data.')
-    return []
-  },
-  updateItemProgress: async (payload: any): Promise<{ success: boolean; error?: string }> => {
-    if ((window as any).api) return (window as any).api.updateItemProgress(payload)
-    console.log('Mock updateItemProgress called with:', payload)
-    return { success: true }
-  },
+
   updateStageDeadline: async (payload: any): Promise<{ success: boolean; error?: string }> => {
     if ((window as any).api) return (window as any).api.updateStageDeadline(payload)
     console.log('Mock updateStageDeadline called with:', payload)
@@ -105,7 +96,7 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
   const handleViewPhoto = (url: string) => {
     apiService.openExternalLink(url)
   }
-  
+
   const handleSelectPhoto = async () => {
     if (isElectron) {
       const selectedPath = await apiService.openFileDialog();
@@ -146,7 +137,7 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
         photoPath: isElectron ? photoPath : null,
         photoBase64: !isElectron ? photoBase64 : null
       }
-      
+
       const result = await apiService.updateItemProgress(payload)
 
       if (result.success) {
