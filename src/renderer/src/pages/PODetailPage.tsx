@@ -4,33 +4,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { POHeader, POItem } from '../types'
+import * as apiService from '../apiService'
 
 // --- START: Component & Service Definitions ---
 // The following components and services are defined here to resolve import errors.
 
-const apiService = {
-  listPOItems: async (poId: string): Promise<POItem[]> => {
-    if ((window as any).api) {
-      return (window as any).api.listPOItems(poId)
-    }
-    console.warn('API service not found, returning mock data.')
-    return []
-  },
-  openExternalLink: async (url: string): Promise<void> => {
-    if ((window as any).api) {
-      return (window as any).api.openExternalLink(url)
-    }
-    console.log(`Opening external link (mock): ${url}`)
-    window.open(url, '_blank')
-  },
-  previewPO: async (payload: any): Promise<{ success: boolean; base64Data?: string; error?: string }> => {
-    if ((window as any).api) {
-      return (window as any).api.previewPO(payload)
-    }
-    console.log('Preview PO (mock) with payload:', payload)
-    return { success: true, base64Data: 'mock-base64-data' }
-  }
-}
 
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
   <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : 'btn-primary'}`} {...props}>

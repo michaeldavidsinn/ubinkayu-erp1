@@ -4,95 +4,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { POItem, PORevision, RevisionHistoryItem } from '../types'
+import * as apiService from '../apiService'
 
 // --- START: Component & Service Definitions ---
 // The following are defined here to resolve import errors.
 
-const apiService = {
-  getRevisionHistory: async (poId: string): Promise<RevisionHistoryItem[]> => {
-    if ((window as any).api) {
-      return (window as any).api.getRevisionHistory(poId)
-    }
-    console.warn('API service not found, returning mock data.')
-    // Mock data to demonstrate the comparison feature
-    const mockRevision1: PORevision = {
-      id: '1', // ID untuk Revisi tetap STRING
-      purchase_order_id: poId,
-      revision_number: 1,
-      project_name: 'Customer A',
-      priority: 'Normal',
-      deadline: '2025-11-10',
-      notes: 'Initial order.',
-      created_at: '2025-10-10T10:00:00Z',
-      status: 'Open',
-      acc_marketing: 'John',
-      pdf_link: 'http://example.com/rev1.pdf'
-    }
-    const mockItems1: POItem[] = [
-      {
-        id: 101, // <-- UBAH KEMBALI JADI NUMBER
-        product_id: 'P-001',
-        product_name: 'Panel Kayu',
-        wood_type: 'Meranti',
-        profile: 'P1',
-        thickness_mm: 18,
-        width_mm: 1200,
-        length_mm: 2400,
-        quantity: 10,
-        satuan: 'pcs',
-        color: 'Natural',
-        finishing: 'Gloss',
-        sample: 'S1',
-        notes: '',
-        marketing: 'John Doe',
-        length_type: 'RL',
-        location: 'Gudang A'
-      }
-    ]
-    const mockRevision2: PORevision = {
-      ...mockRevision1,
-      id: '2', // ID untuk Revisi tetap STRING
-      revision_number: 2,
-      priority: 'High',
-      deadline: '2025-11-05',
-      created_at: '2025-10-12T11:00:00Z',
-      notes: 'Urgent request, deadline moved up.'
-    }
-    const mockItems2: POItem[] = [
-      { ...mockItems1[0], id: 102, quantity: 15, color: 'Dark Walnut' }, // <-- UBAH KEMBALI JADI NUMBER
-      {
-        id: 103, // <-- UBAH KEMBALI JADI NUMBER
-        product_id: 'P-002',
-        product_name: 'List Profil',
-        wood_type: 'Meranti',
-        profile: 'LP2',
-        thickness_mm: 12,
-        width_mm: 50,
-        length_mm: 3000,
-        quantity: 20,
-        satuan: 'pcs',
-        color: 'Dark Walnut',
-        finishing: 'Gloss',
-        sample: 'S1',
-        notes: 'New item added.',
-        marketing: 'John Doe',
-        length_type: 'FL',
-        location: 'Gudang B'
-      }
-    ]
-    return [
-      { revision: mockRevision2, items: mockItems2 },
-      { revision: mockRevision1, items: mockItems1 }
-    ]
-  },
-  openExternalLink: async (url: string): Promise<void> => {
-    if ((window as any).api) {
-      return (window as any).api.openExternalLink(url)
-    }
-    console.log(`Opening external link (mock): ${url}`)
-    window.open(url, '_blank')
-  }
-}
 
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
   children,
