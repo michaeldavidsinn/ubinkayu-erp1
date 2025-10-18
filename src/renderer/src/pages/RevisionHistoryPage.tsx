@@ -15,11 +15,75 @@ const apiService = {
     }
     console.warn('API service not found, returning mock data.')
     // Mock data to demonstrate the comparison feature
-    const mockRevision1: PORevision = { id: 1, po_id: Number(poId), revision_number: 1, project_name: 'Customer A', priority: 'Normal', deadline: '2025-11-10', notes: 'Initial order.', created_at: '2025-10-10T10:00:00Z', status: 'Open', acc_marketing: 'John', pdf_link: 'http://example.com/rev1.pdf' };
-    const mockItems1: POItem[] = [ { id: 101, product_name: 'Panel Kayu', wood_type: 'Meranti', profile: 'P1', thickness_mm: 18, width_mm: 1200, length_mm: 2400, quantity: 10, satuan: 'pcs', color: 'Natural', finishing: 'Gloss', sample: 'S1', notes: '' } ];
-    const mockRevision2: PORevision = { ...mockRevision1, id: 2, revision_number: 2, priority: 'High', deadline: '2025-11-05', created_at: '2025-10-12T11:00:00Z', notes: 'Urgent request, deadline moved up.' };
-    const mockItems2: POItem[] = [ { ...mockItems1[0], id: 102, quantity: 15, color: 'Dark Walnut' }, { id: 103, product_name: 'List Profil', wood_type: 'Meranti', profile: 'LP2', thickness_mm: 12, width_mm: 50, length_mm: 3000, quantity: 20, satuan: 'pcs', color: 'Dark Walnut', finishing: 'Gloss', sample: 'S1', notes: 'New item added.' } ];
-    return [ { revision: mockRevision2, items: mockItems2 }, { revision: mockRevision1, items: mockItems1 } ];
+    const mockRevision1: PORevision = {
+      id: '1', // ID untuk Revisi tetap STRING
+      purchase_order_id: poId,
+      revision_number: 1,
+      project_name: 'Customer A',
+      priority: 'Normal',
+      deadline: '2025-11-10',
+      notes: 'Initial order.',
+      created_at: '2025-10-10T10:00:00Z',
+      status: 'Open',
+      acc_marketing: 'John',
+      pdf_link: 'http://example.com/rev1.pdf'
+    }
+    const mockItems1: POItem[] = [
+      {
+        id: 101, // <-- UBAH KEMBALI JADI NUMBER
+        product_id: 'P-001',
+        product_name: 'Panel Kayu',
+        wood_type: 'Meranti',
+        profile: 'P1',
+        thickness_mm: 18,
+        width_mm: 1200,
+        length_mm: 2400,
+        quantity: 10,
+        satuan: 'pcs',
+        color: 'Natural',
+        finishing: 'Gloss',
+        sample: 'S1',
+        notes: '',
+        marketing: 'John Doe',
+        length_type: 'RL',
+        location: 'Gudang A'
+      }
+    ]
+    const mockRevision2: PORevision = {
+      ...mockRevision1,
+      id: '2', // ID untuk Revisi tetap STRING
+      revision_number: 2,
+      priority: 'High',
+      deadline: '2025-11-05',
+      created_at: '2025-10-12T11:00:00Z',
+      notes: 'Urgent request, deadline moved up.'
+    }
+    const mockItems2: POItem[] = [
+      { ...mockItems1[0], id: 102, quantity: 15, color: 'Dark Walnut' }, // <-- UBAH KEMBALI JADI NUMBER
+      {
+        id: 103, // <-- UBAH KEMBALI JADI NUMBER
+        product_id: 'P-002',
+        product_name: 'List Profil',
+        wood_type: 'Meranti',
+        profile: 'LP2',
+        thickness_mm: 12,
+        width_mm: 50,
+        length_mm: 3000,
+        quantity: 20,
+        satuan: 'pcs',
+        color: 'Dark Walnut',
+        finishing: 'Gloss',
+        sample: 'S1',
+        notes: 'New item added.',
+        marketing: 'John Doe',
+        length_type: 'FL',
+        location: 'Gudang B'
+      }
+    ]
+    return [
+      { revision: mockRevision2, items: mockItems2 },
+      { revision: mockRevision1, items: mockItems1 }
+    ]
   },
   openExternalLink: async (url: string): Promise<void> => {
     if ((window as any).api) {
@@ -30,13 +94,19 @@ const apiService = {
   }
 }
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
-  <button className="btn" {...props}>{children}</button>
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
+  children,
+  ...props
+}) => (
+  <button className="btn" {...props}>
+    {children}
+  </button>
 )
 
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={`card-container ${className || ''}`}>{children}</div>
-)
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className
+}) => <div className={`card-container ${className || ''}`}>{children}</div>
 
 // --- END: Component & Service Definitions ---
 
@@ -76,7 +146,14 @@ const generateItemKey = (item: POItem): string => {
 
 const findItemChanges = (newItem: POItem, oldItem: POItem): string[] => {
   const changes: string[] = []
-  const fieldsToCompare: (keyof POItem)[] = ['color', 'finishing', 'sample', 'quantity', 'satuan', 'notes']
+  const fieldsToCompare: (keyof POItem)[] = [
+    'color',
+    'finishing',
+    'sample',
+    'quantity',
+    'satuan',
+    'notes'
+  ]
 
   fieldsToCompare.forEach((field) => {
     if (newItem[field] !== oldItem[field]) {
@@ -86,7 +163,10 @@ const findItemChanges = (newItem: POItem, oldItem: POItem): string[] => {
   return changes
 }
 
-const compareRevisions = (current: RevisionHistoryItem, previous: RevisionHistoryItem): ComparisonResult => {
+const compareRevisions = (
+  current: RevisionHistoryItem,
+  previous: RevisionHistoryItem
+): ComparisonResult => {
   const headerChanges = findHeaderChanges(current.revision, previous.revision)
   const currentMap = new Map(current.items.map((item) => [generateItemKey(item), item]))
   const previousMap = new Map(previous.items.map((item) => [generateItemKey(item), item]))
@@ -146,7 +226,9 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
   }, [poId])
 
   const formatDate = (d: string | undefined | null) =>
-    d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'
+    d
+      ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '-'
 
   const handleOpenPdf = (url: string) => {
     apiService.openExternalLink(url)
@@ -180,7 +262,9 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
               <div className="revision-header">
                 <div className="revision-title-group">
                   <h3>Revisi #{revItem.revision.revision_number}</h3>
-                  {index === 0 && <span className="status-badge status-completed">Versi Terbaru</span>}
+                  {index === 0 && (
+                    <span className="status-badge status-completed">Versi Terbaru</span>
+                  )}
                 </div>
                 <div className="revision-actions-group">
                   <span>Dibuat pada: {formatDate(revItem.revision.created_at)}</span>
@@ -193,34 +277,64 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
               </div>
 
               <div className="revision-details">
-                <p><strong>Customer:</strong> {revItem.revision.project_name || '-'}</p>
-                <p><strong>Prioritas:</strong> {revItem.revision.priority || 'Normal'}</p>
-                <p><strong>Status:</strong> {revItem.revision.status || '-'}</p>
-                <p><strong>Deadline:</strong> {formatDate(revItem.revision.deadline)}</p>
-                {revItem.revision.notes && <p><strong>Catatan:</strong> {revItem.revision.notes}</p>}
+                <p>
+                  <strong>Customer:</strong> {revItem.revision.project_name || '-'}
+                </p>
+                <p>
+                  <strong>Prioritas:</strong> {revItem.revision.priority || 'Normal'}
+                </p>
+                <p>
+                  <strong>Status:</strong> {revItem.revision.status || '-'}
+                </p>
+                <p>
+                  <strong>Deadline:</strong> {formatDate(revItem.revision.deadline)}
+                </p>
+                {revItem.revision.notes && (
+                  <p>
+                    <strong>Catatan:</strong> {revItem.revision.notes}
+                  </p>
+                )}
               </div>
 
               {!previousRevision ? (
-                <p><em>Ini adalah versi awal.</em></p>
+                <p>
+                  <em>Ini adalah versi awal.</em>
+                </p>
               ) : hasChanges && changes ? (
                 <div className="revision-changes-summary">
                   <h4>Ringkasan Perubahan dari Versi Sebelumnya:</h4>
                   {changes.headerChanges.length > 0 && (
                     <div className="change-section">
                       <h5>(~) Informasi Dasar Diubah:</h5>
-                      <ul>{changes.headerChanges.map((change, i) => <li key={i}>{change}</li>)}</ul>
+                      <ul>
+                        {changes.headerChanges.map((change, i) => (
+                          <li key={i}>{change}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   {changes.added.length > 0 && (
                     <div className="change-section">
                       <h5>(+) Item Ditambahkan:</h5>
-                      <ul>{changes.added.map((item) => <li key={item.id}>{item.product_name} ({item.quantity} {item.satuan})</li>)}</ul>
+                      <ul>
+                        {changes.added.map((item) => (
+                          <li key={item.id}>
+                            {item.product_name} ({item.quantity} {item.satuan})
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   {changes.removed.length > 0 && (
                     <div className="change-section">
                       <h5>(-) Item Dihapus:</h5>
-                      <ul>{changes.removed.map((item) => <li key={item.id}>{item.product_name} ({item.quantity} {item.satuan})</li>)}</ul>
+                      <ul>
+                        {changes.removed.map((item) => (
+                          <li key={item.id}>
+                            {item.product_name} ({item.quantity} {item.satuan})
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   {changes.modified.length > 0 && (
@@ -230,7 +344,11 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
                         {changes.modified.map((mod) => (
                           <li key={mod.item.id}>
                             <strong>{mod.item.product_name}:</strong>
-                            <ul>{mod.changes.map((change, i) => <li key={i}>{change}</li>)}</ul>
+                            <ul>
+                              {mod.changes.map((change, i) => (
+                                <li key={i}>{change}</li>
+                              ))}
+                            </ul>
                           </li>
                         ))}
                       </ul>
@@ -238,7 +356,9 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
                   )}
                 </div>
               ) : (
-                <p><em>Tidak ada perubahan dari versi sebelumnya.</em></p>
+                <p>
+                  <em>Tidak ada perubahan dari versi sebelumnya.</em>
+                </p>
               )}
 
               <h4>Item pada revisi ini:</h4>
@@ -270,7 +390,9 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
                       </tr>
                     ))}
                     {revItem.items.length === 0 && (
-                      <tr><td colSpan={8}>Tidak ada item pada revisi ini.</td></tr>
+                      <tr>
+                        <td colSpan={8}>Tidak ada item pada revisi ini.</td>
+                      </tr>
                     )}
                   </tbody>
                 </table>

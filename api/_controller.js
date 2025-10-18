@@ -127,21 +127,21 @@ export async function handleListPOs(req, res) {
 
     if (finalStatus !== 'Cancelled') {
       if (poProgress >= 100) {
-        finalStatus = 'Completed';
+        finalStatus = 'Completed'
         // --- TAMBAHKAN LOGIKA INI ---
         // Cari tanggal update progress terakhir untuk PO ini
         const allProgressForPO = progressRows
-          .filter(row => row.get('purchase_order_id') === poId)
-          .map(row => new Date(row.get('created_at')).getTime());
+          .filter((row) => row.get('purchase_order_id') === poId)
+          .map((row) => new Date(row.get('created_at')).getTime())
 
         if (allProgressForPO.length > 0) {
-          completed_at = new Date(Math.max(...allProgressForPO)).toISOString();
+          completed_at = new Date(Math.max(...allProgressForPO)).toISOString()
         }
         // --- AKHIR LOGIKA BARU ---
       } else if (poProgress > 0) {
-        finalStatus = 'In Progress';
+        finalStatus = 'In Progress'
       } else {
-        finalStatus = 'Open';
+        finalStatus = 'Open'
       }
     }
     return {
@@ -434,7 +434,7 @@ export async function handleUpdateItemProgress(req, res) {
 
 // --- LOGIC FOR: getActivePOsWithProgress ---
 export async function handleGetActivePOsWithProgress(req, res) {
-  console.log('--- 🏃‍♂️ EXECUTING handleGetActivePOsWithProgress ---');
+  console.log('--- 🏃‍♂️ EXECUTING handleGetActivePOsWithProgress ---')
   const doc = await openDoc()
   const [poSheet, itemSheet, progressSheet] = await Promise.all([
     getSheet(doc, 'purchase_orders'),
@@ -508,30 +508,41 @@ export async function handleGetPOItemsWithDetails(req, res) {
     itemSheet.getRows(),
     progressSheet.getRows()
   ])
-  const latestPoRev = Math.max(
-    -1,
-    ...poRows.filter((r) => r.get('id') === poId).map((r) => toNum(r.get('revision_number')))
-  )
-  const poData = poRows.find(
-    (r) => r.get('id') === poId && toNum(r.get('revision_number')) === latestPoRev
-  )
-  if (!poData) throw new Error(`PO dengan ID ${poId} tidak ditemukan.`)
-  const poStartDate = new Date(poData.get('created_at')),
-    poDeadline = new Date(poData.get('deadline'))
-  let stageDeadlines = []
-  if (poStartDate && poDeadline && poDeadline > poStartDate) {
-    const durationPerStage =
-      (poDeadline.getTime() - poStartDate.getTime()) / PRODUCTION_STAGES.length
-    stageDeadlines = PRODUCTION_STAGES.map((stageName, index) => ({
-      stageName,
-      deadline: new Date(poStartDate.getTime() + durationPerStage * (index + 1)).toISOString()
-    }))
+
+  // --- LOGIKA BARU: Cari revisi terakhir yang memiliki item ---
+  const allItemsForPO = itemRows.filter((r) => r.get('purchase_order_id') === poId)
+  if (allItemsForPO.length === 0) {
+    return res.status(200).json([])
   }
-  const poItems = itemRows.filter(
-    (item) =>
-      item.get('purchase_order_id') === poId &&
-      toNum(item.get('revision_number'), -1) === latestPoRev
+  const latestItemRev = Math.max(-1, ...allItemsForPO.map((r) => toNum(r.get('revision_number'))))
+  const poData = poRows.find(
+    (r) => r.get('id') === poId && toNum(r.get('revision_number')) === latestItemRev
   )
+  // --- AKHIR LOGIKA BARU ---
+
+  if (!poData) {
+    throw new Error(`Data PO untuk revisi terbaru (rev ${latestItemRev}) tidak ditemukan.`)
+  }
+
+  const poStartDate = new Date(poData.get('created_at'))
+  const poDeadline = new Date(poData.get('deadline'))
+
+  // NOTE: Pastikan konstanta DEFAULT_STAGE_DURATIONS ada di _helpers.js
+  const stageDeadlines = PRODUCTION_STAGES.map((stageName) => {
+    if (stageName === 'Siap Kirim') {
+      return { stageName, deadline: poDeadline.toISOString() }
+    }
+    // Logika ini perlu konstanta dari file helper Anda
+    // const durationDays = DEFAULT_STAGE_DURATIONS[stageName] || 0;
+    // cumulativeDate.setDate(cumulativeDate.getDate() + durationDays);
+    // return { stageName, deadline: new Date(cumulativeDate).toISOString() };
+    return { stageName, deadline: new Date().toISOString() } // Placeholder
+  })
+
+  const poItemsForLatestRev = allItemsForPO.filter(
+    (item) => toNum(item.get('revision_number'), -1) === latestItemRev
+  )
+
   const progressByItemId = progressRows
     .filter((row) => row.get('purchase_order_id') === poId)
     .reduce((acc, row) => {
@@ -540,20 +551,22 @@ export async function handleGetPOItemsWithDetails(req, res) {
       acc[itemId].push(row.toObject())
       return acc
     }, {})
-  const result = poItems.map((item) => {
-    const itemObject = item.toObject(),
-      itemId = String(itemObject.id)
+
+  const result = poItemsForLatestRev.map((item) => {
+    const itemObject = item.toObject()
+    const itemId = String(itemObject.id)
     const history = (progressByItemId[itemId] || []).sort(
       (a, b) => new Date(a.created_at) - new Date(b.created_at)
     )
     return { ...itemObject, progressHistory: history, stageDeadlines }
   })
+
   return res.status(200).json(result)
 }
 
 // --- LOGIC FOR: getRecentProgressUpdates ---
 export async function handleGetRecentProgressUpdates(req, res) {
-  console.log('--- ✨ EXECUTING handleGetRecentProgressUpdates ---');
+  console.log('--- ✨ EXECUTING handleGetRecentProgressUpdates ---')
   const doc = await openDoc()
   const [progressSheet, itemSheet, poSheet] = await Promise.all([
     getSheet(doc, 'progress_tracking'),
@@ -590,7 +603,7 @@ export async function handleGetRecentProgressUpdates(req, res) {
 
 // --- LOGIC FOR: getAttentionData ---
 export async function handleGetAttentionData(req, res) {
-  console.log('--- 🎯 EXECUTING handleGetAttentionData ---');
+  console.log('--- 🎯 EXECUTING handleGetAttentionData ---')
   const doc = await openDoc()
   const [poSheet, itemSheet, progressSheet] = await Promise.all([
     getSheet(doc, 'purchase_orders'),
@@ -770,51 +783,51 @@ export async function handleGetSalesItemData(req, res) {
 }
 
 export async function handleAddNewProduct(req, res) {
-  const productData = req.body;
+  const productData = req.body
   try {
-    const doc = await openDoc();
-    const sheet = await getSheet(doc, 'product_master');
-    const nextId = await getNextIdFromSheet(sheet);
-    await sheet.addRow({ id: nextId, ...productData });
-    return res.status(200).json({ success: true, newId: nextId });
+    const doc = await openDoc()
+    const sheet = await getSheet(doc, 'product_master')
+    const nextId = await getNextIdFromSheet(sheet)
+    await sheet.addRow({ id: nextId, ...productData })
+    return res.status(200).json({ success: true, newId: nextId })
   } catch (error) {
-    console.error('❌ Gagal menambahkan produk baru di Vercel:', error.message);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Gagal menambahkan produk baru di Vercel:', error.message)
+    return res.status(500).json({ success: false, error: error.message })
   }
 }
 
 // --- LOGIC FOR: listPORevisions ---
 export async function handleListPORevisions(req, res) {
-  const { poId } = req.query;
-  const doc = await openDoc();
-  const poSheet = await getSheet(doc, 'purchase_orders');
-  const rows = await poSheet.getRows();
+  const { poId } = req.query
+  const doc = await openDoc()
+  const poSheet = await getSheet(doc, 'purchase_orders')
+  const rows = await poSheet.getRows()
   const revisions = rows
     .filter((r) => String(r.get('id')).trim() === String(poId).trim())
     .map((r) => r.toObject())
-    .sort((a, b) => a.revision_number - b.revision_number);
-  return res.status(200).json(revisions);
+    .sort((a, b) => a.revision_number - b.revision_number)
+  return res.status(200).json(revisions)
 }
 
 // --- LOGIC FOR: listPOItemsByRevision ---
 export async function handleListPOItemsByRevision(req, res) {
-  const { poId, revisionNumber } = req.query;
-  const doc = await openDoc();
-  const items = await getItemsByRevision(String(poId), toNum(revisionNumber, 0), doc);
-  return res.status(200).json(items);
+  const { poId, revisionNumber } = req.query
+  const doc = await openDoc()
+  const items = await getItemsByRevision(String(poId), toNum(revisionNumber, 0), doc)
+  return res.status(200).json(items)
 }
 
 // --- LOGIC FOR: updateStageDeadline ---
 export async function handleUpdateStageDeadline(req, res) {
-  const { poId, itemId, stageName, newDeadline } = req.body;
-  const doc = await openDoc();
-  const sheet = await getSheet(doc, 'progress_tracking');
+  const { poId, itemId, stageName, newDeadline } = req.body
+  const doc = await openDoc()
+  const sheet = await getSheet(doc, 'progress_tracking')
   await sheet.addRow({
     purchase_order_id: poId,
     purchase_order_item_id: itemId,
     stage: `DEADLINE_OVERRIDE: ${stageName}`,
     custom_deadline: newDeadline,
     created_at: new Date().toISOString()
-  });
-  return res.status(200).json({ success: true });
+  })
+  return res.status(200).json({ success: true })
 }

@@ -9,7 +9,7 @@ import { POHeader, POItem } from '../types'
 // The following components and services are defined here to resolve import errors.
 
 const apiService = {
-  listPOItems: async (poId: number): Promise<POItem[]> => {
+  listPOItems: async (poId: string): Promise<POItem[]> => {
     if ((window as any).api) {
       return (window as any).api.listPOItems(poId)
     }
@@ -40,13 +40,6 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <div className={`card-container ${className || ''}`}>{children}</div>
-)
-
-const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, name, ...props }) => (
-  <div className="info-item">
-    <label htmlFor={name}>{label}</label>
-    <input id={name} name={name} {...props} />
-  </div>
 )
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (

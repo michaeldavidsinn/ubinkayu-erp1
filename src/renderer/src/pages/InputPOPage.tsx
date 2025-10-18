@@ -32,7 +32,7 @@ const apiService = {
       }
     ])
   },
-  listPOItems: async (poId: number) => {
+  listPOItems: async (poId: string) => {
     console.log(`apiService.listPOItems called with id: ${poId}`)
     if (!!(window as any).api) return (window as any).api.listPOItems(poId)
     return Promise.resolve([])

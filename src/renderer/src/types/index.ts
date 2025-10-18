@@ -60,6 +60,7 @@ export interface POHeader {
   items?: POItem[]
   photo_url?: string | null
   marketing?: string
+  completed_at?: string | null
 }
 
 export interface PORevision {
