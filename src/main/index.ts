@@ -24,7 +24,8 @@ import {
   getAttentionData,
   getProductSalesAnalysis,
   addNewProduct,
-  getSalesItemData
+  getSalesItemData,
+  updateStageDeadline
 } from '../../electron/sheet.js'
 
 if (process.platform === 'win32') {
@@ -100,9 +101,7 @@ app.whenReady().then(() => {
   ipcMain.handle('progress:getAttentionData', () => getAttentionData());
   ipcMain.handle('analysis:getProductSales', () => getProductSalesAnalysis());
   ipcMain.handle('analysis:getSalesItemData', () => getSalesItemData());
-  ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
-
-  ipcMain.handle('app:read-file-base64', async (_event, filePath) => {
+ipcMain.handle('app:read-file-base64', async (_event, filePath) => {
     try {
       const buffer = await fs.promises.readFile(filePath);
       return buffer.toString('base64');
@@ -111,6 +110,12 @@ app.whenReady().then(() => {
       return null;
     }
   });
+
+  // Handler untuk menambah produk baru (ada di kedua branch, cukup satu)
+  ipcMain.handle('product:add', (_event, productData) => addNewProduct(productData));
+
+  // Handler untuk update deadline (dari branch 'Erp1-Mobile-Vercel-2')
+  ipcMain.handle('progress:updateDeadline', (_event, data) => updateStageDeadline(data));
 
   createWindow()
   app.on('activate', () => {

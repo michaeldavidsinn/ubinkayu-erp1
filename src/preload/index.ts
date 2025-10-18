@@ -9,6 +9,7 @@ const api = {
 
   // --- Fungsi untuk Products ---
   getProducts: () => ipcRenderer.invoke('product:get'),
+  addNewProduct: (data) => ipcRenderer.invoke('product:add', data),
 
   // --- Fungsi CRUD untuk Purchase Order (PO) ---
   saveNewPO: (data) => ipcRenderer.invoke('po:save', data),
@@ -32,17 +33,17 @@ const api = {
   updateItemProgress: (data) => ipcRenderer.invoke('progress:updateItem', data),
   getRecentProgressUpdates: () => ipcRenderer.invoke('progress:getRecentUpdates'),
   getAttentionData: () => ipcRenderer.invoke('progress:getAttentionData'),
+  updateStageDeadline: (data) => ipcRenderer.invoke('progress:updateDeadline', data),
   getProductSalesAnalysis: () => ipcRenderer.invoke('analysis:getProductSales'),
   getSalesItemData: () => ipcRenderer.invoke('analysis:getSalesItemData'),
 
   // --- Fungsi untuk File ---
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
-  readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath),
-  addNewProduct: (data) => ipcRenderer.invoke('product:add', data)
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('app:read-file-base64', filePath)
 }
 
 try {
-  console.log(' bridjinggg....') // <-- TAMBAHKAN INI
+  console.log(' bridjinggg....')
   contextBridge.exposeInMainWorld('api', api)
   console.log('✅ --- API EXPOSED TO WINDOW SUCCESSFULLY ---')
 } catch (error) {
