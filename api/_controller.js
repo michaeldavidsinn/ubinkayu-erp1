@@ -13,7 +13,8 @@ import {
   PRODUCTION_STAGES,
   generatePOJpeg,
   getAuth,
-  PROGRESS_PHOTOS_FOLDER_ID
+  PROGRESS_PHOTOS_FOLDER_ID,
+  DEFAULT_STAGE_DURATIONS
 } from './_helpers.js'
 import { google } from 'googleapis'
 import stream from 'stream'
@@ -527,16 +528,19 @@ export async function handleGetPOItemsWithDetails(req, res) {
   const poStartDate = new Date(poData.get('created_at'))
   const poDeadline = new Date(poData.get('deadline'))
 
-  // NOTE: Pastikan konstanta DEFAULT_STAGE_DURATIONS ada di _helpers.js
-  const stageDeadlines = PRODUCTION_STAGES.map((stageName) => {
+  let stageDeadlines = []
+  let cumulativeDate = new Date(poStartDate) // Mulai dari tanggal PO dibuat
+  stageDeadlines = PRODUCTION_STAGES.map((stageName) => {
+    // Jika tahap terakhir, gunakan deadline utama PO
     if (stageName === 'Siap Kirim') {
       return { stageName, deadline: poDeadline.toISOString() }
     }
-    // Logika ini perlu konstanta dari file helper Anda
-    // const durationDays = DEFAULT_STAGE_DURATIONS[stageName] || 0;
-    // cumulativeDate.setDate(cumulativeDate.getDate() + durationDays);
-    // return { stageName, deadline: new Date(cumulativeDate).toISOString() };
-    return { stageName, deadline: new Date().toISOString() } // Placeholder
+    // Ambil durasi dari konstanta, default 0 jika tidak ada
+    const durationDays = DEFAULT_STAGE_DURATIONS[stageName] || 0
+    // Tambahkan durasi ke tanggal kumulatif
+    cumulativeDate.setDate(cumulativeDate.getDate() + durationDays)
+    // Simpan hasilnya
+    return { stageName, deadline: new Date(cumulativeDate).toISOString() }
   })
 
   const poItemsForLatestRev = allItemsForPO.filter(

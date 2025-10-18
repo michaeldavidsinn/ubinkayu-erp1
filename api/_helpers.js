@@ -27,6 +27,16 @@ export const PRODUCTION_STAGES = [
   'Siap Kirim'
 ]
 
+export const DEFAULT_STAGE_DURATIONS = {
+  Pembahanan: 7, // 1 minggu
+  Moulding: 7, // 1 minggu
+  KD: 14, // 2 minggu
+  Coating: 14, // 2 minggu
+  'Cari Bahan Baku': 0, // Default 0 jika tidak ada durasi spesifik
+  Sawmill: 0,
+  'Siap Kirim': 0
+}
+
 // Fungsi untuk otentikasi
 export function getAuth() {
   // 1. Decode dulu dari Base64 untuk mendapatkan kembali string asli dengan \n
@@ -127,8 +137,8 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
     // --- 1. DYNAMIC IMPORT AGAR CANVAS BISA DIPAKAI DI SERVERLESS ---
     // Baris ini harus selalu menjadi baris pertama yang memanggil fungsi atau properti dari 'canvas'
     const { createCanvas, loadImage, registerFont } = await import('canvas')
-    const fontPath = path.join(process.cwd(), 'api/fonts/Roboto-Regular.ttf');
-    registerFont(fontPath, { family: 'Roboto' }); // Daftarkan dengan nama 'Roboto'
+    const fontPath = path.join(process.cwd(), 'api/fonts/Roboto-Regular.ttf')
+    registerFont(fontPath, { family: 'Roboto' }) // Daftarkan dengan nama 'Roboto'
 
     // --- 2. FUNGSI HELPER SINKRON (DIPINDAHKAN KE SINI) ---
     // Fungsi-fungsi ini harus berada di dalam scope generatePOJpeg karena menggunakan
@@ -183,7 +193,6 @@ export async function generatePOJpeg(poData, revisionNumber = 0) {
       return Math.max(1, totalLines)
     }
     // --- AKHIR FUNGSI HELPER ---
-
 
     // --- 3. LOGIKA UTAMA DIMULAI SETELAH IMPORT ---
 
