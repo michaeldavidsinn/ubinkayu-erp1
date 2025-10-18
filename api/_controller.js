@@ -175,6 +175,7 @@ export async function handleSaveNewPO(req, res) {
     priority: data.prioritas || '',
     notes: data.catatan || '',
     kubikasi_total: data.kubikasi_total || 0,
+    acc_marketing: data.marketing || '',
     created_at: now,
     pdf_link: 'generating...'
   })
@@ -232,6 +233,7 @@ export async function handleUpdatePO(req, res) {
     priority: data.prioritas ?? prev.priority ?? '',
     notes: data.catatan ?? prev.notes ?? '',
     kubikasi_total: data.kubikasi_total ?? prev.kubikasi_total ?? 0,
+    acc_marketing: data.marketing ?? prev.acc_marketing ?? '',
     created_at: now,
     pdf_link: 'generating...'
   })
