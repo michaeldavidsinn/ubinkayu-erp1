@@ -22,6 +22,7 @@ function App() {
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [trackingPO, setTrackingPO] = useState<POHeader | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const fetchPOs = async () => {
     setIsLoading(true)
@@ -35,6 +36,12 @@ function App() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true) // Tampilkan loading
+    await fetchPOs()      // Panggil ulang fungsi fetch data
+    setIsRefreshing(false) // Sembunyikan loading
   }
 
   useEffect(() => {
@@ -163,7 +170,12 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Navbar currentView={view} onNavigate={handleNavigate} />
+      <Navbar
+        currentView={view}
+        onNavigate={handleNavigate}
+        onRefresh={handleRefresh}      // <-- TAMBAHKAN INI
+        isRefreshing={isRefreshing}  // <-- TAMBAHKAN INI
+      />
       <main className="main-content">{renderContent()}</main>
     </div>
   )

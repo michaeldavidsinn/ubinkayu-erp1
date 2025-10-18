@@ -102,3 +102,83 @@
     font-size: 1.5rem; /* Ukuran ikon */
   }
 }
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* ... */
+}
+
+/* Tambahkan ini di bawah .navbar-links */
+.navbar-actions {
+  margin-left: 1.5rem;
+}
+
+/* file: src/renderer/src/components/Navbar.css */
+
+/* --- Tambahkan kode ini di paling bawah --- */
+
+/* Animasi untuk ikon loading */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* -- Tombol Refresh Desktop -- */
+.refresh-btn-desktop {
+  display: flex; /* Default (Desktop First) */
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* -- FAB Refresh Mobile -- */
+.refresh-fab-mobile {
+  display: none; /* Sembunyikan di desktop */
+}
+
+
+/* --- Di dalam Media Query untuk Mobile --- */
+@media (max-width: 768px) {
+  /* Sembunyikan tombol refresh desktop di mobile */
+  .refresh-btn-desktop {
+    display: none;
+  }
+
+  /* Tampilkan dan styling FAB di mobile */
+  .refresh-fab-mobile {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    bottom: 80px; /* Jarak dari bawah, di atas navbar */
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1001; /* Pastikan di atas navbar */
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .refresh-fab-mobile:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .refresh-fab-mobile:active {
+    transform: scale(0.95);
+  }
+
+  .refresh-fab-mobile:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+}

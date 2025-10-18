@@ -130,7 +130,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poList, isLoading }) => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Dashboard ERP</h1>
+          <h1>Dashboard PO UbinKayu</h1>
           <p>Ringkasan aktivitas produksi PT Ubinkayu — {todayFormatted}</p>
         </div>
       </div>
