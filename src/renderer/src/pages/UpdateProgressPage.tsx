@@ -8,39 +8,6 @@ import * as apiService from '../apiService'
 // --- START: Component & Service Definitions ---
 // The following are defined here to resolve import errors.
 
-const apiService = {
-
-  updateStageDeadline: async (payload: any): Promise<{ success: boolean; error?: string }> => {
-    if ((window as any).api) return (window as any).api.updateStageDeadline(payload)
-    console.log('Mock updateStageDeadline called with:', payload)
-    return { success: true }
-  },
-  openFileDialog: async (): Promise<string | null> => {
-    if ((window as any).api) return (window as any).api.openFileDialog()
-    return new Promise((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (readerEvent) => {
-                    resolve(readerEvent.target?.result as string);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                resolve(null);
-            }
-        };
-        input.click();
-    });
-  },
-  openExternalLink: async (url: string): Promise<void> => {
-    if ((window as any).api) return (window as any).api.openExternalLink(url)
-    window.open(url, '_blank')
-  }
-}
 
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
   <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : ''}`} {...props}>
