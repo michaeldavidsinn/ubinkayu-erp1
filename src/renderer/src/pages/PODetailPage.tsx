@@ -3,11 +3,30 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
-import { Button } from '../components/Button'
-import { Card } from '../components/Card'
-import { Input } from '../components/Input'
 import { POHeader, POItem } from '../types'
-import { ProgressBar } from '../components/ProgressBar' // [BARU] Impor ProgressBar
+import * as apiService from '../apiService'
+
+// --- START: Component & Service Definitions ---
+// The following components and services are defined here to resolve import errors.
+
+
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
+  <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : 'btn-primary'}`} {...props}>
+    {children}
+  </button>
+)
+
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`card-container ${className || ''}`}>{children}</div>
+)
+
+const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
+  <div className="progress-bar-container">
+    <div className="progress-bar-fill" style={{ width: `${value}%` }}></div>
+  </div>
+)
+
+// --- END: Component & Service Definitions ---
 
 interface PODetailPageProps {
   po: POHeader | null
@@ -24,8 +43,7 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
       const fetchLatestItems = async () => {
         setIsLoading(true)
         try {
-          // @ts-ignore
-          const poItems = await window.api.listPOItems(po.id)
+          const poItems = await apiService.listPOItems(po.id)
           setItems(poItems)
         } catch (error) {
           console.error(`Gagal memuat item untuk PO ${po.id}:`, error)
@@ -41,24 +59,24 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
     return (
       <div className="page-container">
         <p>Data PO tidak ditemukan.</p>
+        <Button onClick={onBackToList}>Kembali ke Daftar</Button>
       </div>
     )
   }
 
-  const formatDate = (d: string | undefined) => (d ? new Date(d).toLocaleDateString('id-ID') : '-')
+  const formatDate = (d: string | undefined) => (d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric'}) : '-')
   const getPriorityBadgeClass = (p: string | undefined) =>
     `status-badge ${(p || 'normal').toLowerCase()}`
   const getStatusBadgeClass = (s: string | undefined) =>
     `status-badge status-${(s || 'open').toLowerCase().replace(' ', '-')}`
 
-  const handleOpenPdf = async () => {
+  const handleOpenFile = async () => {
     if (!po) return
-    // @ts-ignore
+
     if (po.pdf_link && po.pdf_link.startsWith('http')) {
       alert('Membuka file dari Google Drive...')
       try {
-        // @ts-ignore
-        await window.api.openExternalLink(po.pdf_link)
+        await apiService.openExternalLink(po.pdf_link)
       } catch (err) {
         alert(`Gagal membuka link: ${(err as Error).message}`)
       }
@@ -71,21 +89,28 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
           created_at: po.created_at,
           deadline: po.deadline,
           priority: po.priority,
-          items: items,
-          notes: po.notes
+          notes: po.notes,
+          items: items // Menggunakan item yang sudah di-fetch
         }
-        // @ts-ignore
-        await window.api.previewPO(payload)
+        const result = await apiService.previewPO(payload)
+        if (result.success && result.base64Data) {
+          const imageWindow = window.open()
+          if (imageWindow) {
+            imageWindow.document.write(
+              `<title>Preview PO: ${po.po_number}</title><style>body{margin:0; background:#333; display:flex; justify-content:center; align-items:center; height:100vh;}</style><img src="data:image/jpeg;base64,${result.base64Data}" style="max-width:100%; max-height:100%; object-fit:contain;">`
+            )
+          }
+        } else {
+          throw new Error(result.error || 'Gagal generate preview.')
+        }
       } catch (err) {
-        console.error('Error saat preview lokal:', err)
-        alert(`Gagal membuat preview lokal: ${(err as Error).message}`)
+        alert(`Gagal membuat preview: ${(err as Error).message}`)
       }
     }
   }
 
   return (
     <div className="page-container">
-      {/* BAGIAN ATAS (HEADER & INFO PO) - TIDAK DIUBAH SAMA SEKALI */}
       <div className="page-header">
         <div>
           <h1>Detail Purchase Order: {po.po_number}</h1>
@@ -96,7 +121,7 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
           <Button variant="secondary" onClick={onShowHistory}>
             📜 Lihat Riwayat Revisi
           </Button>
-          <Button onClick={handleOpenPdf}>📄 Buka File</Button>
+          <Button onClick={handleOpenFile}>📄 Buka File</Button>
         </div>
       </div>
 
@@ -143,7 +168,6 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
         )}
       </div>
 
-      {/* [DIROMBAK] BAGIAN DAFTAR ITEM DIUBAH MENJADI TABEL */}
       <div className="item-section-header">
         <h2>Daftar Item (Versi Terbaru)</h2>
       </div>
@@ -180,9 +204,7 @@ const PODetailPage: React.FC<PODetailPageProps> = ({ po, onBackToList, onShowHis
                     <td>{item.color || '-'}</td>
                     <td>{item.finishing || '-'}</td>
                     <td>{item.sample || '-'}</td>
-                    <td>{`${item.thickness_mm || 0} x ${item.width_mm || 0} x ${
-                      item.length_mm || 0
-                    }`}</td>
+                    <td>{`${item.thickness_mm || 0} x ${item.width_mm || 0} x ${item.length_mm || 0}`}</td>
                     <td>{item.length_type || '-'}</td>
                     <td>{`${item.quantity || 0} ${item.satuan || ''}`}</td>
                     <td>{item.notes || '-'}</td>

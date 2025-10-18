@@ -1,10 +1,133 @@
+// file: src/renderer/pages/InputPOPage.tsx
+
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card } from '../components/Card'
-import { Input } from '../components/Input'
-import { Textarea } from '../components/textarea'
-import { Button } from '../components/Button'
 import { POHeader, POItem } from '../types'
-import { AddProductModal } from '../components/AddProductModal'
+import * as apiService from '../apiService'
+
+// Basic Component Implementations
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className
+}) => <div className={`card-container ${className || ''}`}>{children}</div>
+
+const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({
+  label,
+  name,
+  ...props
+}) => (
+  <div className="form-group">
+    <label htmlFor={name}>{label}</label>
+    <input id={name} name={name} {...props} />
+  </div>
+)
+
+const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({
+  label,
+  name,
+  ...props
+}) => (
+  <div className="form-group">
+    <label htmlFor={name}>{label}</label>
+    <textarea id={name} name={name} {...props} />
+  </div>
+)
+
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({
+  children,
+  variant,
+  ...props
+}) => (
+  <button
+    className={`btn ${variant === 'secondary' ? 'btn-secondary' : 'btn-primary'} ${variant === 'danger' ? 'btn-danger' : ''}`}
+    {...props}
+  >
+    {children}
+  </button>
+)
+
+const AddProductModal: React.FC<{
+  isOpen: boolean
+  onClose: () => void
+  onSaveSuccess: () => void
+}> = ({ isOpen, onClose, onSaveSuccess }) => {
+  const [productData, setProductData] = useState({
+    product_name: '',
+    wood_type: '',
+    profile: '',
+    color: '',
+    finishing: '',
+    sample: '',
+    marketing: ''
+  })
+
+  if (!isOpen) return null
+
+  const handleSave = async () => {
+    await apiService.addNewProduct(productData)
+    onSaveSuccess()
+    onClose()
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setProductData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>Tambah Master Produk Baru</h3>
+          <button onClick={onClose} className="modal-close-btn">
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          <Input
+            label="Nama Produk"
+            name="product_name"
+            value={productData.product_name}
+            onChange={handleChange}
+          />
+          <Input
+            label="Tipe Kayu"
+            name="wood_type"
+            value={productData.wood_type}
+            onChange={handleChange}
+          />
+          <Input
+            label="Profil"
+            name="profile"
+            value={productData.profile}
+            onChange={handleChange}
+          />
+          <Input label="Warna" name="color" value={productData.color} onChange={handleChange} />
+          <Input
+            label="Finishing"
+            name="finishing"
+            value={productData.finishing}
+            onChange={handleChange}
+          />
+          <Input label="Sample" name="sample" value={productData.sample} onChange={handleChange} />
+          <Input
+            label="Marketing"
+            name="marketing"
+            value={productData.marketing}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="modal-footer">
+          <Button variant="secondary" onClick={onClose}>
+            Batal
+          </Button>
+          <Button onClick={handleSave}>Simpan</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- END: Component & Service Definitions ---
 
 interface InputPOPageProps {
   onSaveSuccess: () => void
@@ -13,6 +136,10 @@ interface InputPOPageProps {
 
 const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) => {
   const today = new Date().toISOString().split('T')[0]
+  // Cek apakah aplikasi berjalan di Electron
+  const isElectron = !!(window as any).api
+
+  // State
   const [productList, setProductList] = useState<any[]>([])
   const [poData, setPoData] = useState({
     nomorPo: editingPO?.po_number || '',
@@ -20,16 +147,20 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     tanggalMasuk: editingPO?.created_at ? editingPO.created_at.split('T')[0] : today,
     tanggalKirim: editingPO?.deadline || '',
     prioritas: editingPO?.priority || 'Normal',
-    alamatKirim: '',
+    alamatKirim: (editingPO as any)?.alamatKirim || '', // Field dari Vercel
     catatan: editingPO?.notes || '',
-    marketing: editingPO?.marketing || ''
+    marketing: (editingPO as any)?.acc_marketing || '' // Field dari Vercel-2
   })
   const [items, setItems] = useState<POItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
-  const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
 
+  // State terpisah untuk foto agar bisa mendukung Electron (path) & Web (base64)
+  const [poPhotoPath, setPoPhotoPath] = useState<string | null>(null)
+  const [poPhotoBase64, setPoPhotoBase64] = useState<string | null>(null)
+
+  // --- Helper Functions from Vercel-2 (Fuzzy Matching Logic) ---
   const createEmptyItem = (): POItem => ({
     id: Date.now(),
     product_id: '',
@@ -62,9 +193,10 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const calculateSimilarity = (str1: string, str2: string): number => {
     const s1 = str1.toLowerCase()
     const s2 = str2.toLowerCase()
+    if (s1.length === 0 && s2.length === 0) return 1.0
+    if (s1.length === 0 || s2.length === 0) return 0.0
     const longer = s1.length > s2.length ? s1 : s2
     const shorter = s1.length > s2.length ? s2 : s1
-
     if (longer.length === 0) return 1.0
     const editDistance = getEditDistance(longer, shorter)
     return (longer.length - editDistance) / longer.length
@@ -92,98 +224,80 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   }
 
   const findBestMatch = (field: string, value: string): string => {
-    if (!value.trim()) return value
-
+    if (!value || !value.trim()) return value
     const options = getUniqueOptions(field as any)
-
-    // First, try exact match (case-insensitive)
     const exactMatch = options.find((opt) => opt.toLowerCase() === value.toLowerCase())
     if (exactMatch) return exactMatch
-
-    // Then, try fuzzy matching with similarity threshold
     const matches = options
       .map((opt) => ({
         option: opt,
         similarity: calculateSimilarity(value, opt)
       }))
-      .filter((m) => m.similarity >= 0.6) // 60% similarity threshold
+      .filter((m) => m.similarity >= 0.6)
       .sort((a, b) => b.similarity - a.similarity)
-
     return matches.length > 0 ? matches[0].option : value
   }
 
-  useEffect(() => {
-    if (editingPO) {
-      setPoPhotoPath(editingPO.photo_url as string | null || null)
-    } else {
-      setPoPhotoPath(null)
-    }
-  }, [editingPO])
-
-  const handleSelectPoPhoto = async () => {
-    try {
-      const selectedPath = await (window as any).api.openFileDialog()
-      if (selectedPath) {
-        setPoPhotoPath(selectedPath)
-      }
-    } catch (error) {
-      console.error('Failed to select photo:', error)
-    }
-  }
-
-  const handleCancelPoPhoto = () => {
-    setPoPhotoPath(null)
-  }
-
+  // --- Data Fetching & Initialization ---
   const fetchProducts = useCallback(async () => {
     try {
-      const products = await (window as any).api.getProducts()
+      const products = await apiService.getProducts()
       setProductList(products)
-      console.log('Product list refreshed successfully.')
     } catch (error) {
       console.error('Failed to load product list:', error)
     }
   }, [])
 
   useEffect(() => {
-    if (editingPO) {
-      setPoData({
-        nomorPo: editingPO.po_number,
-        namaCustomer: editingPO.project_name,
-        tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
-        tanggalKirim: editingPO.deadline || '',
-        prioritas: editingPO.priority || 'Normal',
-        alamatKirim: '',
-        catatan: editingPO.notes || '',
-        marketing: (editingPO as any).marketing || ''
-      })
+    const initialize = async () => {
+      fetchProducts()
+      if (editingPO) {
+        setPoData({
+          nomorPo: editingPO.po_number,
+          namaCustomer: editingPO.project_name,
+          tanggalMasuk: editingPO.created_at ? editingPO.created_at.split('T')[0] : today,
+          tanggalKirim: editingPO.deadline || '',
+          prioritas: editingPO.priority || 'Normal',
+          alamatKirim: (editingPO as any).alamatKirim || '',
+          catatan: editingPO.notes || '',
+          marketing: (editingPO as any).marketing || ''
+        })
 
-      const fetchPOItems = async () => {
+        if (isElectron && editingPO.photo_url) {
+          setPoPhotoPath('Foto referensi dari revisi sebelumnya.')
+        }
+
         try {
-          const poItems = await (window as any).api.listPOItems(editingPO.id)
-          setItems(poItems)
+          const poItems = await apiService.listPOItems(editingPO.id)
+          const itemsWithNumbers = poItems.map((item) => ({
+            ...item,
+            kubikasi: Number(item.kubikasi) || 0
+          }))
+          setItems(itemsWithNumbers)
         } catch (error) {
           console.error('Failed to load PO items:', error)
         }
+      } else {
+        // Reset for new PO
+        setPoData({
+          nomorPo: '',
+          namaCustomer: '',
+          tanggalMasuk: today,
+          tanggalKirim: '',
+          prioritas: 'Normal',
+          alamatKirim: '',
+          catatan: '',
+          marketing: ''
+        })
+        setItems([createEmptyItem()])
+        setPoPhotoPath(null)
+        setPoPhotoBase64(null)
       }
-      fetchPOItems()
-    } else {
-      setPoData({
-        nomorPo: '',
-        namaCustomer: '',
-        tanggalMasuk: today,
-        tanggalKirim: '',
-        prioritas: 'Normal',
-        alamatKirim: '',
-        catatan: '',
-        marketing: ''
-      })
-      setItems([createEmptyItem()])
     }
+    initialize()
+  }, [editingPO, isElectron, fetchProducts, today])
 
-    fetchProducts()
-  }, [editingPO, fetchProducts, today])
-
+  // --- Event Handlers ---
   const handleDataChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -194,6 +308,50 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
   const handleDataBlur = (field: string, value: string) => {
     const correctedValue = findBestMatch(field, value)
     setPoData((prev) => ({ ...prev, [field]: correctedValue }))
+  }
+
+  // Penanganan foto yang mendukung Electron & Web
+  const handleSelectPoPhoto = async () => {
+    if (isElectron) {
+      const selectedPath = await apiService.openFileDialog()
+      if (selectedPath) {
+        setPoPhotoPath(selectedPath)
+      }
+    } else {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (file) {
+          setPoPhotoPath(file.name)
+          const reader = new FileReader()
+          reader.onload = (readerEvent) => {
+            const base64String = readerEvent.target?.result as string
+            setPoPhotoBase64(base64String.split(',')[1])
+          }
+          reader.readAsDataURL(file)
+        }
+      }
+      input.click()
+    }
+  }
+
+  const handleCancelPoPhoto = () => {
+    setPoPhotoPath(null)
+    setPoPhotoBase64(null)
+  }
+
+  // --- Item Handlers ---
+  const calculateKubikasi = (item: POItem) => {
+    const tebal = item.thickness_mm || 0,
+      lebar = item.width_mm || 0,
+      panjang = item.length_mm || 0,
+      qty = item.quantity || 0
+    if (item.satuan === 'pcs') return (tebal * lebar * panjang * qty) / 1_000_000_000
+    if (item.satuan === 'm1') return (tebal * lebar * qty) / 1_000_000
+    if (item.satuan === 'm2') return (tebal * qty) / 1000
+    return 0
   }
 
   const handleAddItem = () => {
@@ -214,7 +372,6 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
 
   const handleItemBlur = (id: number | string, field: keyof POItem, value: string | number) => {
     if (typeof value !== 'string') return
-
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -232,133 +389,107 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
+  // --- Save & Preview Logic ---
+  const constructPayload = async () => {
+    const itemsWithKubikasi = items.map((item) => ({ ...item, kubikasi: calculateKubikasi(item) }))
+    const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
+
+    const payload: any = {
+      ...poData,
+      items: itemsWithKubikasi,
+      kubikasi_total: kubikasiTotal,
+      poId: editingPO?.id
+    }
+
+    if (isElectron && poPhotoPath) {
+      payload.poPhotoPath = poPhotoPath
+      if (!poPhotoPath.startsWith('Foto referensi')) {
+        const base64 = await apiService.readFileAsBase64(poPhotoPath)
+        if (base64) payload.poPhotoBase64 = base64
+      }
+    } else if (!isElectron && poPhotoBase64) {
+      payload.poPhotoBase64 = poPhotoBase64
+    }
+    return payload
+  }
+
   const handleSaveOrUpdatePO = async () => {
-    if (!poData.nomorPo || !poData.namaCustomer) {
-      alert('PO Number and Customer Name are required!')
-      return
-    }
-    if (items.length === 0) {
-      alert('Add at least one item.')
-      return
-    }
+    if (!poData.nomorPo || !poData.namaCustomer)
+      return alert('Nomor PO dan Nama Customer harus diisi!')
+    if (items.length === 0) return alert('Tambahkan minimal satu item.')
 
     setIsSaving(true)
     try {
-      const itemsWithKubikasi = items.map((item) => ({
-        ...item,
-        kubikasi: calculateKubikasi(item)
-      }))
-
-      const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
-
-      const payload = {
-        ...poData,
-        items: itemsWithKubikasi,
-        kubikasi_total: kubikasiTotal,
-        poId: editingPO?.id,
-        poPhotoPath: poPhotoPath
-      }
-
+      const payload = await constructPayload()
       const result = editingPO
-        ? await (window as any).api.updatePO(payload)
-        : await (window as any).api.saveNewPO(payload)
+        ? await apiService.updatePO(payload)
+        : await apiService.saveNewPO(payload)
 
       if (result.success) {
-        alert(`PO successfully ${editingPO ? 'updated' : 'saved'}!`)
+        alert(`PO berhasil ${editingPO ? 'diperbarui' : 'disimpan'}!`)
         onSaveSuccess()
       } else {
-        throw new Error(result.error || 'Unknown error occurred.')
+        throw new Error(result.error || 'Terjadi kesalahan di backend.')
       }
     } catch (error) {
-      alert(`Failed to save PO: ${(error as Error).message}`)
+      alert(`Gagal menyimpan PO: ${(error as Error).message}`)
     } finally {
       setIsSaving(false)
     }
   }
 
   const handlePreviewPO = async () => {
-    if (items.length === 0) {
-      alert('Add at least one item to preview.')
-      return
-    }
+    if (items.length === 0) return alert('Tambahkan minimal satu item untuk preview.')
+
     setIsPreviewing(true)
     try {
-      const itemsWithKubikasi = items.map((item) => ({
-        ...item,
-        kubikasi: calculateKubikasi(item)
-      }))
-
-      const kubikasiTotal = itemsWithKubikasi.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
-
-      const payload = {
-        ...poData,
-        items: itemsWithKubikasi,
-        kubikasi_total: kubikasiTotal,
-        poPhotoPath: poPhotoPath
-      }
-
-      const result = await (window as any).api.previewPO(payload)
+      const payload = await constructPayload()
+      const result = await apiService.previewPO(payload)
 
       if (result.success) {
         const imageWindow = window.open()
-        if (imageWindow) {
+        if (imageWindow)
           imageWindow.document.write(
             `<title>PO Preview</title><style>body{margin:0;}</style><img src="data:image/jpeg;base64,${result.base64Data}" style="width:100%;">`
           )
-        }
       } else {
-        throw new Error(result.error || 'Failed to generate preview data.')
+        throw new Error(result.error || 'Gagal membuat data preview.')
       }
     } catch (error) {
-      alert(`Failed to preview PO: ${(error as Error).message}`)
+      alert(`Gagal membuka preview PO: ${(error as Error).message}`)
     } finally {
       setIsPreviewing(false)
     }
   }
 
-  const calculateKubikasi = (item: POItem) => {
-    const tebal = item.thickness_mm || 0
-    const lebar = item.width_mm || 0
-    const panjang = item.length_mm || 0
-    const qty = item.quantity || 0
+  const totalKubikasi = items.reduce((acc, item) => acc + (item.kubikasi || 0), 0)
 
-    if (item.satuan === 'pcs') {
-      return (tebal * lebar * panjang * qty) / 1_000_000_000
-    }
-    if (item.satuan === 'm1') {
-      return (tebal * lebar * qty) / 1_000_000
-    }
-    if (item.satuan === 'm2') {
-      return (tebal * qty) / 1000
-    }
-    return 0
-  }
-
-  const totalKubikasi = items.reduce((acc, item) => acc + calculateKubikasi(item), 0)
-
+  // --- Render JSX ---
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>{editingPO ? 'Revise Purchase Order' : 'Input Purchase Order'}</h1>
-          <p>{editingPO ? 'Update PO and item data' : 'Create new PO with detailed specifications'}</p>
+          <h1>{editingPO ? 'Revisi Purchase Order' : 'Input Purchase Order'}</h1>
+          <p>
+            {editingPO ? 'Perbarui data PO dan itemnya' : 'Buat PO baru dengan spesifikasi detail'}
+          </p>
         </div>
         <div className="header-actions">
-          <Button onClick={onSaveSuccess}>Back</Button>
+          <Button onClick={onSaveSuccess}>Kembali</Button>
           <Button variant="secondary" onClick={handlePreviewPO} disabled={isPreviewing}>
-            {isPreviewing ? 'Opening Preview...' : '◎ Preview'}
+            {isPreviewing ? 'Membuka...' : '◎ Preview'}
           </Button>
           <Button onClick={handleSaveOrUpdatePO} disabled={isSaving}>
-            {isSaving ? 'Saving...' : editingPO ? 'Save Revision' : 'Save New PO'}
+            {isSaving ? 'Menyimpan...' : editingPO ? 'Simpan Revisi' : 'Simpan PO Baru'}
           </Button>
         </div>
       </div>
 
       <Card>
-        <h2>Basic PO Information</h2>
+        <h2>Informasi Dasar PO</h2>
         <div className="form-grid">
           <Input
-            label="PO Number *"
+            label="Nomor PO *"
             name="nomorPo"
             value={poData.nomorPo}
             onChange={handleDataChange}
@@ -366,14 +497,14 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             disabled={!!editingPO}
           />
           <Input
-            label="Customer Name *"
+            label="Nama Customer *"
             name="namaCustomer"
             value={poData.namaCustomer}
             onChange={handleDataChange}
             placeholder="e.g., ELIE MAGDA SBY"
           />
           <Input
-            label="Entry Date"
+            label="Tanggal Masuk"
             name="tanggalMasuk"
             type="date"
             value={poData.tanggalMasuk}
@@ -381,21 +512,27 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
             disabled
           />
           <Input
-            label="Target Delivery Date *"
+            label="Target Tanggal Kirim *"
             name="tanggalKirim"
             type="date"
             value={poData.tanggalKirim}
             onChange={handleDataChange}
           />
           <div className="form-group">
-            <label>Priority</label>
+            <label>Prioritas</label>
             <select name="prioritas" value={poData.prioritas} onChange={handleDataChange}>
               <option value="Normal">Normal</option>
               <option value="High">High</option>
               <option value="Urgent">Urgent</option>
             </select>
           </div>
-
+          <Input
+            label="Alamat Kirim"
+            name="alamatKirim"
+            value={poData.alamatKirim}
+            onChange={handleDataChange}
+            placeholder="e.g., Jl. Industri No. 10"
+          />
           <div className="form-group">
             <label>Marketing</label>
             <input
@@ -404,8 +541,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
               value={poData.marketing}
               onChange={handleDataChange}
               onBlur={() => handleDataBlur('marketing', poData.marketing)}
-              placeholder="Select or type name"
-              className="combobox-input"
+              placeholder="Pilih atau ketik nama"
             />
             <datalist id="marketing-list">
               {getUniqueOptions('marketing').map((name) => (
@@ -415,28 +551,32 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           </div>
         </div>
         <Textarea
-          label="Notes"
+          label="Catatan"
           name="catatan"
           value={poData.catatan}
           onChange={handleDataChange}
-          placeholder="Special notes for this PO..."
+          placeholder="Catatan khusus untuk PO ini..."
           rows={3}
         />
         <div className="form-group" style={{ marginTop: '1rem' }}>
-          <label>PO Reference Photo (Optional)</label>
+          <label>Foto Referensi PO (Opsional)</label>
           <div className="file-input-container">
             {poPhotoPath ? (
               <div className="file-preview">
                 <span className="file-name" title={poPhotoPath}>
                   {poPhotoPath.split(/[/\\]/).pop()}
                 </span>
-                <Button variant="secondary" onClick={handleCancelPoPhoto} className="cancel-photo-btn">
-                  Cancel
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelPoPhoto}
+                  className="cancel-photo-btn"
+                >
+                  Batal
                 </Button>
               </div>
             ) : (
               <Button variant="secondary" onClick={handleSelectPoPhoto}>
-                Select Photo
+                Pilih Foto
               </Button>
             )}
           </div>
@@ -444,12 +584,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
       </Card>
 
       <div className="item-section-header">
-        <h2>Item List</h2>
+        <h2>Daftar Item</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <Button variant="secondary" onClick={() => setIsAddProductModalOpen(true)}>
-            + Add Master Product
+            + Tambah Master Produk
           </Button>
-          <Button onClick={handleAddItem}>+ Add Row</Button>
+          <Button onClick={handleAddItem}>+ Tambah Baris</Button>
         </div>
       </div>
 
@@ -458,17 +598,17 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
           <table className="item-table">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Wood Type</th>
-                <th>Profile</th>
-                <th>Color</th>
+                <th>Produk</th>
+                <th>Tipe Kayu</th>
+                <th>Profil</th>
+                <th>Warna</th>
                 <th>Finishing</th>
                 <th>Sample</th>
-                <th>Size (T x W x L)</th>
-                <th>Length Type</th>
+                <th>Ukuran (T x L x P)</th>
+                <th>Tipe Panjang</th>
                 <th>Qty</th>
-                <th>Item Notes</th>
-                <th>Action</th>
+                <th>Catatan Item</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -480,7 +620,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       value={item.product_name}
                       onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'product_name', item.product_name)}
-                      placeholder="Select/Type Product"
+                      placeholder="Pilih/Ketik Produk"
                     />
                     <datalist id="product-list">
                       {getUniqueOptions('product_name').map((name) => (
@@ -494,7 +634,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       value={item.wood_type}
                       onChange={(e) => handleItemChange(item.id, 'wood_type', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'wood_type', item.wood_type)}
-                      placeholder="Select/Type Wood"
+                      placeholder="Pilih/Ketik Kayu"
                     />
                     <datalist id="wood-type-list">
                       {getUniqueOptions('wood_type').map((val) => (
@@ -505,11 +645,10 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                   <td style={{ minWidth: '100px' }}>
                     <input
                       list="profile-list"
-                      type="text"
                       value={item.profile}
                       onChange={(e) => handleItemChange(item.id, 'profile', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'profile', item.profile)}
-                      placeholder="Select/Type Profile"
+                      placeholder="Pilih/Ketik Profil"
                     />
                     <datalist id="profile-list">
                       {getUniqueOptions('profile').map((val) => (
@@ -520,11 +659,10 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                   <td style={{ minWidth: '100px' }}>
                     <input
                       list="color-list"
-                      type="text"
                       value={item.color}
                       onChange={(e) => handleItemChange(item.id, 'color', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'color', item.color)}
-                      placeholder="Select/Type Color"
+                      placeholder="Pilih/Ketik Warna"
                     />
                     <datalist id="color-list">
                       {getUniqueOptions('color').map((val) => (
@@ -538,7 +676,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       value={item.finishing}
                       onChange={(e) => handleItemChange(item.id, 'finishing', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'finishing', item.finishing)}
-                      placeholder="Select/Type Finishing"
+                      placeholder="Pilih/Ketik Finishing"
                     />
                     <datalist id="finishing-list">
                       {getUniqueOptions('finishing').map((val) => (
@@ -552,7 +690,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       value={item.sample}
                       onChange={(e) => handleItemChange(item.id, 'sample', e.target.value)}
                       onBlur={() => handleItemBlur(item.id, 'sample', item.sample)}
-                      placeholder="Select/Type Sample"
+                      placeholder="Pilih/Ketik Sample"
                     />
                     <datalist id="sample-list">
                       {getUniqueOptions('sample').map((val) => (
@@ -565,22 +703,28 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       <input
                         type="number"
                         value={item.thickness_mm}
-                        onChange={(e) => handleItemChange(item.id, 'thickness_mm', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'thickness_mm', Number(e.target.value))
+                        }
                         placeholder="T"
                       />
                       <span>x</span>
                       <input
                         type="number"
                         value={item.width_mm}
-                        onChange={(e) => handleItemChange(item.id, 'width_mm', Number(e.target.value))}
-                        placeholder="W"
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'width_mm', Number(e.target.value))
+                        }
+                        placeholder="L"
                       />
                       <span>x</span>
                       <input
                         type="number"
                         value={item.length_mm}
-                        onChange={(e) => handleItemChange(item.id, 'length_mm', Number(e.target.value))}
-                        placeholder="L"
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'length_mm', Number(e.target.value))
+                        }
+                        placeholder="P"
                       />
                     </div>
                   </td>
@@ -589,7 +733,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       type="text"
                       value={item.length_type}
                       onChange={(e) => handleItemChange(item.id, 'length_type', e.target.value)}
-                      placeholder="Type"
+                      placeholder="e.g. RL"
                     />
                   </td>
                   <td style={{ minWidth: '150px' }}>
@@ -597,7 +741,9 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))}
+                        onChange={(e) =>
+                          handleItemChange(item.id, 'quantity', Number(e.target.value))
+                        }
                         placeholder="Qty"
                       />
                       <select
@@ -615,12 +761,12 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO }) =
                       type="text"
                       value={item.notes}
                       onChange={(e) => handleItemChange(item.id, 'notes', e.target.value)}
-                      placeholder="Notes..."
+                      placeholder="Catatan..."
                     />
                   </td>
                   <td>
                     <Button variant="danger" onClick={() => handleRemoveItem(item.id)}>
-                      Delete
+                      Hapus
                     </Button>
                   </td>
                 </tr>

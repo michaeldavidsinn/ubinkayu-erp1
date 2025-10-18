@@ -366,10 +366,26 @@ export async function listPOs() {
       }
 
       let finalStatus = poObject.status
+      let completed_at = null
+
       if (finalStatus !== 'Cancelled') {
-        if (poProgress >= 100) finalStatus = 'Completed'
-        else if (poProgress > 0) finalStatus = 'In Progress'
-        else finalStatus = 'Open'
+        if (poProgress >= 100) {
+          finalStatus = 'Completed'
+          // --- TAMBAHKAN LOGIKA INI ---
+          // Cari tanggal update progress terakhir untuk PO ini
+          const allProgressForPO = progressRows
+            .filter((row) => row.get('purchase_order_id') === poId)
+            .map((row) => new Date(row.get('created_at')).getTime())
+
+          if (allProgressForPO.length > 0) {
+            completed_at = new Date(Math.max(...allProgressForPO)).toISOString()
+          }
+          // --- AKHIR LOGIKA BARU ---
+        } else if (poProgress > 0) {
+          finalStatus = 'In Progress'
+        } else {
+          finalStatus = 'Open'
+        }
       }
 
       return {
@@ -377,6 +393,7 @@ export async function listPOs() {
         items: poItems,
         progress: Math.round(poProgress),
         status: finalStatus,
+        completed_at: completed_at,
         pdf_link: po.get('pdf_link') || null
       }
     })
@@ -911,22 +928,37 @@ export async function getPOItemsWithDetails(poId) {
       progressSheet.getRows()
     ])
 
-    const latestPoRev = Math.max(
-      -1,
-      ...poRows.filter((r) => r.get('id') === poId).map((r) => toNum(r.get('revision_number')))
-    )
+    // --- LOGIKA BARU: Cari revisi terakhir yang memiliki item ---
+    // 1. Filter semua item yang relevan untuk PO ini
+    const allItemsForPO = itemRows.filter((r) => r.get('purchase_order_id') === poId)
+
+    // 2. Jika tidak ada item sama sekali untuk PO ini, langsung kembalikan array kosong.
+    if (allItemsForPO.length === 0) {
+      console.warn(`Tidak ada item sama sekali untuk PO ID ${poId} di sheet items.`)
+      return []
+    }
+
+    // 3. Cari nomor revisi tertinggi DARI ITEM YANG ADA.
+    const latestItemRev = Math.max(-1, ...allItemsForPO.map((r) => toNum(r.get('revision_number'))))
+
+    // 4. Ambil header PO yang cocok dengan revisi item terakhir ini.
     const poData = poRows.find(
-      (r) => r.get('id') === poId && toNum(r.get('revision_number')) === latestPoRev
+      (r) => r.get('id') === poId && toNum(r.get('revision_number')) === latestItemRev
     )
+    // --- AKHIR LOGIKA BARU ---
 
     if (!poData) {
-      throw new Error(`PO dengan ID ${poId} tidak ditemukan.`)
+      // Ini bisa terjadi jika ada item tetapi tidak ada header PO yang cocok (inkonsistensi data).
+      console.error(
+        `Inkonsistensi Data: Ditemukan item untuk PO ID ${poId} rev ${latestItemRev}, tetapi tidak ada header PO yang cocok.`
+      )
+      throw new Error(`Data PO untuk revisi terbaru (rev ${latestItemRev}) tidak ditemukan.`)
     }
 
     const poStartDate = new Date(poData.get('created_at'))
     const poDeadline = new Date(poData.get('deadline'))
 
-    // --- LOGIKA PERHITUNGAN DEADLINE YANG SUDAH DIPERBAIKI ---
+    // Logika perhitungan deadline yang sudah benar
     let stageDeadlines = []
     let cumulativeDate = new Date(poStartDate)
     stageDeadlines = PRODUCTION_STAGES.map((stageName) => {
@@ -937,12 +969,10 @@ export async function getPOItemsWithDetails(poId) {
       cumulativeDate.setDate(cumulativeDate.getDate() + durationDays)
       return { stageName, deadline: new Date(cumulativeDate).toISOString() }
     })
-    // --- AKHIR BLOK PERBAIKAN ---
 
-    const poItems = itemRows.filter(
-      (item) =>
-        item.get('purchase_order_id') === poId &&
-        toNum(item.get('revision_number'), -1) === latestPoRev
+    // 5. Filter item sekali lagi untuk hanya mendapatkan item dari revisi yang valid.
+    const poItemsForLatestRev = allItemsForPO.filter(
+      (item) => toNum(item.get('revision_number'), -1) === latestItemRev
     )
 
     const progressByItemId = progressRows
@@ -954,7 +984,7 @@ export async function getPOItemsWithDetails(poId) {
         return acc
       }, {})
 
-    const result = poItems.map((item) => {
+    const result = poItemsForLatestRev.map((item) => {
       const itemObject = item.toObject()
       const itemId = String(itemObject.id)
       const history = (progressByItemId[itemId] || []).sort(
@@ -1309,20 +1339,19 @@ export async function getSalesItemData() {
 }
 export async function addNewProduct(productData) {
   try {
+    // Mengambil console.log yang deskriptif dari satu branch
     console.log('📦 Menambahkan produk baru ke master:', productData)
+
     const doc = await openDoc()
     const sheet = await getSheet(doc, 'product_master')
 
-    // Menambahkan baris baru dengan data yang dikirim dari form
+    // Menggunakan logika yang benar untuk mendapatkan ID dan menambah baris
     const nextId = await getNextIdFromSheet(sheet)
     await sheet.addRow({ id: nextId, ...productData })
 
-    // PENTING: Jika nanti Anda sudah menerapkan sistem cache,
-    // jangan lupa untuk membersihkan cache di sini agar daftar produk bisa ter-refresh.
-    // Contoh: clearSheetCache(); atau getAllSheetData(true);
-
-    console.log('✅ Produk baru berhasil ditambahkan.')
-    return { success: true }
+    // Menggunakan return value yang lebih informatif dari branch lain
+    console.log(`✅ Produk baru [ID: ${nextId}] berhasil ditambahkan.`)
+    return { success: true, newId: nextId }
   } catch (err) {
     console.error('❌ Gagal menambahkan produk baru:', err.message)
     return { success: false, error: err.message }

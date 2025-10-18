@@ -1,69 +1,99 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { POHeader, POItem, ProductionStage } from '../types';
+import React, { useState, useEffect, useCallback } from 'react'
+import { POHeader, POItem, ProductionStage } from '../types'
+import * as apiService from '../apiService'
+
+// --- START: Component & Service Definitions ---
+// The following are defined here to resolve import errors.
+
+
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
+  <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : ''}`} {...props}>
+    {children}
+  </button>
+)
+
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`card-container ${className || ''}`}>{children}</div>
+)
+
+// --- END: Component & Service Definitions ---
 
 // Helper functions
-const formatDate = (d: string) => new Date(d).toLocaleString('id-ID');
-const formatDeadlineForInput = (isoString: string) => new Date(isoString).toISOString().split('T')[0];
+const formatDate = (d: string) => new Date(d).toLocaleString('id-ID', { hour12: false })
+const formatDeadlineForInput = (isoString: string) => new Date(isoString).toISOString().split('T')[0]
 
 // --- ProgressItem Component ---
-// Handles a single item's progress display and update form.
 const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: string; poNumber: string; onUpdate: () => void }) => {
-  const stages: ProductionStage[] = ['Cari Bahan Baku', 'Sawmill', 'KD', 'Pembahanan', 'Moulding', 'Coating', 'Siap Kirim'];
-  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage;
-  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1;
+  const isElectron = !!(window as any).api
+  const stages: ProductionStage[] = ['Cari Bahan Baku', 'Sawmill', 'KD', 'Pembahanan', 'Moulding', 'Coating', 'Siap Kirim']
+  const latestStage = item.progressHistory?.[item.progressHistory.length - 1]?.stage
+  const currentStageIndex = latestStage ? stages.indexOf(latestStage) : -1
 
   // State for the form
-  const [notes, setNotes] = useState('');
-  const [photoPath, setPhotoPath] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [notes, setNotes] = useState('')
+  const [photoPath, setPhotoPath] = useState<string | null>(null) // For Electron path
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null) // For Web base64 data
+  const [photoName, setPhotoName] = useState<string | null>(null); // For displaying file name
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [editableDeadlines, setEditableDeadlines] = useState(item.stageDeadlines || [])
 
-  // State for editable deadlines
-  const [editableDeadlines, setEditableDeadlines] = useState(item.stageDeadlines || []);
-
-  // Function to handle changes in the date inputs
   const handleDeadlineChange = (stageName: string, newDate: string) => {
-    if (!newDate || stageName !== 'Siap Kirim') return;
-    const newDeadlineISO = new Date(newDate).toISOString();
+    if (!newDate || stageName !== 'Siap Kirim') return
+    const newDeadlineISO = new Date(newDate).toISOString()
 
     const updatedDeadlines = editableDeadlines.map(d =>
       d.stageName === stageName ? { ...d, deadline: newDeadlineISO } : d
-    );
-    setEditableDeadlines(updatedDeadlines);
+    )
+    setEditableDeadlines(updatedDeadlines)
 
-    // Call the backend directly via window.api
-    // @ts-ignore
-    window.api.updateStageDeadline({
+    apiService.updateStageDeadline({
       poId,
       itemId: item.id,
       stageName,
       newDeadline: newDeadlineISO
     }).catch(err => {
-      alert(`Gagal menyimpan deadline baru: ${err.message}`);
-      setEditableDeadlines(item.stageDeadlines || []); // Revert on failure
-    });
-  };
+      alert(`Gagal menyimpan deadline baru: ${err.message}`)
+      setEditableDeadlines(item.stageDeadlines || []) // Revert on failure
+    })
+  }
 
   const handleViewPhoto = (url: string) => {
-    // @ts-ignore
-    window.api.openExternalLink(url);
-  };
+    apiService.openExternalLink(url)
+  }
 
   const handleSelectPhoto = async () => {
-    // @ts-ignore
-    const selectedPath = await window.api.openFileDialog();
-    if (selectedPath) {
-      setPhotoPath(selectedPath);
+    if (isElectron) {
+      const selectedPath = await apiService.openFileDialog();
+      if (selectedPath) {
+        setPhotoPath(selectedPath);
+        setPhotoName(selectedPath.split(/[/\\]/).pop() || selectedPath);
+      }
+    } else {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          setPhotoName(file.name);
+          const reader = new FileReader();
+          reader.onload = (readerEvent) => {
+            const base64String = readerEvent.target?.result as string;
+            setPhotoBase64(base64String.split(',')[1]); // Store only base64 data
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
     }
   };
 
   const handleUpdate = async (nextStage: string) => {
-    if (!notes && !photoPath) return alert('Harap isi catatan atau unggah foto.');
-    setIsUpdating(true);
+    if (!notes && !photoName) return alert('Harap isi catatan atau unggah foto.')
+    setIsUpdating(true)
     try {
       const payload = {
         poId,
@@ -71,26 +101,28 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
         poNumber,
         stage: nextStage,
         notes,
-        photoPath, // Send the file path directly
-      };
+        photoPath: isElectron ? photoPath : null,
+        photoBase64: !isElectron ? photoBase64 : null
+      }
 
-      // @ts-ignore
-      const result = await window.api.updateItemProgress(payload);
+      const result = await apiService.updateItemProgress(payload)
 
       if (result.success) {
-        alert(`Progress item ${item.product_name} berhasil diupdate!`);
-        onUpdate();
-        setNotes('');
-        setPhotoPath(null);
+        alert(`Progress item ${item.product_name} berhasil diupdate!`)
+        onUpdate()
+        setNotes('')
+        setPhotoPath(null)
+        setPhotoBase64(null)
+        setPhotoName(null);
       } else {
-        throw new Error(result.error || 'Terjadi kesalahan di backend.');
+        throw new Error(result.error || 'Terjadi kesalahan di backend.')
       }
     } catch (err) {
-      alert(`Gagal update progress: ${(err as Error).message}`);
+      alert(`Gagal update progress: ${(err as Error).message}`)
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(false)
     }
-  };
+  }
 
   return (
     <Card className="item-card">
@@ -102,10 +134,10 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
       <div className="timeline-container">
         <div className="progress-timeline">
           {stages.map((stage) => {
-            const deadlineInfo = editableDeadlines.find((d) => d.stageName === stage);
-            const isCompleted = stages.indexOf(stage) <= currentStageIndex;
-            const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted;
-            const isEditable = stage === 'Siap Kirim'; // Tentukan apakah bisa diedit
+            const deadlineInfo = editableDeadlines.find((d) => d.stageName === stage)
+            const isCompleted = stages.indexOf(stage) <= currentStageIndex
+            const isOverdue = deadlineInfo && new Date() > new Date(deadlineInfo.deadline) && !isCompleted
+            const isEditable = stage === 'Siap Kirim'
 
             return (
               <div key={stage} className={`stage ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
@@ -120,12 +152,12 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
                       type="date"
                       value={formatDeadlineForInput(deadlineInfo.deadline)}
                       onChange={(e) => handleDeadlineChange(stage, e.target.value)}
-                      disabled={!isEditable} // Nonaktifkan input jika tidak bisa diedit
+                      disabled={!isEditable}
                     />
                   </div>
                 )}
               </div>
-            );
+            )
           })}
         </div>
       </div>
@@ -134,13 +166,11 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
         <div className="update-form">
           <h5>Update ke Tahap Berikutnya: {stages[currentStageIndex + 1]}</h5>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
-
           <div>
             <label onClick={handleSelectPhoto} className="file-input-label">
-              {photoPath ? `✅ ${photoPath.split(/[/\\]/).pop()}` : '📷 Unggah Foto (Opsional)'}
+                {photoName ? `✅ ${photoName}` : '📷 Unggah Foto (Opsional)'}
             </label>
           </div>
-
           <Button onClick={() => handleUpdate(stages[currentStageIndex + 1])} disabled={isUpdating}>
             {isUpdating ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
@@ -148,26 +178,26 @@ const ProgressItem = ({ item, poId, poNumber, onUpdate }: { item: POItem; poId: 
       )}
 
       {item.progressHistory && item.progressHistory.length > 0 && (
-         <div className="history-log">
-            <h6>Riwayat Progress</h6>
-            {item.progressHistory.map(log => (
-                <div key={log.id} className="log-entry">
-                    <div className="log-details">
-                      <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
-                      <p>{log.notes}</p>
-                    </div>
-                    {log.photo_url && (
-                      <Button variant="secondary" onClick={() => handleViewPhoto(log.photo_url!)} className="view-photo-btn">
-                        Lihat Foto
-                      </Button>
-                    )}
-                </div>
-            ))}
-         </div>
+        <div className="history-log">
+          <h6>Riwayat Progress</h6>
+          {item.progressHistory.map(log => (
+            <div key={log.id} className="log-entry">
+              <div className="log-details">
+                <p><strong>{log.stage}</strong> ({formatDate(log.created_at)})</p>
+                <p>{log.notes}</p>
+              </div>
+              {log.photo_url && (
+                <Button variant="secondary" onClick={() => handleViewPhoto(log.photo_url!)} className="view-photo-btn">
+                  Lihat Foto
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </Card>
-  );
-};
+  )
+}
 
 // --- Main Page Component ---
 interface UpdateProgressPageProps {
@@ -184,8 +214,7 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
 
     setIsLoading(true);
     try {
-      // @ts-ignore
-      const fetchedItems = await window.api.getPOItemsWithDetails(po.id);
+      const fetchedItems = await apiService.getPOItemsWithDetails(po.id);
       setItems(fetchedItems);
     } catch (err) {
       console.error('Gagal memuat item:', err);
@@ -220,12 +249,22 @@ const UpdateProgressPage: React.FC<UpdateProgressPageProps> = ({ po, onBack }) =
       {isLoading ? (
         <p>Memuat item...</p>
       ) : items.length > 0 ? (
-        items.map((item) => <ProgressItem key={item.id} item={item} poId={po.id} poNumber={po.po_number} onUpdate={fetchItems} />)
+        items.map((item) => (
+          <ProgressItem
+            key={item.id}
+            item={item}
+            poId={po.id}
+            poNumber={po.po_number}
+            onUpdate={fetchItems}
+          />
+        ))
       ) : (
-        <Card><p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p></Card>
+        <Card>
+          <p>Tidak ada item yang ditemukan untuk PO ini pada revisi terbaru.</p>
+        </Card>
       )}
     </div>
   );
 };
 
-export default UpdateProgressPage;
+export default UpdateProgressPage

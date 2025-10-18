@@ -1,20 +1,24 @@
 /* eslint-disable prettier/prettier */
 // src/renderer/src/types/index.ts
 
-// [BARU] Tipe untuk satu entri progress
-
-export type ProductionStage = 'Cari Bahan Baku' | 'Sawmill' | 'KD' | 'Pembahanan' | 'Moulding' | 'Coating' | 'Siap Kirim';
+export type ProductionStage =
+  | 'Cari Bahan Baku'
+  | 'Sawmill'
+  | 'KD'
+  | 'Pembahanan'
+  | 'Moulding'
+  | 'Coating'
+  | 'Siap Kirim'
 
 export interface ProgressUpdate {
-  id: string;
-  purchase_order_item_id: string;
-  stage: ProductionStage;
-  notes: string;
-  photo_url: string | null;
-  created_at: string;
+  id: string
+  purchase_order_item_id: string
+  stage: ProductionStage
+  notes: string
+  photo_url: string | null
+  created_at: string
 }
 
-// [MODIFIKASI] POItem ditambahkan progressHistory
 export interface POItem {
   id: number
   purchase_order_id?: string
@@ -36,11 +40,11 @@ export interface POItem {
   location: string
   notes: string
   kubikasi?: number
-  progressHistory?: ProgressUpdate[]; // Riwayat progress untuk item ini
-  stageDeadlines?: { stageName: string; deadline: string }[];
+  progressHistory?: ProgressUpdate[]
+  stageDeadlines?: { stageName: string; deadline: string }[]
+  customer_name?: string
 }
 
-// [MODIFIKASI] POHeader ditambahkan progress
 export interface POHeader {
   id: string
   po_number: string
@@ -52,11 +56,13 @@ export interface POHeader {
   notes?: string
   kubikasi_total?: number
   pdf_link?: string | null
-  progress?: number; // Progress keseluruhan PO
+  progress?: number
+  items?: POItem[]
+  photo_url?: string | null
   marketing?: string
+  completed_at?: string | null
 }
 
-// Tipe ini tidak diubah
 export interface PORevision {
   id: string
   purchase_order_id: string
@@ -67,20 +73,29 @@ export interface PORevision {
   priority: string | null
   notes: string | null
   created_at: string
-  pdf_link?: string | null // <-- [TAMBAHKAN BARIS INI]
+  pdf_link?: string | null
   acc_marketing?: string
 }
 
-// Tipe ini tidak diubah
 export interface RevisionHistoryItem {
-  revision: PORevision;
-  items: POItem[];
+  revision: PORevision
+  items: POItem[]
 }
 
 export interface AnalysisData {
-  topSellingProducts: { name: string; totalQuantity: number }[];
-  trendingProducts: { name: string; change: number }[];
-  slowMovingProducts: string[];
-  woodTypeDistribution: { name: string; value: number }[]; // Tambahkan ini
-  topCustomers: { name: string; totalKubikasi: number }[]; // Tambahkan ini
+  topSellingProducts: { name: string; totalQuantity: number }[]
+  trendingProducts: { name: string; change: number }[]
+  slowMovingProducts: string[]
+  woodTypeDistribution: { name: string; value: number }[]
+  topCustomers: { name: string; totalKubikasi: number }[]
+}
+
+export interface DeleteResult {
+  success: boolean
+  message: string
+  summary?: {
+    duration?: string
+    failedFileDeletes?: number
+  }
+  error?: string
 }

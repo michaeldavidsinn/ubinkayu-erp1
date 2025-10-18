@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react'
+// file: src/renderer/src/App.tsx
+
+import { useState, useEffect } from 'react'
 import { POHeader } from './types'
 import Navbar from './components/Navbar'
 import POListPage from './pages/POListPage'
@@ -10,79 +12,56 @@ import RevisionHistoryPage from './pages/RevisionHistoryPage'
 import UpdateProgressPage from './pages/UpdateProgressPage'
 import AnalysisPage from './pages/AnalysisPage'
 
+// Impor semua fungsi dari apiService
+import * as apiService from './apiService'
+
 function App() {
   const [view, setView] = useState<string>('dashboard')
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([])
   const [editingPO, setEditingPO] = useState<POHeader | null>(null)
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-
   const [trackingPO, setTrackingPO] = useState<POHeader | null>(null)
 
   const fetchPOs = async () => {
     setIsLoading(true)
     try {
-      const pos: POHeader[] = await window.api.listPOs()
+      // Menggunakan apiService
+      const pos: POHeader[] = await apiService.listPOs()
       setPurchaseOrders(pos)
     } catch (error) {
       console.error('Gagal mengambil daftar PO:', error)
+      alert(`Gagal mengambil daftar PO: ${(error as Error).message}`)
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (['dashboard', 'list', 'detail', 'history', 'input'].includes(view)) {
+    // Hanya fetch data jika berada di view yang relevan
+    if (['dashboard', 'list'].includes(view)) {
       fetchPOs()
     }
   }, [view])
 
   const handleDeletePO = async (poId: string) => {
-    const poToDelete = purchaseOrders.find(po => po.id === poId)
+    const poToDelete = purchaseOrders.find((po) => po.id === poId)
     const poInfo = poToDelete ? `${poToDelete.po_number} - ${poToDelete.project_name}` : poId
-
-    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN\n\n` +
-      `PO: ${poInfo}\n\n` +
-      `Data yang akan dihapus PERMANEN:\n` +
-      `• Semua revisi PO dari spreadsheet\n` +
-      `• Semua item dan progress tracking\n` +
-      `• File PDF dari Google Drive\n` +
-      `• Foto progress dari Google Drive\n\n` +
-      `Tindakan ini TIDAK DAPAT DIBATALKAN!\n\n` +
-      `Apakah Anda yakin ingin melanjutkan?`
+    const confirmMessage = `⚠️ PERINGATAN PENGHAPUSAN\n\nPO: ${poInfo}\n\nData yang akan dihapus PERMANEN:\n• Semua revisi PO\n• Semua item & progress\n• File PDF & foto dari Google Drive\n\nTindakan ini TIDAK DAPAT DIBATALKAN!\n\nApakah Anda yakin ingin melanjutkan?`
 
     if (window.confirm(confirmMessage)) {
       setIsLoading(true)
-
-      const progressMessage = `🗜️ Menghapus PO ${poInfo}...\n\n` +
-        `Sedang memproses:\n` +
-        `• Menghapus file dari Google Drive\n` +
-        `• Membersihkan data spreadsheet\n\n` +
-        `Mohon tunggu, jangan tutup aplikasi...`
-
-      const progressAlert = setTimeout(() => {
-      }, 100)
-
       try {
-        const result = await window.api.deletePO(poId)
-        clearTimeout(progressAlert)
-
+        // Menggunakan apiService
+        const result = await apiService.deletePO(poId)
         if (result.success) {
-          const duration = result.summary?.duration || 'beberapa detik'
-          let successMessage = `${result.message}\n\nWaktu pemrosesan: ${duration}`
-
-          if (result.summary?.failedFileDeletes > 0) {
-            successMessage += `\n\n⚠️ Catatan: ${result.summary.failedFileDeletes} file tidak dapat dihapus dari Drive (mungkin sudah dihapus atau tidak memiliki akses)`
-          }
-
-          alert(`✅ PENGHAPUSAN BERHASIL\n\n${successMessage}`)
-          await fetchPOs()
+          alert(`✅ PENGHAPUSAN BERHASIL\n\n${result.message}`)
+          fetchPOs() // Muat ulang daftar PO
         } else {
           throw new Error(result.error)
         }
       } catch (error) {
-        clearTimeout(progressAlert)
-        alert(`❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi atau hubungi administrator.`)
+        alert(`❌ Gagal menghapus PO: ${(error as Error).message}\n\nSilakan coba lagi.`)
       } finally {
         setIsLoading(false)
       }
@@ -110,16 +89,14 @@ function App() {
     }
   }
 
-  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking') => {
+  const handleNavigate = (targetView: 'dashboard' | 'list' | 'tracking' | 'analysis'): void => {
     setSelectedPoId(null)
     setTrackingPO(null)
+    setEditingPO(null)
     setView(targetView)
   }
 
   const handleBackToList = () => {
-    setEditingPO(null)
-    setSelectedPoId(null)
-    fetchPOs()
     handleNavigate('list')
   }
 
