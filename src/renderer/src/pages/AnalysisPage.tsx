@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Card } from '../components/Card'
 import { AnalysisData, POItem } from '../types'
+import { useWindowWidth } from '../hooks/useWindowWidth'
 import {
   BarChart,
   Bar,
@@ -51,6 +52,8 @@ const calculateInsights = (items: POItem[]) => {
 }
 
 const AnalysisPage: React.FC = () => {
+  const windowWidth = useWindowWidth()
+  const isMobile = windowWidth < 640
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [allItems, setAllItems] = useState<POItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -172,7 +175,7 @@ const AnalysisPage: React.FC = () => {
                 cy="50%"
                 outerRadius={80}
                 fill="#8884d8"
-                label={(props: any) => `${props.name} (${(props.percent * 100).toFixed(0)}%)`}
+                label={isMobile ? false : (props: any) => `${props.name} (${(props.percent * 100).toFixed(0)}%)`}
               >
                 {analysisData.woodTypeDistribution.map((_entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
