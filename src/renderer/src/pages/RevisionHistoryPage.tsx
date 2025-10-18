@@ -1,23 +1,14 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import React, { useState, useEffect } from 'react'
 import { POItem, PORevision, RevisionHistoryItem } from '../types'
 import * as apiService from '../apiService'
+import { Button } from '../components/Button'
 
 // --- START: Component & Service Definitions ---
 // The following are defined here to resolve import errors.
 
-
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
-  children,
-  ...props
-}) => (
-  <button className="btn" {...props}>
-    {children}
-  </button>
-)
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -157,7 +148,7 @@ const RevisionHistoryPage: React.FC<RevisionHistoryPageProps> = ({ poId, poNumbe
           <h1>Riwayat Revisi: PO {poNumber}</h1>
           <p>Menampilkan semua versi perubahan untuk Purchase Order ini.</p>
         </div>
-        <Button onClick={onBack}>Kembali ke Detail</Button>
+        <Button onClick={onBack} variant="secondary">Kembali ke Detail</Button>
       </div>
 
       {isLoading ? (

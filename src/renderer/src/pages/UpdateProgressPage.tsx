@@ -4,16 +4,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { POHeader, POItem, ProductionStage } from '../types'
 import * as apiService from '../apiService'
+import { Button } from '../components/Button'
 
 // --- START: Component & Service Definitions ---
 // The following are defined here to resolve import errors.
 
-
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, variant, ...props }) => (
-  <button className={`btn ${variant === 'secondary' ? 'btn-secondary' : ''}`} {...props}>
-    {children}
-  </button>
-)
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <div className={`card-container ${className || ''}`}>{children}</div>

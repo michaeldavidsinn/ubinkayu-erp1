@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '../components/Button'
