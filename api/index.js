@@ -23,9 +23,9 @@ export default async function handler(req, res) {
         return await Controller.handleListOrders(req, res)
       case 'saveNewOrder':
         return await Controller.handleSaveNewOrder(req, res)
-      case 'updatePO':
+      case 'updateOrder':
         return await Controller.handleUpdateOrder(req, res)
-      case 'deletePO':
+      case 'deleteOrder':
         return await Controller.handleDeleteOrder(req, res)
 
       // Rute untuk Produk
@@ -38,12 +38,12 @@ export default async function handler(req, res) {
       case 'getRevisionHistory':
         return await Controller.handleGetRevisionHistory(req, res)
       case 'listPORevisions':
-        return await Controller.handleListPORevisions(req, res)
+        return await Controller.handleListOrderRevisions(req, res)
       case 'listorderItemsByRevision':
         return await Controller.handleListorderItemsByRevision(req, res)
 
       // Rute untuk Preview
-      case 'previewPO':
+      case 'previewOrder':
         return await Controller.handlePreviewOrder(req, res)
 
       // Rute untuk Progress

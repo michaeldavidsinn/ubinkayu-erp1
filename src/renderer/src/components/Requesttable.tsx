@@ -55,7 +55,7 @@ const RequestTable: React.FC<RequestTableProps> = ({
             <th>Target Kirim</th>
             <th>Prioritas</th>
             <th>Valuasi Project</th>
-            <th>Alamat Kirim</th>
+            {/* Kolom Alamat Kirim telah dihapus */}
             <th>Catatan</th>
             <th>Tgl Request</th>
             <th>Aksi</th>
@@ -64,7 +64,8 @@ const RequestTable: React.FC<RequestTableProps> = ({
         <tbody>
           {requestList.length === 0 ? (
             <tr>
-              <td colSpan={10} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-secondary)' }}>
+              {/* colSpan dikurangi menjadi 9 karena satu kolom dihapus */}
+              <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-secondary)' }}>
                 Belum ada request project masuk dari marketing.
               </td>
             </tr>
@@ -114,20 +115,6 @@ const RequestTable: React.FC<RequestTableProps> = ({
                 {/* Valuasi Project */}
                 <td>
                   <strong>{formatRupiah((order as any).project_valuation)}</strong>
-                </td>
-
-                {/* Alamat Kirim */}
-                <td style={{ maxWidth: '160px' }}>
-                  <span style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    color: 'var(--color-text-secondary)',
-                    fontSize: '13px'
-                  } as React.CSSProperties}>
-                    {order.alamat_kirim || '-'}
-                  </span>
                 </td>
 
                 {/* Catatan */}

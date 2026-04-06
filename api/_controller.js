@@ -1536,7 +1536,7 @@ export async function handleAddNewProduct(req, res) {
   }
 }
 
-export async function handleListPORevisions(req, res) {
+export async function handleListOrderRevisions(req, res) {
   const { orderId } = req.query
   const doc = await openDoc()
   const Sheet = await getSheet(doc, 'orders')

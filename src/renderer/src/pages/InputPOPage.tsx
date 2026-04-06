@@ -540,14 +540,7 @@ const InputPOPage: React.FC<InputPOPageProps> = ({ onSaveSuccess, editingPO, cur
               <option value="Urgent">Urgent</option>
             </select>
           </div>
-          <Input
-            label="Alamat Kirim"
-            name="alamatKirim"
-            value={orderData.alamatKirim}
-            onChange={handleDataChange}
-            placeholder="e.g., Jl. Industri No. 10"
-            disabled={isConfirmMode}
-          />
+          
           <div className="form-group">
             <label>Marketing</label>
             <input
